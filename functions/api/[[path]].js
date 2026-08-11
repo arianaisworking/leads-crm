@@ -240,12 +240,30 @@ export async function onRequest(context) {
       }
       const oql = `[out:json][timeout:90];\narea["ISO3166-2"="${iso}"]->.a;\n(\n${selectors.join("\n")}\n);\nout center tags;`;
 
-      const resp = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: "data=" + encodeURIComponent(oql),
-      });
-      if (!resp.ok) return err(`OpenStreetMap query failed (${resp.status}). Try again in a minute.`, 502);
+      // Overpass mirrors reject header-less requests (406/403) and go down often,
+      // so identify ourselves and fail over across a few public instances.
+      const OVERPASS_ENDPOINTS = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.private.coffee/api/interpreter",
+      ];
+      let resp = null, lastStatus = 0, lastErr = "";
+      for (const endpoint of OVERPASS_ENDPOINTS) {
+        try {
+          const r = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "user-agent": "AIW-CRM/1.0 (+https://leads-crm-2sv.pages.dev; lead finder)",
+            },
+            body: "data=" + encodeURIComponent(oql),
+          });
+          if (r.ok) { resp = r; break; }
+          lastStatus = r.status;
+        } catch (e) { lastErr = e.message; }
+      }
+      if (!resp) return err(`OpenStreetMap query failed${lastStatus ? ` (${lastStatus})` : lastErr ? `: ${lastErr}` : ""}. Every mirror is busy — try again in a minute, or use Google Maps.`, 502);
       const data = await resp.json();
       const elements = data.elements || [];
 
