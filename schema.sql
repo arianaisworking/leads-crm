@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS leads (
   lon REAL,
   rating REAL,
   reviews INTEGER,
+  signals TEXT,               -- comma list of buying signals: financing, free_consult, multi_location
+  enriched INTEGER DEFAULT 0, -- 1 once the website has been scanned by /api/enrich
   source TEXT DEFAULT 'openstreetmap',
   source_id TEXT UNIQUE,
   website_live INTEGER,
@@ -39,8 +41,13 @@ CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_state ON leads(state);
 CREATE INDEX IF NOT EXISTS idx_leads_next_touch ON leads(next_touch);
 
--- Added for the Google Maps (SerpApi) finder. Already applied to the live
--- aiw-crm database; only needed if you rebuild from scratch.
+CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);
+CREATE INDEX IF NOT EXISTS idx_leads_reviews ON leads(reviews);
+
+-- Columns added over time. Already applied to the live aiw-crm database;
+-- listed here only for rebuilding from scratch. SQLite ignores IF NOT EXISTS
+-- on ADD COLUMN, so run these once and only if the column is missing:
 -- ALTER TABLE leads ADD COLUMN rating REAL;
 -- ALTER TABLE leads ADD COLUMN reviews INTEGER;
-CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);
+-- ALTER TABLE leads ADD COLUMN signals TEXT;
+-- ALTER TABLE leads ADD COLUMN enriched INTEGER DEFAULT 0;

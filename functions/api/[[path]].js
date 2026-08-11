@@ -29,16 +29,40 @@ const STATE_ISO = {
   "Wisconsin": "US-WI", "Wyoming": "US-WY", "District of Columbia": "US-DC",
 };
 
-// Search phrase used against Google Maps for each trade.
-const GMAPS_QUERIES = {
-  roofing: "roofing contractor",
-  plumbing: "plumber",
-  electrical: "electrician",
-  hvac: "hvac contractor",
+// Verticals we can source. Each carries the search phrases used against Google
+// Maps and Yelp (via SerpApi). `maps` is an array so one vertical can sweep
+// several terms in a run (duplicates are dropped by source_id). Skilled trades
+// also have OSM tags in TRADE_TAGS above; the newer verticals are Maps/Yelp only.
+const VERTICALS = {
+  roofing:         { label: "Roofing",         maps: ["roofing contractor"],                                                   yelp: "roofing" },
+  plumbing:        { label: "Plumbing",        maps: ["plumber"],                                                              yelp: "plumbing" },
+  electrical:      { label: "Electrical",      maps: ["electrician"],                                                          yelp: "electricians" },
+  hvac:            { label: "HVAC",            maps: ["hvac contractor"],                                                      yelp: "hvac" },
+  windows:         { label: "Windows",         maps: ["window replacement", "window installation"],                            yelp: "windows installation" },
+  medspa:          { label: "Med spa",         maps: ["med spa", "botox", "laser hair removal"],                               yelp: "medical spas" },
+  dental_implants: { label: "Dental implants", maps: ["dental implants", "all-on-4 dental implants", "dental implant center"], yelp: "cosmetic dentists" },
 };
 
+// Backwards-compatible single-phrase lookup (used nowhere critical now, kept
+// so older callers passing one phrase still resolve).
+const GMAPS_QUERIES = Object.fromEntries(
+  Object.entries(VERTICALS).map(([k, v]) => [k, v.maps[0]])
+);
+
 // Ceiling on SerpApi calls per run, so one click can't burn a month of credits.
-const MAX_GMAPS_SEARCHES = 12;
+// Counts every phrase × city × page, so med spa (3 phrases) is 3 per city.
+const MAX_GMAPS_SEARCHES = 30;
+
+// How many lead websites one /api/enrich call will fetch. Bounded so we stay
+// well under Cloudflare's per-request subrequest limit.
+const ENRICH_BATCH = 12;
+
+// Website signal detectors: regex -> flag stored in leads.signals.
+const SIGNAL_PATTERNS = [
+  ["financing",     /financ|care\s*credit|carecredit|affirm|cherry|klarna|0%\s*apr|payment\s*plan|monthly\s*payments/i],
+  ["free_consult",  /free\s*(consult|consultation|estimate|quote)|complimentary\s*consultation/i],
+  ["multi_location", /our\s*locations|view\s*locations|all\s*locations|multiple\s*locations|other\s*locations/i],
+];
 
 // "5024 Westbank Expy, Marrero, LA 70072" -> street / city / state / postcode
 function splitUsAddress(addr) {
@@ -100,16 +124,22 @@ export async function onRequest(context) {
         const state = url.searchParams.get("state");
         const q = url.searchParams.get("q");
         const due = url.searchParams.get("due"); // "1" => next_touch due
+        const minReviews = parseInt(url.searchParams.get("min_reviews"), 10);
+        const sort = url.searchParams.get("sort"); // "reviews" | "rating" | default recency
         if (status) { wh.push("status = ?"); bind.push(status); }
         if (trade) { wh.push("trade = ?"); bind.push(trade); }
         if (state) { wh.push("state = ?"); bind.push(state); }
         if (due === "1") { wh.push("next_touch IS NOT NULL AND next_touch <= date('now')"); }
+        if (Number.isInteger(minReviews) && minReviews > 0) { wh.push("reviews >= ?"); bind.push(minReviews); }
         if (q) {
           wh.push("(name LIKE ? OR city LIKE ? OR phone LIKE ? OR email LIKE ?)");
           const like = `%${q}%`;
           bind.push(like, like, like, like);
         }
-        const sql = `SELECT * FROM leads ${wh.length ? "WHERE " + wh.join(" AND ") : ""} ORDER BY updated_at DESC LIMIT 1000`;
+        const order = sort === "reviews" ? "reviews DESC NULLS LAST, updated_at DESC"
+          : sort === "rating" ? "rating DESC NULLS LAST, reviews DESC NULLS LAST"
+          : "updated_at DESC";
+        const sql = `SELECT * FROM leads ${wh.length ? "WHERE " + wh.join(" AND ") : ""} ORDER BY ${order} LIMIT 1000`;
         const { results } = await db.prepare(sql).bind(...bind).all();
         return json(results || []);
       }
@@ -269,8 +299,8 @@ export async function onRequest(context) {
       if (!STATE_ISO[state]) return err(`Unknown state "${state}". Use a full US state name.`);
       const abbr = STATE_ISO[state].slice(3);
 
-      const trades = (b.trades || []).filter((t) => GMAPS_QUERIES[t]);
-      if (!trades.length) return err("Pick at least one trade: roofing, plumbing, electrical, hvac.");
+      const trades = (b.trades || []).filter((t) => VERTICALS[t]);
+      if (!trades.length) return err(`Pick at least one vertical: ${Object.keys(VERTICALS).join(", ")}.`);
 
       const cities = String(b.cities || "")
         .split(",")
@@ -280,13 +310,14 @@ export async function onRequest(context) {
 
       const pages = Math.min(Math.max(parseInt(b.pages, 10) || 1, 1), 5);
 
+      // Each vertical sweeps all of its search phrases; duplicates collapse on source_id.
       const jobs = [];
-      for (const t of trades) for (const c of cities) for (let p = 0; p < pages; p++)
-        jobs.push({ trade: t, city: c, start: p * 20 });
+      for (const t of trades) for (const phrase of VERTICALS[t].maps) for (const c of cities) for (let p = 0; p < pages; p++)
+        jobs.push({ trade: t, q: phrase, city: c, start: p * 20 });
 
       if (jobs.length > MAX_GMAPS_SEARCHES) {
         return err(
-          `That's ${jobs.length} SerpApi searches in one run, and each one costs a credit. Keep it to ${MAX_GMAPS_SEARCHES} or fewer by trimming cities, trades, or depth.`
+          `That's ${jobs.length} SerpApi searches in one run, and each one costs a credit. Keep it to ${MAX_GMAPS_SEARCHES} or fewer by trimming cities, verticals, or depth.`
         );
       }
 
@@ -299,7 +330,7 @@ export async function onRequest(context) {
         u.searchParams.set("type", "search");
         u.searchParams.set("google_domain", "google.com");
         u.searchParams.set("hl", "en");
-        u.searchParams.set("q", `${GMAPS_QUERIES[job.trade]} in ${job.city}, ${abbr}`);
+        u.searchParams.set("q", `${job.q} in ${job.city}, ${abbr}`);
         if (job.start) u.searchParams.set("start", String(job.start));
         u.searchParams.set("api_key", key);
 
@@ -308,15 +339,15 @@ export async function onRequest(context) {
           const resp = await fetch(u.toString());
           data = await resp.json();
           if (!resp.ok) {
-            problems.push(`${job.trade} · ${job.city}: SerpApi returned ${resp.status}${data && data.error ? ` — ${data.error}` : ""}`);
+            problems.push(`${job.q} · ${job.city}: SerpApi returned ${resp.status}${data && data.error ? ` — ${data.error}` : ""}`);
             continue;
           }
         } catch (e) {
-          problems.push(`${job.trade} · ${job.city}: ${e.message}`);
+          problems.push(`${job.q} · ${job.city}: ${e.message}`);
           continue;
         }
 
-        if (data.error) { problems.push(`${job.trade} · ${job.city}: ${data.error}`); continue; }
+        if (data.error) { problems.push(`${job.q} · ${job.city}: ${data.error}`); continue; }
         searches++;
 
         const results = data.local_results || (data.place_results ? [data.place_results] : []);
@@ -360,6 +391,150 @@ export async function onRequest(context) {
       }
 
       return json({ source: "google_maps", searches, found, inserted, skipped, state, trades, cities, problems });
+    }
+
+    // POST /api/scrape-yelp  { trades:[...], cities:"Dallas, Plano", state:"Texas", pages:1 }
+    // Pulls Yelp businesses through SerpApi. Needs env.SERPAPI_KEY.
+    if (parts[0] === "scrape-yelp" && method === "POST") {
+      const key = env.SERPAPI_KEY;
+      if (!key) {
+        return err(
+          "SERPAPI_KEY isn't set. Add it under Cloudflare Pages → Settings → Variables and secrets (type: Secret), then redeploy.",
+          500
+        );
+      }
+
+      const b = await request.json();
+      const state = (b.state || "").trim();
+      if (!STATE_ISO[state]) return err(`Unknown state "${state}". Use a full US state name.`);
+      const abbr = STATE_ISO[state].slice(3);
+
+      const trades = (b.trades || []).filter((t) => VERTICALS[t]);
+      if (!trades.length) return err(`Pick at least one vertical: ${Object.keys(VERTICALS).join(", ")}.`);
+
+      const cities = String(b.cities || "").split(",").map((s) => s.trim()).filter(Boolean);
+      if (!cities.length) return err("Enter at least one city or metro to search.");
+
+      const pages = Math.min(Math.max(parseInt(b.pages, 10) || 1, 1), 5);
+
+      // Yelp returns ~10 results per page.
+      const jobs = [];
+      for (const t of trades) for (const c of cities) for (let p = 0; p < pages; p++)
+        jobs.push({ trade: t, city: c, start: p * 10 });
+
+      if (jobs.length > MAX_GMAPS_SEARCHES) {
+        return err(`That's ${jobs.length} SerpApi searches in one run. Keep it to ${MAX_GMAPS_SEARCHES} or fewer by trimming cities, verticals, or depth.`);
+      }
+
+      let found = 0, inserted = 0, skipped = 0, searches = 0;
+      const problems = [];
+
+      for (const job of jobs) {
+        const u = new URL("https://serpapi.com/search.json");
+        u.searchParams.set("engine", "yelp");
+        u.searchParams.set("find_desc", VERTICALS[job.trade].yelp);
+        u.searchParams.set("find_loc", `${job.city}, ${abbr}`);
+        if (job.start) u.searchParams.set("start", String(job.start));
+        u.searchParams.set("api_key", key);
+
+        let data;
+        try {
+          const resp = await fetch(u.toString());
+          data = await resp.json();
+          if (!resp.ok) { problems.push(`${job.trade} · ${job.city}: SerpApi returned ${resp.status}${data && data.error ? ` — ${data.error}` : ""}`); continue; }
+        } catch (e) { problems.push(`${job.trade} · ${job.city}: ${e.message}`); continue; }
+
+        if (data.error) { problems.push(`${job.trade} · ${job.city}: ${data.error}`); continue; }
+        searches++;
+
+        const results = data.organic_results || [];
+        found += results.length;
+
+        const stmts = [];
+        for (const r of results) {
+          const pid = (Array.isArray(r.place_ids) && r.place_ids[0]) || r.place_id || r.id;
+          if (!r.title || !pid) { skipped++; continue; }
+          stmts.push(
+            db.prepare(`
+              INSERT OR IGNORE INTO leads
+                (name, trade, phone, email, website, address, city, state, postcode,
+                 lat, lon, rating, reviews, source, source_id, status)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            `).bind(
+              r.title,
+              job.trade,
+              r.phone || null,
+              null,
+              null, // Yelp gives its own listing URL, not the business site
+              r.address || (Array.isArray(r.neighborhoods) ? r.neighborhoods.join(", ") : null),
+              job.city,
+              state,
+              null,
+              r.gps_coordinates?.latitude ?? null,
+              r.gps_coordinates?.longitude ?? null,
+              typeof r.rating === "number" ? r.rating : null,
+              typeof r.reviews === "number" ? r.reviews : (typeof r.review_count === "number" ? r.review_count : null),
+              "yelp",
+              `yelp/${pid}`,
+              "New"
+            )
+          );
+        }
+
+        if (stmts.length) {
+          const res = await db.batch(stmts);
+          for (const x of res) { if (x.meta.changes > 0) inserted++; else skipped++; }
+        }
+      }
+
+      return json({ source: "yelp", searches, found, inserted, skipped, state, trades, cities, problems });
+    }
+
+    // POST /api/enrich  -> fetches a batch of lead websites and flags buying signals
+    // (financing, free consultation, multiple locations) into leads.signals.
+    if (parts[0] === "enrich" && method === "POST") {
+      const { results } = await db.prepare(
+        `SELECT id, website FROM leads
+         WHERE website IS NOT NULL AND website != '' AND (enriched IS NULL OR enriched = 0)
+         ORDER BY reviews DESC NULLS LAST LIMIT ?`
+      ).bind(ENRICH_BATCH).all();
+
+      let processed = 0, flagged = 0;
+      const problems = [];
+
+      for (const row of results || []) {
+        let html = "";
+        try {
+          const resp = await fetch(row.website, {
+            headers: { "user-agent": "Mozilla/5.0 (compatible; AIW-CRM/1.0; +https://leads-crm-2sv.pages.dev)" },
+            redirect: "follow",
+          });
+          html = (await resp.text()).slice(0, 500000);
+        } catch (e) {
+          // Mark as enriched so a dead site doesn't block the queue forever.
+          await db.prepare("UPDATE leads SET enriched = 1 WHERE id = ?").bind(row.id).run();
+          problems.push(`${row.website}: ${e.message}`);
+          processed++;
+          continue;
+        }
+
+        const sig = [];
+        for (const [flag, re] of SIGNAL_PATTERNS) if (re.test(html)) sig.push(flag);
+
+        await db.prepare(
+          "UPDATE leads SET signals = ?, enriched = 1, updated_at = datetime('now') WHERE id = ?"
+        ).bind(sig.join(",") || null, row.id).run();
+
+        processed++;
+        if (sig.length) flagged++;
+      }
+
+      const rem = await db.prepare(
+        `SELECT COUNT(*) AS n FROM leads
+         WHERE website IS NOT NULL AND website != '' AND (enriched IS NULL OR enriched = 0)`
+      ).first();
+
+      return json({ processed, flagged, remaining: rem ? rem.n : 0, problems });
     }
 
     return err("Not found", 404);

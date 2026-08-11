@@ -114,6 +114,7 @@
   .pill.Qualified{background:#fdeede;color:#d97a1e} .pill.Client{background:#e0f6ee;color:#279a6c}
   .pill.Dead{background:#efe9ec;color:var(--dead)}
   .trade{font-size:11.5px;color:var(--ink-soft);text-transform:capitalize}
+  .sig{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;color:var(--pink-deep);background:var(--pink-wash);padding:2px 7px;border-radius:20px;text-transform:none;white-space:nowrap}
 
   /* Pipeline */
   .kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;align-items:start}
@@ -224,12 +225,24 @@ const API = "/api";
 // ▼▼▼ YOUR SPOTIFY PLAYLIST — paste your playlist ID here (the part after /playlist/ in the share link). 0vvXsWCC9xrXsKd4FyS8kM is a lo-fi placeholder.
 const SPOTIFY_PLAYLIST = "6DmrkQbB4S6zYnm49QkhpJ";
 const STATUSES = ["New","Contacted","Qualified","Client","Dead"];
-const TRADES = ["roofing","plumbing","electrical","hvac"];
+const VERTICALS=[
+  {key:"roofing",label:"Roofing",osm:true,phrases:1},
+  {key:"plumbing",label:"Plumbing",osm:true,phrases:1},
+  {key:"electrical",label:"Electrical",osm:true,phrases:1},
+  {key:"hvac",label:"HVAC",osm:true,phrases:1},
+  {key:"windows",label:"Windows",osm:false,phrases:2},
+  {key:"medspa",label:"Med spa",osm:false,phrases:3},
+  {key:"dental_implants",label:"Dental implants",osm:false,phrases:3},
+];
+const TRADES=VERTICALS.map(v=>v.key);
+const vLabel=k=>{const v=VERTICALS.find(x=>x.key===k);return v?v.label:(k||"—");};
+const SIGNAL_LABEL={financing:"💳 Financing",free_consult:"🎁 Free consult",multi_location:"📍 Multi-location"};
+function signalBadges(s){return (s||"").split(",").filter(Boolean).map(x=>`<span class="sig">${SIGNAL_LABEL[x]||x}</span>`).join("");}
 const TRADE_COLOR={roofing:"#f5943b",plumbing:"#8288ea",electrical:"#ed1a78",hvac:"#2bb5c4"};
 const POOL=["#ed1a78","#8288ea","#f5943b","#35c08a","#9b6be0","#2bb5c4"];
 const STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
 
-let state = { view:"database", leads:[], stats:{}, q:"", fTrade:"", fState:"", fStatus:"" };
+let state = { view:"database", leads:[], stats:{}, q:"", fTrade:"", fState:"", fStatus:"", fReviews:"", fSort:"" };
 
 const $ = (s,r=document)=>r.querySelector(s);
 const esc = (s)=> (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -293,12 +306,15 @@ async function renderDatabase(m){
     + statCards()
     + `<div class="bar">
         <input class="search" id="q" placeholder="Search name, city, phone, email…" value="${esc(state.q)}">
-        <select id="fTrade"><option value="">All trades</option>${TRADES.map(t=>`<option ${state.fTrade===t?"selected":""}>${t}</option>`).join("")}</select>
+        <select id="fTrade"><option value="">All verticals</option>${VERTICALS.map(v=>`<option value="${v.key}" ${state.fTrade===v.key?"selected":""}>${v.label}</option>`).join("")}</select>
         <select id="fState"><option value="">All states</option>${STATES.map(s=>`<option ${state.fState===s?"selected":""}>${s}</option>`).join("")}</select>
         <select id="fStatus"><option value="">All statuses</option>${STATUSES.map(s=>`<option ${state.fStatus===s?"selected":""}>${s}</option>`).join("")}</select>
+        <select id="fReviews"><option value="">Any reviews</option>${[25,50,100,250,500].map(n=>`<option value="${n}" ${String(state.fReviews)===String(n)?"selected":""}>${n}+ reviews</option>`).join("")}</select>
+        <select id="fSort"><option value="">Newest first</option><option value="reviews" ${state.fSort==="reviews"?"selected":""}>Most reviews</option><option value="rating" ${state.fSort==="rating"?"selected":""}>Highest rated</option></select>
       </div><div id="tbl"></div>`;
   const draw=async()=>{
     const p={}; if(state.q)p.q=state.q; if(state.fTrade)p.trade=state.fTrade; if(state.fState)p.state=state.fState; if(state.fStatus)p.status=state.fStatus;
+    if(state.fReviews)p.min_reviews=state.fReviews; if(state.fSort)p.sort=state.fSort;
     await loadLeads(p);
     $("#tbl").innerHTML=leadTable(state.leads,"✦","Nothing here yet","Head to <b>Find Leads</b> and pull in some skilled-trades businesses to get started.");
     wireRows();
@@ -307,6 +323,8 @@ async function renderDatabase(m){
   $("#fTrade").onchange=(e)=>{state.fTrade=e.target.value;draw()};
   $("#fState").onchange=(e)=>{state.fState=e.target.value;draw()};
   $("#fStatus").onchange=(e)=>{state.fStatus=e.target.value;draw()};
+  $("#fReviews").onchange=(e)=>{state.fReviews=e.target.value;draw()};
+  $("#fSort").onchange=(e)=>{state.fSort=e.target.value;draw()};
   $("#addBtn").onclick=openAdd;
   await draw();
 }
@@ -315,12 +333,13 @@ function leadTable(rows,mark,eh,ep){
   if(!rows.length) return `<div class="card"><div class="empty"><div class="mark">${mark}</div><h3>${eh}</h3><p>${ep}</p>
     <button class="btn" onclick="setView('finder')">Go to Find Leads</button></div></div>`;
   return `<div class="card"><table><thead><tr>
-      <th>Business</th><th>Location</th><th>Contact</th><th>Status</th><th>Next touch</th>
+      <th>Business</th><th>Location</th><th>Contact</th><th>Reviews</th><th>Status</th><th>Next touch</th>
     </tr></thead><tbody>${rows.map(r=>`
       <tr data-id="${r.id}">
-        <td><div class="biz">${avatar(r)}<div><div class="name">${esc(r.name)}</div><div class="sub trade">${esc(r.trade||"—")}</div></div></div></td>
+        <td><div class="biz">${avatar(r)}<div><div class="name">${esc(r.name)}</div><div class="sub trade">${esc(vLabel(r.trade))}${signalBadges(r.signals)}</div></div></div></td>
         <td>${esc([r.city,r.state].filter(Boolean).join(", ")||"—")}</td>
         <td>${esc(r.phone||r.email||"—")}</td>
+        <td class="sub">${r.reviews!=null?`${r.rating!=null?"⭐ "+r.rating+" · ":""}${r.reviews}`:"—"}</td>
         <td><span class="pill ${r.status}">${r.status}</span></td>
         <td class="sub">${esc(r.next_touch||"—")}</td>
       </tr>`).join("")}</tbody></table></div>`;
@@ -343,7 +362,7 @@ async function renderPipeline(m){
     const rows=state.leads.filter(r=>r.status===s);
     return `<div class="col" data-status="${s}"><h3>${s} <span class="c">${rows.length}</span></h3>
       ${rows.map(r=>`<div class="kcard" draggable="true" data-id="${r.id}">${avatar(r,true)}
-        <div><div class="name">${esc(r.name)}</div><div class="sub">${esc(r.trade||"")}${r.city?" · "+esc(r.city):""}</div></div></div>`).join("")}</div>`;
+        <div><div class="name">${esc(r.name)}</div><div class="sub">${esc(r.trade?vLabel(r.trade):"")}${r.city?" · "+esc(r.city):""}</div></div></div>`).join("")}</div>`;
   }).join("");
   let dragId=null;
   kb.querySelectorAll(".kcard").forEach(c=>{
@@ -375,7 +394,7 @@ async function openLead(id){
   d.innerHTML=`
     <button class="dclose" onclick="closeDrawer()">✕</button>
     <div class="dhead">${avatar(lead)}<div><div class="name">${esc(lead.name)}</div>
-      <div class="sub" style="margin-top:2px">${esc([lead.trade,lead.city,lead.state].filter(Boolean).join(" · ")||"")}</div></div></div>
+      <div class="sub" style="margin-top:2px">${esc([lead.trade?vLabel(lead.trade):"",lead.city,lead.state].filter(Boolean).join(" · ")||"")}</div></div></div>
     <div class="dbody">
       <div class="drow">
         <div class="field"><label>Status</label><select id="dStatus">${STATUSES.map(s=>`<option ${lead.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
@@ -435,18 +454,23 @@ function openAdd(){
 }
 
 function renderFinder(m){
+  const SEL=new Set(); // checked vertical keys, persisted across source switches
+  const vertHTML=(srcVal)=>VERTICALS
+    .filter(v=>srcVal==="osm"?v.osm:true)
+    .map(v=>`<label class="check${SEL.has(v.key)?" on":""}" data-t="${v.key}"><input type="checkbox" value="${v.key}"${SEL.has(v.key)?" checked":""}><span>${v.label}</span></label>`).join("");
+
   m.innerHTML=head("Fresh leads","Find Leads")
     + `<div class="finder">
-        <p class="muted" style="margin-top:-6px">Pull real skilled-trades businesses straight into your book.</p>
+        <p class="muted" style="margin-top:-6px">Pull real businesses — trades, med spas, dental implant centers and more — straight into your book.</p>
 
         <div class="field"><label>Where the leads come from</label><div class="checks" id="srcPick">
           <label class="check on" data-src="osm"><input type="radio" name="src" value="osm" checked><span>OpenStreetMap · free</span></label>
           <label class="check" data-src="google"><input type="radio" name="src" value="google"><span>Google Maps · uses credits</span></label>
+          <label class="check" data-src="yelp"><input type="radio" name="src" value="yelp"><span>Yelp · uses credits</span></label>
         </div></div>
 
-        <div class="field"><label>Trades</label><div class="checks" id="checks">
-          ${TRADES.map(t=>`<label class="check" data-t="${t}"><input type="checkbox" value="${t}"><span>${t}</span></label>`).join("")}
-        </div></div>
+        <div class="field"><label>Verticals</label><div class="checks" id="checks">${vertHTML("osm")}</div>
+          <p class="muted" id="vNote" style="margin:6px 0 0"></p></div>
 
         <div class="field"><label>State</label>
           <select id="scState"><option value="">Choose a state…</option>${STATES.map(s=>`<option>${s}</option>`).join("")}</select></div>
@@ -454,14 +478,14 @@ function renderFinder(m){
         <div class="field" id="gWrap" style="display:none">
           <label>Cities or metros</label>
           <input id="scCities" type="text" placeholder="Dallas, Fort Worth, Plano">
-          <p class="muted" style="margin:6px 0 0">Google searches one city at a time, so name the metros you actually want to work.</p>
+          <p class="muted" style="margin:6px 0 0">Google Maps and Yelp search one city at a time, so name the metros you actually want to work.</p>
         </div>
         <div class="field" id="gDepth" style="display:none">
           <label>How deep per city</label>
           <select id="scPages">
-            <option value="1">Top 20 businesses</option>
-            <option value="2">Top 40 businesses</option>
-            <option value="3">Top 60 businesses</option>
+            <option value="1">Top ~20 businesses</option>
+            <option value="2">Top ~40 businesses</option>
+            <option value="3">Top ~60 businesses</option>
           </select>
           <p class="muted" id="scCost" style="margin:6px 0 0"></p>
         </div>
@@ -469,63 +493,110 @@ function renderFinder(m){
         <button class="btn" id="scGo">Find leads</button>
         <div id="scResult"></div>
         <p class="muted" id="scNote"></p>
+
+        <div class="field" style="margin-top:22px;border-top:1px solid var(--line);padding-top:18px">
+          <label>Enrich buying signals</label>
+          <p class="muted" style="margin:2px 0 10px">Scans each lead's website for <b>financing</b>, <b>free consultation</b>, and <b>multiple locations</b> — the cues that usually mean high lead volume. Runs in batches and is free (no SerpApi credits). Flags show up as badges in the Database.</p>
+          <button class="btn ghost" id="enGo">Scan lead websites</button>
+          <div id="enResult" style="margin-top:8px"></div>
+        </div>
       </div>`;
 
   const NOTES={
     osm:"Only named businesses come in, and duplicates are skipped automatically. Coverage depends on what's mapped in OpenStreetMap — busy metros return the most. This finds businesses; it doesn't check licensing or consent to contact.",
-    google:"Google Maps gives you phone, website, rating and review count on most listings, so it's far richer than OpenStreetMap — but every search spends a SerpApi credit. Duplicates are skipped automatically. This finds businesses; it doesn't check licensing or consent to contact."
+    google:"Google Maps gives you phone, website, rating and review count on most listings, so it's the richest source — but every search spends a SerpApi credit. Duplicates are skipped automatically. This finds businesses; it doesn't check licensing or consent to contact.",
+    yelp:"Yelp returns rating and review count and over-indexes on review-heavy businesses — handy for spotting the busy players. It doesn't include the business's own website, so enrichment can't scan Yelp-only leads. Every search spends a SerpApi credit; duplicates are skipped."
+  };
+  const VNOTES={
+    osm:"OpenStreetMap only covers the four skilled trades. Switch to Google Maps or Yelp to search med spas, dental implants and windows.",
+    google:"Med spa and dental implant runs sweep several search terms each, so they cost a few credits per city — watch the estimate below.",
+    yelp:""
   };
   const src=()=>document.querySelector('#srcPick input:checked').value;
+  const isCredit=()=>src()!=="osm";
 
+  function readSel(){
+    document.querySelectorAll("#checks input").forEach(cb=>{ if(cb.checked)SEL.add(cb.value); else SEL.delete(cb.value); });
+  }
+  function wireChecks(){
+    document.querySelectorAll("#checks .check").forEach(c=>{const cb=c.querySelector("input");
+      c.onclick=(e)=>{ if(e.target!==cb)cb.checked=!cb.checked; c.classList.toggle("on",cb.checked); readSel(); cost(); };});
+  }
+  function renderChecks(){
+    if(src()==="osm") VERTICALS.forEach(v=>{ if(!v.osm) SEL.delete(v.key); }); // prune hidden picks
+    $("#checks").innerHTML=vertHTML(src());
+    $("#vNote").textContent=VNOTES[src()]||"";
+    wireChecks();
+  }
   function sync(){
-    const g=src()==="google";
     document.querySelectorAll("#srcPick .check").forEach(c=>c.classList.toggle("on",c.dataset.src===src()));
-    $("#gWrap").style.display=g?"":"none";
-    $("#gDepth").style.display=g?"":"none";
+    const credit=isCredit();
+    $("#gWrap").style.display=credit?"":"none";
+    $("#gDepth").style.display=credit?"":"none";
     $("#scNote").textContent=NOTES[src()];
+    renderChecks();
     cost();
   }
   function cost(){
-    if(src()!=="google") return;
-    const t=document.querySelectorAll("#checks input:checked").length;
+    if(!isCredit()){ $("#scCost").textContent=""; return; }
+    const g=src()==="google";
+    const chosen=[...document.querySelectorAll("#checks input:checked")].map(i=>i.value);
     const c=$("#scCities").value.split(",").map(s=>s.trim()).filter(Boolean).length;
     const p=parseInt($("#scPages").value,10)||1;
-    const n=t*c*p;
-    $("#scCost").textContent=n?`This run costs ${n} SerpApi search${n===1?"":"es"}.`:"";
+    const per=g?chosen.reduce((a,k)=>a+(((VERTICALS.find(v=>v.key===k)||{}).phrases)||1),0):chosen.length;
+    const n=per*c*p;
+    $("#scCost").textContent=n?`This run costs about ${n} SerpApi search${n===1?"":"es"}.`:"";
   }
 
   document.querySelectorAll("#srcPick .check").forEach(c=>{const rb=c.querySelector("input");
     c.onclick=()=>{ rb.checked=true; sync(); };});
-  document.querySelectorAll("#checks .check").forEach(c=>{const cb=c.querySelector("input");
-    c.onclick=(e)=>{ if(e.target!==cb)cb.checked=!cb.checked; c.classList.toggle("on",cb.checked); cost(); };});
   $("#scCities").oninput=cost;
   $("#scPages").onchange=cost;
   sync();
 
   $("#scGo").onclick=async()=>{
-    const trades=[...document.querySelectorAll("#checks input:checked")].map(i=>i.value);
-    const stateName=$("#scState").value; const box=$("#scResult"); const google=src()==="google";
-    if(!trades.length){box.innerHTML=`<div class="result">Pick at least one trade.</div>`;return;}
+    readSel();
+    const trades=[...SEL];
+    const stateName=$("#scState").value; const box=$("#scResult"); const credit=isCredit(); const s=src();
+    if(!trades.length){box.innerHTML=`<div class="result">Pick at least one vertical.</div>`;return;}
     if(!stateName){box.innerHTML=`<div class="result">Choose a state.</div>`;return;}
     const cities=$("#scCities").value;
-    if(google&&!cities.split(",").map(s=>s.trim()).filter(Boolean).length){
-      box.innerHTML=`<div class="result">Name at least one city for Google Maps to search.</div>`;return;}
+    if(credit&&!cities.split(",").map(x=>x.trim()).filter(Boolean).length){
+      box.innerHTML=`<div class="result">Name at least one city to search.</div>`;return;}
 
     const btn=$("#scGo"); btn.disabled=true; const orig=btn.textContent;
     btn.innerHTML=`<span class="spin"></span>Searching ${esc(stateName)}…`;
-    box.innerHTML=`<p class="muted">${google?"Asking Google Maps through SerpApi — a few seconds per city.":"Querying OpenStreetMap — a statewide search can take up to a minute."}</p>`;
+    box.innerHTML=`<p class="muted">${credit?"Asking "+(s==="google"?"Google Maps":"Yelp")+" through SerpApi — a few seconds per city.":"Querying OpenStreetMap — a statewide search can take up to a minute."}</p>`;
     try{
-      const body=google
+      const path=s==="google"?"/scrape-google":s==="yelp"?"/scrape-yelp":"/scrape";
+      const body=credit
         ? {trades,state:stateName,cities,pages:parseInt($("#scPages").value,10)||1}
         : {trades,state:stateName};
-      const r=await api(google?"/scrape-google":"/scrape",
-        {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+      const r=await api(path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
       let msg=`Added ${r.inserted} new lead${r.inserted===1?"":"s"} from ${esc(stateName)} · ${r.found} found · ${r.skipped} skipped.`;
-      if(google) msg+=` ${r.searches} credit${r.searches===1?"":"s"} used.`;
+      if(credit) msg+=` ${r.searches} credit${r.searches===1?"":"s"} used.`;
       box.innerHTML=`<div class="result">${msg}</div>`
         + ((r.problems&&r.problems.length)?`<p class="muted">${r.problems.map(esc).join("<br>")}</p>`:"");
     }catch(e){ box.innerHTML=`<div class="result">${esc(e.message)}</div>`; }
     finally{ btn.disabled=false; btn.textContent=orig; loadStats(); }
+  };
+
+  // Website enrichment — loops batches until the queue is drained (bounded).
+  $("#enGo").onclick=async()=>{
+    const btn=$("#enGo"); const box=$("#enResult");
+    btn.disabled=true; const orig=btn.textContent; btn.innerHTML=`<span class="spin"></span>Scanning…`;
+    let processed=0, flagged=0, rounds=0;
+    try{
+      while(rounds<60){
+        const r=await api("/enrich",{method:"POST",headers:{"content-type":"application/json"},body:"{}"});
+        processed+=r.processed||0; flagged+=r.flagged||0; rounds++;
+        box.innerHTML=`<div class="result">Scanned ${processed} site${processed===1?"":"s"} · ${flagged} with signals · ${r.remaining} left.</div>`
+          + ((r.problems&&r.problems.length)?`<p class="muted">${r.problems.slice(0,6).map(esc).join("<br>")}</p>`:"");
+        if(!r.processed || !r.remaining) break;
+      }
+      if(!processed) box.innerHTML=`<div class="result">No lead websites left to scan. Pull in some Google Maps leads first.</div>`;
+    }catch(e){ box.innerHTML=`<div class="result">${esc(e.message)}</div>`; }
+    finally{ btn.disabled=false; btn.textContent=orig; }
   };
 }
 
