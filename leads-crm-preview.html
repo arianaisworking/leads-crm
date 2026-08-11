@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ariana is Working — CRM</title>
+<title>PREVIEW · Ariana is Working — CRM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -228,12 +228,27 @@ function initials(n){const w=(n||"?").replace(/[^a-zA-Z ]/g,"").trim().split(/\s
 function avColor(l){ if(l.trade&&TRADE_COLOR[l.trade])return TRADE_COLOR[l.trade]; let h=0; for(const c of (l.name||"")) h=(h*31+c.charCodeAt(0))>>>0; return POOL[h%POOL.length]; }
 function avatar(l,sm){return `<span class="av${sm?' sm':''}" style="background:${avColor(l)}">${esc(initials(l.name))}</span>`;}
 
-async function api(path, opts){
-  const r = await fetch(API+path, opts);
-  const d = await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(d.error || ("Request failed ("+r.status+")"));
-  return d;
-}
+const _SAMPLE=[
+ {id:1,name:"Lone Star Roofing Co.",trade:"roofing",phone:"(214) 555-0142",email:null,website:"https://lonestarroof.com",address:"1820 Elm St",city:"Dallas",state:"Texas",postcode:"75201",status:"New",next_touch:null},
+ {id:2,name:"BlueFlame Plumbing",trade:"plumbing",phone:"(469) 555-0199",email:"hi@blueflameplumb.com",website:null,address:"77 Cedar Springs",city:"Dallas",state:"Texas",postcode:"75219",status:"Contacted",next_touch:"2026-08-12"},
+ {id:3,name:"Corradetti Electric",trade:"electrical",phone:"(972) 555-0110",email:null,website:"https://corradettielectric.com",address:"305 Main",city:"Plano",state:"Texas",postcode:"75074",status:"Qualified",next_touch:"2026-08-09"},
+ {id:4,name:"North TX Comfort HVAC",trade:"hvac",phone:"(817) 555-0173",email:"team@ntxcomfort.com",website:"https://ntxcomfort.com",address:"12 Airport Fwy",city:"Fort Worth",state:"Texas",postcode:"76102",status:"Client",next_touch:null},
+ {id:5,name:"Alamo Ridge Roofing",trade:"roofing",phone:"(210) 555-0128",email:null,website:null,address:"900 Broadway",city:"San Antonio",state:"Texas",postcode:"78215",status:"New",next_touch:null},
+ {id:6,name:"Bayou City Plumbers",trade:"plumbing",phone:"(713) 555-0164",email:"book@bayoucityplumb.com",website:"https://bayoucityplumb.com",address:"44 Heights Blvd",city:"Houston",state:"Texas",postcode:"77007",status:"Contacted",next_touch:"2026-08-08"},
+ {id:7,name:"Capitol Wiring & Electric",trade:"electrical",phone:"(512) 555-0187",email:null,website:null,address:"210 Congress Ave",city:"Austin",state:"Texas",postcode:"78701",status:"Client",next_touch:null},
+ {id:8,name:"Summit Air Solutions",trade:"hvac",phone:"(214) 555-0155",email:null,website:"https://summitair.co",address:"1500 Ross Ave",city:"Dallas",state:"Texas",postcode:"75202",status:"Qualified",next_touch:"2026-08-07"}];
+const _STATS={total:24,new:9,contacted:6,qualified:4,client:3,dead:2,due:3};
+async function api(path,opts){await new Promise(r=>setTimeout(r,50));
+ if(path.startsWith("/stats"))return _STATS;
+ if(path.startsWith("/leads")){const u=new URLSearchParams(path.split("?")[1]||"");let rows=_SAMPLE.slice();
+  if(u.get("status"))rows=rows.filter(r=>r.status===u.get("status"));
+  if(u.get("trade"))rows=rows.filter(r=>r.trade===u.get("trade"));
+  if(u.get("state"))rows=rows.filter(r=>r.state===u.get("state"));
+  if(u.get("due")==="1")rows=rows.filter(r=>r.next_touch&&r.next_touch<="2026-08-10");
+  if(u.get("q")){const q=u.get("q").toLowerCase();rows=rows.filter(r=>(r.name+r.city+(r.phone||"")+(r.email||"")).toLowerCase().includes(q));}
+  if(path.includes("/notes"))return [{id:1,body:"Left a voicemail — try Thursday AM.",created_at:"2026-08-08 14:20"}];
+  return rows;}
+ return {ok:true,inserted:0,found:0,skipped:0};}
 async function loadStats(){
   try{ state.stats = await api("/stats"); }catch(e){ state.stats={}; }
   const s=state.stats;
