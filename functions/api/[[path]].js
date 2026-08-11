@@ -48,6 +48,9 @@ const VERTICALS = {
   nail_salon:      { label: "Nail salon",      maps: ["nail salon"],                                                           yelp: "nail salons" },
   barber:          { label: "Barbershop",      maps: ["barbershop"],                                                           yelp: "barbers" },
   lash_brow:       { label: "Lash & brow",     maps: ["eyelash extensions", "microblading", "brow bar"],                       yelp: "eyelash service" },
+  tattoo:          { label: "Tattoo",          maps: ["tattoo shop", "tattoo studio"],                                         yelp: "tattoo" },
+  massage:         { label: "Massage",         maps: ["massage therapy", "massage spa"],                                       yelp: "massage" },
+  tanning:         { label: "Tanning salon",   maps: ["tanning salon", "spray tan"],                                           yelp: "tanning" },
   dental_implants: { label: "Dental implants", maps: ["dental implants", "all-on-4 dental implants", "dental implant center"], yelp: "cosmetic dentists" },
 };
 
