@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads CRM — Ariana is Working</title>
+<style>
+  :root{
+    --ink:#1b1420; --ink-soft:#5c5566; --line:#eae4ee; --line-2:#f3eff6;
+    --bg:#fbf9fc; --panel:#ffffff;
+    --pink:#e5397f; --pink-deep:#b81f5f; --pink-wash:#fdeef4;
+    --new:#8a7fb8; --contacted:#3f7fd1; --qualified:#c98a1e; --client:#1f9d6b; --dead:#9a9299;
+    --shadow:0 1px 2px rgba(27,20,32,.06),0 8px 24px rgba(27,20,32,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+  a{color:var(--pink-deep)}
+  button{font-family:inherit;cursor:pointer}
+  .app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+
+  /* Sidebar */
+  .side{background:var(--ink);color:#efe9f2;padding:22px 16px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:baseline;gap:8px;padding:2px 8px 18px}
+  .brand b{font-size:17px;letter-spacing:-.02em}
+  .brand span{font-size:11px;color:#b7a9c4;font-weight:600;text-transform:uppercase;letter-spacing:.12em}
+  .nav{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+  .nav button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:0;color:#cdc2d6;
+    padding:10px 12px;border-radius:10px;font-size:14px;font-weight:500}
+  .nav button .ct{margin-left:auto;font-size:11px;font-weight:700;background:#2f2536;color:#b7a9c4;border-radius:20px;padding:1px 8px;min-width:22px;text-align:center}
+  .nav button:hover{background:#2a2030;color:#fff}
+  .nav button.on{background:var(--pink);color:#fff}
+  .nav button.on .ct{background:rgba(255,255,255,.2);color:#fff}
+  .side .foot{margin-top:auto;font-size:11px;color:#8f8199;line-height:1.5;padding:0 8px}
+
+  /* Main */
+  .main{padding:26px 30px 60px;max-width:1200px}
+  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap}
+  .head h1{margin:0;font-size:23px;letter-spacing:-.02em}
+  .head p{margin:3px 0 0;color:var(--ink-soft);font-size:13px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:22px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .stat .n{font-size:24px;font-weight:700;letter-spacing:-.02em}
+  .stat .l{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  .stat.due .n{color:var(--pink-deep)}
+
+  .bar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  input,select{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none}
+  input:focus,select:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-wash)}
+  .search{flex:1;min-width:180px}
+  .btn{background:var(--pink);color:#fff;border:0;border-radius:10px;padding:9px 15px;font-size:13.5px;font-weight:600}
+  .btn:hover{background:var(--pink-deep)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--pink);color:var(--pink-deep)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);text-align:left;
+    padding:12px 14px;border-bottom:1px solid var(--line);background:var(--line-2);font-weight:700}
+  td{padding:12px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--pink-wash)}
+  .name{font-weight:600}
+  .sub{color:var(--ink-soft);font-size:12px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+  .pill.New{background:#efecf8;color:var(--new)} .pill.Contacted{background:#e8f1fb;color:var(--contacted)}
+  .pill.Qualified{background:#fbf1dd;color:var(--qualified)} .pill.Client{background:#e2f6ee;color:var(--client)}
+  .pill.Dead{background:#efedf0;color:var(--dead)}
+  .trade{font-size:11px;color:var(--ink-soft);text-transform:capitalize}
+
+  /* Pipeline */
+  .kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start}
+  .col{background:var(--line-2);border:1px solid var(--line);border-radius:var(--radius);padding:10px;min-height:120px}
+  .col h3{margin:2px 4px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between}
+  .col h3 .c{color:var(--ink-soft)}
+  .kcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:8px;cursor:grab}
+  .kcard:hover{border-color:var(--pink)}
+  .kcard .name{font-size:13px} .kcard .sub{margin-top:2px}
+  .col.drop{outline:2px dashed var(--pink);outline-offset:-4px}
+
+  /* Empty state */
+  .empty{text-align:center;padding:56px 24px;color:var(--ink-soft)}
+  .empty h2{color:var(--ink);font-size:18px;margin:0 0 6px}
+  .empty p{margin:0 auto 18px;max-width:420px;font-size:14px;line-height:1.5}
+
+  /* Drawer */
+  .scrim{position:fixed;inset:0;background:rgba(27,20,32,.34);opacity:0;pointer-events:none;transition:.18s}
+  .scrim.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:min(440px,92vw);background:#fff;box-shadow:-12px 0 40px rgba(27,20,32,.18);
+    transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1);overflow-y:auto;z-index:10}
+  .drawer.show{transform:translateX(0)}
+  .dhead{padding:22px 22px 16px;border-bottom:1px solid var(--line)}
+  .dhead .name{font-size:19px}
+  .dclose{position:absolute;top:16px;right:16px;background:var(--line-2);border:0;width:30px;height:30px;border-radius:8px;font-size:16px;color:var(--ink-soft)}
+  .dbody{padding:20px 22px;display:flex;flex-direction:column;gap:18px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+  .field .val{font-size:14px}
+  .drow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .notes-list{display:flex;flex-direction:column;gap:8px}
+  .note{background:var(--line-2);border-radius:10px;padding:10px 12px;font-size:13px}
+  .note .t{font-size:11px;color:var(--ink-soft);margin-top:4px}
+  .noteadd{display:flex;gap:8px}
+  .noteadd input{flex:1}
+  .del{background:none;border:0;color:var(--dead);font-size:12px;text-decoration:underline;padding:0;margin-top:6px}
+
+  /* Find Leads */
+  .finder{display:grid;grid-template-columns:1fr;gap:18px;max-width:560px}
+  .checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .check{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:#fff}
+  .check input{width:17px;height:17px;accent-color:var(--pink)}
+  .check.on{border-color:var(--pink);background:var(--pink-wash)}
+  .result{font-size:14px;padding:14px 16px;border-radius:10px;background:var(--pink-wash);color:var(--pink-deep);font-weight:600}
+  .muted{color:var(--ink-soft);font-size:12.5px;line-height:1.5}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media(max-width:760px){
+    .app{grid-template-columns:1fr}
+    .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;gap:4px;padding:14px}
+    .side .foot{display:none}.brand{width:100%;padding-bottom:8px}
+    .nav{flex-direction:row;flex-wrap:wrap}.nav button{width:auto}
+    .kanban{grid-template-columns:1fr;overflow-x:visible}
+    .main{padding:18px}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>Leads CRM</b><span>AIW</span></div>
+    <nav class="nav" id="nav">
+      <button data-view="database" class="on">Database <span class="ct" id="ct-database">0</span></button>
+      <button data-view="pipeline">Pipeline</button>
+      <button data-view="clients">Clients <span class="ct" id="ct-clients">0</span></button>
+      <button data-view="nurture">Nurture <span class="ct" id="ct-nurture">0</span></button>
+      <button data-view="finder">Find Leads</button>
+    </nav>
+    <div class="foot">Data from OpenStreetMap (ODbL). Outreach is subject to TCPA / DNC / CAN-SPAM.</div>
+  </aside>
+
+  <main class="main" id="main"></main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer"></div>
+
+<script>
+const API = "/api";
+const STATUSES = ["New","Contacted","Qualified","Client","Dead"];
+const TRADES = ["roofing","plumbing","electrical","hvac"];
+const STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
+
+let state = { view:"database", leads:[], stats:{}, q:"", fTrade:"", fState:"", fStatus:"" };
+
+const $ = (s,r=document)=>r.querySelector(s);
+const el = (h)=>{const t=document.createElement("template");t.innerHTML=h.trim();return t.content.firstElementChild;};
+const esc = (s)=> (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function api(path, opts){
+  const r = await fetch(API+path, opts);
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error || ("Request failed ("+r.status+")"));
+  return d;
+}
+
+async function loadStats(){
+  try{ state.stats = await api("/stats"); }catch(e){ state.stats={}; }
+  const s = state.stats;
+  $("#ct-database").textContent = s.total||0;
+  $("#ct-clients").textContent = s.client||0;
+  $("#ct-nurture").textContent = s.due||0;
+}
+
+async function loadLeads(params={}){
+  const qs = new URLSearchParams(params).toString();
+  state.leads = await api("/leads"+(qs?"?"+qs:""));
+}
+
+/* ---------- Views ---------- */
+function setView(v){
+  state.view=v;
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
+  render();
+}
+
+async function render(){
+  const m = $("#main");
+  await loadStats();
+  if(state.view==="database") return renderDatabase(m);
+  if(state.view==="pipeline") return renderPipeline(m);
+  if(state.view==="clients") return renderList(m,"Clients","Businesses you've marked as clients.",{status:"Client"});
+  if(state.view==="nurture") return renderList(m,"Nurture","Leads with a follow-up due today or earlier.",{due:"1"});
+  if(state.view==="finder") return renderFinder(m);
+}
+
+function statCards(){
+  const s=state.stats;
+  return `<div class="stats">
+    <div class="stat"><div class="n">${s.total||0}</div><div class="l">Total leads</div></div>
+    <div class="stat"><div class="n">${s.new||0}</div><div class="l">New</div></div>
+    <div class="stat"><div class="n">${s.contacted||0}</div><div class="l">Contacted</div></div>
+    <div class="stat"><div class="n">${s.qualified||0}</div><div class="l">Qualified</div></div>
+    <div class="stat"><div class="n">${s.client||0}</div><div class="l">Clients</div></div>
+    <div class="stat due"><div class="n">${s.due||0}</div><div class="l">Follow-ups due</div></div>
+  </div>`;
+}
+
+async function renderDatabase(m){
+  m.innerHTML = `
+    <div class="head"><div><h1>Database</h1><p>Every lead in your pipeline. Click a row to open it.</p></div>
+      <button class="btn ghost" id="addBtn">+ Add lead</button></div>
+    ${statCards()}
+    <div class="bar">
+      <input class="search" id="q" placeholder="Search name, city, phone, email…" value="${esc(state.q)}">
+      <select id="fTrade"><option value="">All trades</option>${TRADES.map(t=>`<option ${state.fTrade===t?"selected":""}>${t}</option>`).join("")}</select>
+      <select id="fState"><option value="">All states</option>${STATES.map(s=>`<option ${state.fState===s?"selected":""}>${s}</option>`).join("")}</select>
+      <select id="fStatus"><option value="">All statuses</option>${STATUSES.map(s=>`<option ${state.fStatus===s?"selected":""}>${s}</option>`).join("")}</select>
+    </div>
+    <div id="tbl"></div>`;
+
+  const draw = async ()=>{
+    const p={};
+    if(state.q)p.q=state.q; if(state.fTrade)p.trade=state.fTrade; if(state.fState)p.state=state.fState; if(state.fStatus)p.status=state.fStatus;
+    await loadLeads(p);
+    $("#tbl").innerHTML = leadTable(state.leads,
+      "No leads yet","Run <b>Find Leads</b> to pull skilled-trades businesses from OpenStreetMap into your database.");
+    wireRows();
+  };
+  let t; $("#q").oninput=(e)=>{state.q=e.target.value;clearTimeout(t);t=setTimeout(draw,250)};
+  $("#fTrade").onchange=(e)=>{state.fTrade=e.target.value;draw()};
+  $("#fState").onchange=(e)=>{state.fState=e.target.value;draw()};
+  $("#fStatus").onchange=(e)=>{state.fStatus=e.target.value;draw()};
+  $("#addBtn").onclick=openAdd;
+  await draw();
+}
+
+function leadTable(rows, emptyH, emptyP){
+  if(!rows.length) return `<div class="card"><div class="empty"><h2>${emptyH}</h2><p>${emptyP}</p>
+    <button class="btn" onclick="setView('finder')">Go to Find Leads</button></div></div>`;
+  return `<div class="card"><table><thead><tr>
+      <th>Business</th><th>Trade</th><th>Location</th><th>Contact</th><th>Status</th><th>Next touch</th>
+    </tr></thead><tbody>${rows.map(r=>`
+      <tr data-id="${r.id}">
+        <td><div class="name">${esc(r.name)}</div>${r.website?`<div class="sub">${esc(r.website.replace(/^https?:\/\//,""))}</div>`:""}</td>
+        <td><span class="trade">${esc(r.trade||"—")}</span></td>
+        <td>${esc([r.city,r.state].filter(Boolean).join(", ")||"—")}</td>
+        <td>${esc(r.phone||r.email||"—")}</td>
+        <td><span class="pill ${r.status}">${r.status}</span></td>
+        <td class="sub">${esc(r.next_touch||"—")}</td>
+      </tr>`).join("")}</tbody></table></div>`;
+}
+
+async function renderList(m,title,sub,params){
+  m.innerHTML=`<div class="head"><div><h1>${title}</h1><p>${sub}</p></div></div>${statCards()}<div id="tbl"></div>`;
+  await loadLeads(params);
+  const emptyMap = { Clients:["No clients yet","Open a lead and set its status to <b>Client</b> once they sign on."],
+                     Nurture:["Nothing due","Set a <b>next touch</b> date on a lead to schedule your follow-up."] };
+  const [eh,ep]=emptyMap[title]||["Nothing here",""];
+  $("#tbl").innerHTML=leadTable(state.leads,eh,ep);
+  wireRows();
+}
+
+async function renderPipeline(m){
+  m.innerHTML=`<div class="head"><div><h1>Pipeline</h1><p>Drag a card between stages to update its status.</p></div></div>${statCards()}<div class="kanban" id="kb"></div>`;
+  await loadLeads({});
+  const kb=$("#kb");
+  kb.innerHTML=STATUSES.map(s=>{
+    const rows=state.leads.filter(r=>r.status===s);
+    return `<div class="col" data-status="${s}"><h3>${s} <span class="c">${rows.length}</span></h3>
+      ${rows.map(r=>`<div class="kcard" draggable="true" data-id="${r.id}">
+        <div class="name">${esc(r.name)}</div>
+        <div class="sub">${esc(r.trade||"")}${r.city?" · "+esc(r.city):""}</div></div>`).join("")}</div>`;
+  }).join("");
+  // drag + click
+  let dragId=null;
+  kb.querySelectorAll(".kcard").forEach(c=>{
+    c.addEventListener("dragstart",()=>{dragId=c.dataset.id;});
+    c.addEventListener("click",()=>openLead(parseInt(c.dataset.id,10)));
+  });
+  kb.querySelectorAll(".col").forEach(col=>{
+    col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("drop");});
+    col.addEventListener("dragleave",()=>col.classList.remove("drop"));
+    col.addEventListener("drop",async e=>{
+      e.preventDefault();col.classList.remove("drop");
+      if(!dragId)return;
+      await api("/leads/"+dragId,{method:"PATCH",headers:{"content-type":"application/json"},
+        body:JSON.stringify({status:col.dataset.status, last_contacted:new Date().toISOString().slice(0,10)})});
+      dragId=null; renderPipeline(m);
+    });
+  });
+}
+
+function wireRows(){
+  document.querySelectorAll("tbody tr[data-id]").forEach(tr=>{
+    tr.onclick=()=>openLead(parseInt(tr.dataset.id,10));
+  });
+}
+
+/* ---------- Drawer ---------- */
+function closeDrawer(){$("#drawer").classList.remove("show");$("#scrim").classList.remove("show");}
+$("#scrim").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+
+async function openLead(id){
+  const lead = state.leads.find(l=>l.id===id) || await api("/leads?q="+id).then(a=>a.find(l=>l.id===id));
+  if(!lead)return;
+  const d=$("#drawer");
+  d.innerHTML=`
+    <button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead"><div class="name">${esc(lead.name)}</div>
+      <div class="sub">${esc([lead.trade,lead.city,lead.state].filter(Boolean).join(" · ")||"")}</div></div>
+    <div class="dbody">
+      <div class="drow">
+        <div class="field"><label>Status</label>
+          <select id="dStatus">${STATUSES.map(s=>`<option ${lead.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
+        <div class="field"><label>Next touch</label><input type="date" id="dNext" value="${esc(lead.next_touch||"")}"></div>
+      </div>
+      <div class="field"><label>Phone</label><input id="dPhone" value="${esc(lead.phone||"")}" placeholder="Add phone"></div>
+      <div class="field"><label>Email</label><input id="dEmail" value="${esc(lead.email||"")}" placeholder="Add email"></div>
+      <div class="field"><label>Website</label>
+        <div class="val">${lead.website?`<a href="${esc(lead.website)}" target="_blank" rel="noopener">${esc(lead.website.replace(/^https?:\/\//,""))}</a>`:'<span class="sub">—</span>'}</div></div>
+      <div class="field"><label>Address</label><div class="val sub">${esc([lead.address,lead.city,lead.state,lead.postcode].filter(Boolean).join(", ")||"—")}</div></div>
+      <button class="btn" id="dSave">Save changes</button>
+      <div class="field"><label>Notes</label><div class="notes-list" id="dNotes"><div class="sub">Loading…</div></div>
+        <div class="noteadd" style="margin-top:8px"><input id="dNoteInput" placeholder="Add a note…"><button class="btn ghost" id="dNoteBtn">Add</button></div></div>
+      <button class="del" id="dDelete">Delete this lead</button>
+    </div>`;
+  $("#scrim").classList.add("show"); d.classList.add("show");
+
+  $("#dSave").onclick=async()=>{
+    const body={status:$("#dStatus").value, next_touch:$("#dNext").value||null,
+      phone:$("#dPhone").value||null, email:$("#dEmail").value||null};
+    await api("/leads/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+    closeDrawer(); render();
+  };
+  $("#dDelete").onclick=async()=>{
+    if(!confirm("Delete "+lead.name+"? This can't be undone."))return;
+    await api("/leads/"+id,{method:"DELETE"}); closeDrawer(); render();
+  };
+  loadNotes(id);
+  $("#dNoteBtn").onclick=async()=>{
+    const v=$("#dNoteInput").value.trim(); if(!v)return;
+    await api("/leads/"+id+"/notes",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({body:v})});
+    $("#dNoteInput").value=""; loadNotes(id);
+  };
+}
+async function loadNotes(id){
+  const notes=await api("/leads/"+id+"/notes");
+  $("#dNotes").innerHTML = notes.length
+    ? notes.map(n=>`<div class="note">${esc(n.body)}<div class="t">${esc(n.created_at)}</div></div>`).join("")
+    : `<div class="sub">No notes yet.</div>`;
+}
+
+function openAdd(){
+  const d=$("#drawer");
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead"><div class="name">Add a lead</div><div class="sub">Manual entry</div></div>
+    <div class="dbody">
+      <div class="field"><label>Business name *</label><input id="aName" placeholder="Required"></div>
+      <div class="drow">
+        <div class="field"><label>Trade</label><select id="aTrade"><option value="">—</option>${TRADES.map(t=>`<option>${t}</option>`).join("")}</select></div>
+        <div class="field"><label>State</label><select id="aState"><option value="">—</option>${STATES.map(s=>`<option>${s}</option>`).join("")}</select></div>
+      </div>
+      <div class="field"><label>City</label><input id="aCity"></div>
+      <div class="field"><label>Phone</label><input id="aPhone"></div>
+      <div class="field"><label>Email</label><input id="aEmail"></div>
+      <div class="field"><label>Website</label><input id="aWebsite"></div>
+      <button class="btn" id="aSave">Add lead</button>
+    </div>`;
+  $("#scrim").classList.add("show"); d.classList.add("show");
+  $("#aSave").onclick=async()=>{
+    const name=$("#aName").value.trim(); if(!name){$("#aName").focus();return;}
+    await api("/leads",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
+      name, trade:$("#aTrade").value||null, state:$("#aState").value||null, city:$("#aCity").value||null,
+      phone:$("#aPhone").value||null, email:$("#aEmail").value||null, website:$("#aWebsite").value||null})});
+    closeDrawer(); render();
+  };
+}
+
+/* ---------- Find Leads ---------- */
+function renderFinder(m){
+  m.innerHTML=`<div class="head"><div><h1>Find Leads</h1><p>Pull real skilled-trades businesses from OpenStreetMap into your database.</p></div></div>
+    <div class="finder">
+      <div class="field"><label>Trades</label><div class="checks" id="checks">
+        ${TRADES.map(t=>`<label class="check" data-t="${t}"><input type="checkbox" value="${t}"><span style="text-transform:capitalize">${t}</span></label>`).join("")}
+      </div></div>
+      <div class="field"><label>State</label>
+        <select id="scState"><option value="">Choose a state…</option>${STATES.map(s=>`<option>${s}</option>`).join("")}</select></div>
+      <button class="btn" id="scGo">Find leads</button>
+      <div id="scResult"></div>
+      <p class="muted">Only named businesses are imported, and duplicates are skipped automatically. Coverage depends on what's mapped in OpenStreetMap — dense metros return the most. This finds businesses; it doesn't verify licensing or contact consent.</p>
+    </div>`;
+  document.querySelectorAll("#checks .check").forEach(c=>{
+    const cb=c.querySelector("input");
+    c.onclick=(e)=>{ if(e.target!==cb)cb.checked=!cb.checked; c.classList.toggle("on",cb.checked); };
+  });
+  $("#scGo").onclick=async()=>{
+    const trades=[...document.querySelectorAll("#checks input:checked")].map(i=>i.value);
+    const stateName=$("#scState").value;
+    const box=$("#scResult");
+    if(!trades.length){box.innerHTML=`<div class="result">Pick at least one trade.</div>`;return;}
+    if(!stateName){box.innerHTML=`<div class="result">Choose a state.</div>`;return;}
+    const btn=$("#scGo"); btn.disabled=true; const orig=btn.textContent;
+    btn.innerHTML=`<span class="spin"></span>Searching ${esc(stateName)}…`;
+    box.innerHTML=`<p class="muted">Querying OpenStreetMap — a statewide search can take up to a minute.</p>`;
+    try{
+      const r=await api("/scrape",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({trades,state:stateName})});
+      box.innerHTML=`<div class="result">Added ${r.inserted} new lead${r.inserted===1?"":"s"} from ${esc(stateName)} · ${r.found} found · ${r.skipped} skipped (duplicates or unnamed).</div>`;
+    }catch(e){ box.innerHTML=`<div class="result">${esc(e.message)}</div>`; }
+    finally{ btn.disabled=false; btn.textContent=orig; loadStats(); }
+  };
+}
+
+/* ---------- Boot ---------- */
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+render();
+</script>
+</body>
+</html>
