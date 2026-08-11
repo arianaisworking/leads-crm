@@ -163,6 +163,8 @@
   .check span{text-transform:capitalize;font-weight:600}
   .check input{width:17px;height:17px;accent-color:var(--pink)}
   .check.on{border-color:var(--pink);background:var(--pink-wash)}
+  .vgroup{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 8px}
+  #checks .vgroup:first-child{margin-top:0}
   .check.disabled{opacity:.5;cursor:not-allowed}
   .check.disabled span::after{content:" · paid source";font-size:10px;font-weight:600;color:var(--ink-soft);text-transform:none}
   .result{font-family:var(--serif);font-size:17px;font-weight:600;padding:16px 18px;border-radius:14px;background:var(--pink-wash);color:var(--pink-deep)}
@@ -228,14 +230,23 @@ const API = "/api";
 const SPOTIFY_PLAYLIST = "6DmrkQbB4S6zYnm49QkhpJ";
 const STATUSES = ["New","Contacted","Qualified","Client","Dead"];
 const VERTICALS=[
-  {key:"roofing",label:"Roofing",osm:true,phrases:1},
-  {key:"plumbing",label:"Plumbing",osm:true,phrases:1},
-  {key:"electrical",label:"Electrical",osm:true,phrases:1},
-  {key:"hvac",label:"HVAC",osm:true,phrases:1},
-  {key:"windows",label:"Windows",osm:false,phrases:2},
-  {key:"medspa",label:"Med spa",osm:false,phrases:3},
-  {key:"dental_implants",label:"Dental implants",osm:false,phrases:3},
+  {key:"roofing",label:"Roofing",group:"Home services",osm:true,phrases:1},
+  {key:"plumbing",label:"Plumbing",group:"Home services",osm:true,phrases:1},
+  {key:"electrical",label:"Electrical",group:"Home services",osm:true,phrases:1},
+  {key:"hvac",label:"HVAC",group:"Home services",osm:true,phrases:1},
+  {key:"windows",label:"Windows",group:"Home services",osm:false,phrases:2},
+  {key:"solar",label:"Solar",group:"Home services",osm:false,phrases:3},
+  {key:"remodeling",label:"Remodeling",group:"Home services",osm:false,phrases:3},
+  {key:"pool",label:"Pool builders",group:"Home services",osm:false,phrases:3},
+  {key:"pest",label:"Pest control",group:"Home services",osm:false,phrases:2},
+  {key:"medspa",label:"Med spa",group:"Beauty & aesthetics",osm:false,phrases:3},
+  {key:"hair_salon",label:"Hair salon",group:"Beauty & aesthetics",osm:false,phrases:1},
+  {key:"nail_salon",label:"Nail salon",group:"Beauty & aesthetics",osm:false,phrases:1},
+  {key:"barber",label:"Barbershop",group:"Beauty & aesthetics",osm:false,phrases:1},
+  {key:"lash_brow",label:"Lash & brow",group:"Beauty & aesthetics",osm:false,phrases:3},
+  {key:"dental_implants",label:"Dental implants",group:"Dental & medical",osm:false,phrases:3},
 ];
+const GROUPS=[...new Set(VERTICALS.map(v=>v.group))];
 const TRADES=VERTICALS.map(v=>v.key);
 const vLabel=k=>{const v=VERTICALS.find(x=>x.key===k);return v?v.label:(k||"—");};
 const SIGNAL_LABEL={financing:"💳 Financing",free_consult:"🎁 Free consult",multi_location:"📍 Multi-location"};
@@ -308,7 +319,7 @@ async function renderDatabase(m){
     + statCards()
     + `<div class="bar">
         <input class="search" id="q" placeholder="Search name, city, phone, email…" value="${esc(state.q)}">
-        <select id="fTrade"><option value="">All verticals</option>${VERTICALS.map(v=>`<option value="${v.key}" ${state.fTrade===v.key?"selected":""}>${v.label}</option>`).join("")}</select>
+        <select id="fTrade"><option value="">All verticals</option>${GROUPS.map(g=>`<optgroup label="${g}">${VERTICALS.filter(v=>v.group===g).map(v=>`<option value="${v.key}" ${state.fTrade===v.key?"selected":""}>${v.label}</option>`).join("")}</optgroup>`).join("")}</select>
         <select id="fState"><option value="">All states</option>${STATES.map(s=>`<option ${state.fState===s?"selected":""}>${s}</option>`).join("")}</select>
         <select id="fStatus"><option value="">All statuses</option>${STATUSES.map(s=>`<option ${state.fStatus===s?"selected":""}>${s}</option>`).join("")}</select>
         <select id="fReviews"><option value="">Any reviews</option>${[25,50,100,250,500].map(n=>`<option value="${n}" ${String(state.fReviews)===String(n)?"selected":""}>${n}+ reviews</option>`).join("")}</select>
@@ -457,9 +468,12 @@ function openAdd(){
 
 function renderFinder(m){
   const SEL=new Set(); // checked vertical keys, persisted across source switches
-  const vertHTML=(srcVal)=>VERTICALS.map(v=>{
-    const dis = srcVal==="osm" && !v.osm; // paid-only vertical, greyed under free OSM
-    return `<label class="check${SEL.has(v.key)&&!dis?" on":""}${dis?" disabled":""}" data-t="${v.key}"${dis?' title="Switch to Google Maps or Yelp to search this"':''}><input type="checkbox" value="${v.key}"${SEL.has(v.key)&&!dis?" checked":""}${dis?" disabled":""}><span>${v.label}</span></label>`;
+  const vertHTML=(srcVal)=>GROUPS.map(g=>{
+    const items=VERTICALS.filter(v=>v.group===g).map(v=>{
+      const dis = srcVal==="osm" && !v.osm; // paid-only vertical, greyed under free OSM
+      return `<label class="check${SEL.has(v.key)&&!dis?" on":""}${dis?" disabled":""}" data-t="${v.key}"${dis?' title="Switch to Google Maps or Yelp to search this"':''}><input type="checkbox" value="${v.key}"${SEL.has(v.key)&&!dis?" checked":""}${dis?" disabled":""}><span>${v.label}</span></label>`;
+    }).join("");
+    return `<div class="vgroup">${g}</div><div class="checks">${items}</div>`;
   }).join("");
 
   m.innerHTML=head("Fresh leads","Find Leads")
@@ -472,7 +486,7 @@ function renderFinder(m){
           <label class="check" data-src="yelp"><input type="radio" name="src" value="yelp"><span>Yelp · uses credits</span></label>
         </div></div>
 
-        <div class="field"><label>Verticals</label><div class="checks" id="checks">${vertHTML("osm")}</div>
+        <div class="field"><label>Verticals</label><div id="checks">${vertHTML("osm")}</div>
           <p class="muted" id="vNote" style="margin:6px 0 0"></p></div>
 
         <div class="field"><label>State</label>

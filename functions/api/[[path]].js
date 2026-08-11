@@ -39,7 +39,15 @@ const VERTICALS = {
   electrical:      { label: "Electrical",      maps: ["electrician"],                                                          yelp: "electricians" },
   hvac:            { label: "HVAC",            maps: ["hvac contractor"],                                                      yelp: "hvac" },
   windows:         { label: "Windows",         maps: ["window replacement", "window installation"],                            yelp: "windows installation" },
+  solar:           { label: "Solar",           maps: ["solar installer", "solar panel installation", "solar energy company"],  yelp: "solar installation" },
+  remodeling:      { label: "Remodeling",      maps: ["kitchen remodeling", "bathroom remodeling", "home remodeling contractor"], yelp: "remodeling" },
+  pool:            { label: "Pool builders",   maps: ["swimming pool contractor", "pool builder", "pool installation"],        yelp: "pool installers" },
+  pest:            { label: "Pest control",    maps: ["pest control", "exterminator"],                                         yelp: "pest control" },
   medspa:          { label: "Med spa",         maps: ["med spa", "botox", "laser hair removal"],                               yelp: "medical spas" },
+  hair_salon:      { label: "Hair salon",      maps: ["hair salon"],                                                           yelp: "hair salons" },
+  nail_salon:      { label: "Nail salon",      maps: ["nail salon"],                                                           yelp: "nail salons" },
+  barber:          { label: "Barbershop",      maps: ["barbershop"],                                                           yelp: "barbers" },
+  lash_brow:       { label: "Lash & brow",     maps: ["eyelash extensions", "microblading", "brow bar"],                       yelp: "eyelash service" },
   dental_implants: { label: "Dental implants", maps: ["dental implants", "all-on-4 dental implants", "dental implant center"], yelp: "cosmetic dentists" },
 };
 
