@@ -163,6 +163,8 @@
   .check span{text-transform:capitalize;font-weight:600}
   .check input{width:17px;height:17px;accent-color:var(--pink)}
   .check.on{border-color:var(--pink);background:var(--pink-wash)}
+  .check.disabled{opacity:.5;cursor:not-allowed}
+  .check.disabled span::after{content:" · paid source";font-size:10px;font-weight:600;color:var(--ink-soft);text-transform:none}
   .result{font-family:var(--serif);font-size:17px;font-weight:600;padding:16px 18px;border-radius:14px;background:var(--pink-wash);color:var(--pink-deep)}
   .muted{color:var(--ink-soft);font-size:12.5px;line-height:1.6}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:8px}
@@ -455,9 +457,10 @@ function openAdd(){
 
 function renderFinder(m){
   const SEL=new Set(); // checked vertical keys, persisted across source switches
-  const vertHTML=(srcVal)=>VERTICALS
-    .filter(v=>srcVal==="osm"?v.osm:true)
-    .map(v=>`<label class="check${SEL.has(v.key)?" on":""}" data-t="${v.key}"><input type="checkbox" value="${v.key}"${SEL.has(v.key)?" checked":""}><span>${v.label}</span></label>`).join("");
+  const vertHTML=(srcVal)=>VERTICALS.map(v=>{
+    const dis = srcVal==="osm" && !v.osm; // paid-only vertical, greyed under free OSM
+    return `<label class="check${SEL.has(v.key)&&!dis?" on":""}${dis?" disabled":""}" data-t="${v.key}"${dis?' title="Switch to Google Maps or Yelp to search this"':''}><input type="checkbox" value="${v.key}"${SEL.has(v.key)&&!dis?" checked":""}${dis?" disabled":""}><span>${v.label}</span></label>`;
+  }).join("");
 
   m.innerHTML=head("Fresh leads","Find Leads")
     + `<div class="finder">
@@ -520,6 +523,7 @@ function renderFinder(m){
   }
   function wireChecks(){
     document.querySelectorAll("#checks .check").forEach(c=>{const cb=c.querySelector("input");
+      if(cb.disabled){ c.onclick=null; return; }
       c.onclick=(e)=>{ if(e.target!==cb)cb.checked=!cb.checked; c.classList.toggle("on",cb.checked); readSel(); cost(); };});
   }
   function renderChecks(){
