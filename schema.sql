@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS leads (
   postcode TEXT,
   lat REAL,
   lon REAL,
+  rating REAL,
+  reviews INTEGER,
   source TEXT DEFAULT 'openstreetmap',
   source_id TEXT UNIQUE,
   website_live INTEGER,
@@ -36,3 +38,9 @@ CREATE TABLE IF NOT EXISTS notes (
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_state ON leads(state);
 CREATE INDEX IF NOT EXISTS idx_leads_next_touch ON leads(next_touch);
+
+-- Added for the Google Maps (SerpApi) finder. Already applied to the live
+-- aiw-crm database; only needed if you rebuild from scratch.
+-- ALTER TABLE leads ADD COLUMN rating REAL;
+-- ALTER TABLE leads ADD COLUMN reviews INTEGER;
+CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);

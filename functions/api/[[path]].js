@@ -29,6 +29,32 @@ const STATE_ISO = {
   "Wisconsin": "US-WI", "Wyoming": "US-WY", "District of Columbia": "US-DC",
 };
 
+// Search phrase used against Google Maps for each trade.
+const GMAPS_QUERIES = {
+  roofing: "roofing contractor",
+  plumbing: "plumber",
+  electrical: "electrician",
+  hvac: "hvac contractor",
+};
+
+// Ceiling on SerpApi calls per run, so one click can't burn a month of credits.
+const MAX_GMAPS_SEARCHES = 12;
+
+// "5024 Westbank Expy, Marrero, LA 70072" -> street / city / state / postcode
+function splitUsAddress(addr) {
+  const empty = { street: null, city: null, state: null, postcode: null };
+  if (!addr) return empty;
+  const parts = String(addr).split(",").map((s) => s.trim()).filter(Boolean);
+  let street = null, city = null, st = null, postcode = null;
+  if (parts.length) {
+    const m = parts[parts.length - 1].match(/^([A-Z]{2})(?:\s+(\d{5}(?:-\d{4})?))?$/);
+    if (m) { st = m[1]; postcode = m[2] || null; parts.pop(); }
+  }
+  if (parts.length) city = parts.pop();
+  if (parts.length) street = parts.join(", ");
+  return { street, city, state: st, postcode };
+}
+
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -225,6 +251,115 @@ export async function onRequest(context) {
       }
 
       return json({ found: elements.length, inserted, skipped, state, trades });
+    }
+
+    // POST /api/scrape-google  { trades:[...], cities:"Dallas, Plano", state:"Texas", pages:1 }
+    // Pulls Google Maps businesses through SerpApi. Needs env.SERPAPI_KEY.
+    if (parts[0] === "scrape-google" && method === "POST") {
+      const key = env.SERPAPI_KEY;
+      if (!key) {
+        return err(
+          "SERPAPI_KEY isn't set. Add it under Cloudflare Pages → Settings → Variables and secrets (type: Secret), then redeploy.",
+          500
+        );
+      }
+
+      const b = await request.json();
+      const state = (b.state || "").trim();
+      if (!STATE_ISO[state]) return err(`Unknown state "${state}". Use a full US state name.`);
+      const abbr = STATE_ISO[state].slice(3);
+
+      const trades = (b.trades || []).filter((t) => GMAPS_QUERIES[t]);
+      if (!trades.length) return err("Pick at least one trade: roofing, plumbing, electrical, hvac.");
+
+      const cities = String(b.cities || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!cities.length) return err("Enter at least one city or metro to search.");
+
+      const pages = Math.min(Math.max(parseInt(b.pages, 10) || 1, 1), 5);
+
+      const jobs = [];
+      for (const t of trades) for (const c of cities) for (let p = 0; p < pages; p++)
+        jobs.push({ trade: t, city: c, start: p * 20 });
+
+      if (jobs.length > MAX_GMAPS_SEARCHES) {
+        return err(
+          `That's ${jobs.length} SerpApi searches in one run, and each one costs a credit. Keep it to ${MAX_GMAPS_SEARCHES} or fewer by trimming cities, trades, or depth.`
+        );
+      }
+
+      let found = 0, inserted = 0, skipped = 0, searches = 0;
+      const problems = [];
+
+      for (const job of jobs) {
+        const u = new URL("https://serpapi.com/search.json");
+        u.searchParams.set("engine", "google_maps");
+        u.searchParams.set("type", "search");
+        u.searchParams.set("google_domain", "google.com");
+        u.searchParams.set("hl", "en");
+        u.searchParams.set("q", `${GMAPS_QUERIES[job.trade]} in ${job.city}, ${abbr}`);
+        if (job.start) u.searchParams.set("start", String(job.start));
+        u.searchParams.set("api_key", key);
+
+        let data;
+        try {
+          const resp = await fetch(u.toString());
+          data = await resp.json();
+          if (!resp.ok) {
+            problems.push(`${job.trade} · ${job.city}: SerpApi returned ${resp.status}${data && data.error ? ` — ${data.error}` : ""}`);
+            continue;
+          }
+        } catch (e) {
+          problems.push(`${job.trade} · ${job.city}: ${e.message}`);
+          continue;
+        }
+
+        if (data.error) { problems.push(`${job.trade} · ${job.city}: ${data.error}`); continue; }
+        searches++;
+
+        const results = data.local_results || (data.place_results ? [data.place_results] : []);
+        found += results.length;
+
+        const stmts = [];
+        for (const r of results) {
+          if (!r.title || !r.place_id) { skipped++; continue; }
+          const a = splitUsAddress(r.address);
+          stmts.push(
+            db.prepare(`
+              INSERT OR IGNORE INTO leads
+                (name, trade, phone, email, website, address, city, state, postcode,
+                 lat, lon, rating, reviews, source, source_id, status)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            `).bind(
+              r.title,
+              job.trade,
+              r.phone || null,
+              null,
+              r.website || null,
+              a.street,
+              a.city || job.city,
+              state,
+              a.postcode,
+              r.gps_coordinates?.latitude ?? null,
+              r.gps_coordinates?.longitude ?? null,
+              typeof r.rating === "number" ? r.rating : null,
+              typeof r.reviews === "number" ? r.reviews : null,
+              "google_maps",
+              `gmaps/${r.place_id}`,
+              "New"
+            )
+          );
+        }
+
+        if (stmts.length) {
+          const res = await db.batch(stmts);
+          for (const x of res) { if (x.meta.changes > 0) inserted++; else skipped++; }
+        }
+      }
+
+      return json({ source: "google_maps", searches, found, inserted, skipped, state, trades, cities, problems });
     }
 
     return err("Not found", 404);
