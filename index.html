@@ -257,6 +257,13 @@
   .auto-act{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line-2);font-size:12.5px}
   .auto-act:first-child{border-top:none} .auto-kind{font-weight:700;min-width:120px;text-transform:capitalize}
   .auto-time{margin-left:auto;color:var(--ink-soft);font-size:11px;white-space:nowrap}
+  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+  .status-row{display:flex;align-items:center;gap:9px;font-size:13px}
+  .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .status-dot.ok{background:var(--client);box-shadow:0 0 0 3px rgba(31,157,107,.15)}
+  .status-dot.no{background:#cfcad4}
+  .status-miss{font-size:10.5px;color:var(--ink-soft);background:var(--line-2);padding:1px 7px;border-radius:20px}
+  @media(max-width:760px){.status-grid{grid-template-columns:1fr}}
   @media(max-width:760px){.auto-grid{grid-template-columns:1fr}}
   /* ---- Client setup editor ---- */
   .cs-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
@@ -379,6 +386,33 @@ const VERTICALS=[
 ];
 const GROUPS=[...new Set(VERTICALS.map(v=>v.group))];
 const TRADES=VERTICALS.map(v=>v.key);
+const BRAIN_TEMPLATES=[
+ {key:"medspa",label:"Med spa / aesthetics",brain:{tone:"Warm, personable and reassuring — like a favorite front-desk coordinator. Friendly, never pushy.",
+   services:[{name:"Botox",price:"$12/unit",duration:30},{name:"Hydrafacial",price:"$199",duration:60},{name:"Lip filler",price:"$650",duration:45}],
+   add_ons:[{name:"Brow wax",price:"$20"},{name:"LED light therapy",price:"$40"}],booking_hours:{start:9,end:18},
+   never_say:["guaranteed results","medical advice","before-and-after promises"],escalate_if:["asks about a bad reaction","mentions a refund","medical condition"],
+   sequence:["Hi {first_name}, it's {business}. You reached out a while back about treatments and we never got you booked — still interested? Reply STOP to opt out.","Hi {first_name}, following up from {business} — happy to find you a time this week if you're still thinking about it. Reply STOP to opt out.","Last note from {business}, {first_name} — want me to hold a spot for you? No worries if the timing's off. Reply STOP to opt out."]}},
+ {key:"salon",label:"Hair / nails / beauty salon",brain:{tone:"Friendly, upbeat and welcoming. Casual and warm.",
+   services:[{name:"Women's cut & style",price:"$65",duration:60},{name:"Full highlights",price:"$160",duration:120},{name:"Gel manicure",price:"$45",duration:45}],
+   add_ons:[{name:"Deep-conditioning treatment",price:"$25"},{name:"Brow tint",price:"$20"}],booking_hours:{start:9,end:19},
+   never_say:["guaranteed color results"],escalate_if:["complaint about past service","refund"],
+   sequence:["Hi {first_name}, it's {business}! You reached out about an appointment a while back — still want to get in? Reply STOP to opt out.","Hey {first_name}, {business} here — we've got openings this week if you're due for a refresh. Reply STOP to opt out.","Last check-in from {business}, {first_name} — want me to save you a spot? Reply STOP to opt out."]}},
+ {key:"roofing",label:"Roofing",brain:{tone:"Direct, professional and factual. No fluff, no hype. Respect their time.",
+   services:[{name:"Free roof inspection",price:"Free",duration:45},{name:"Roof repair",price:"Quoted after inspection",duration:0},{name:"Full replacement",price:"Quoted after inspection",duration:0}],
+   add_ons:[{name:"Gutter inspection",price:"Free with roof inspection"}],booking_hours:{start:7,end:18},
+   never_say:["guaranteed insurance approval","final price before inspection"],escalate_if:["insurance claim dispute","storm damage emergency","attorney"],
+   sequence:["Hi {first_name}, this is {business}. You asked about your roof a while back — still want that free inspection? Reply STOP to opt out.","{first_name}, following up from {business} on your roof. We can get an inspector out this week — want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a slot for the free inspection if you still need it. Reply STOP to opt out."]}},
+ {key:"hvac",label:"HVAC",brain:{tone:"Direct, helpful and factual. Clear and to the point.",
+   services:[{name:"Diagnostic / service call",price:"$89",duration:60},{name:"AC tune-up",price:"$129",duration:60},{name:"Replacement estimate",price:"Free",duration:60}],
+   add_ons:[{name:"Duct-cleaning quote",price:"Free"},{name:"Maintenance membership",price:"$16/mo"}],booking_hours:{start:7,end:19},
+   never_say:["final repair price sight-unseen","guaranteed same-day"],escalate_if:["no heat or no cool emergency","warranty dispute"],
+   sequence:["Hi {first_name}, this is {business}. You reached out about your system a while back — still need it looked at? Reply STOP to opt out.","{first_name}, {business} here — we can get a tech out this week. Want me to grab you a time? Reply STOP to opt out.","Last check-in from {business}, {first_name} — want me to hold a service slot? Reply STOP to opt out."]}},
+ {key:"dental_implants",label:"Dental implants",brain:{tone:"Reassuring, professional and caring. Calm and confidence-building.",
+   services:[{name:"Free implant consultation",price:"Free",duration:45},{name:"Single implant",price:"Quoted at consult",duration:0},{name:"All-on-4",price:"Quoted at consult",duration:0}],
+   add_ons:[{name:"3D imaging",price:"Included with consult"},{name:"Financing pre-check",price:"Free"}],booking_hours:{start:8,end:17},
+   never_say:["dental advice","guaranteed outcome","final price before consult"],escalate_if:["pain or emergency","complaint","refund","attorney"],
+   sequence:["Hi {first_name}, this is {business}. You asked about implants a while back — still want that free consultation? Reply STOP to opt out.","{first_name}, following up from {business} — we can get you in this week to go over options and financing. Want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a consult spot whenever you're ready. Reply STOP to opt out."]}}
+];
 const vLabel=k=>{const v=VERTICALS.find(x=>x.key===k);return v?v.label:(k||"—");};
 const SIGNAL_LABEL={financing:"💳 Financing",free_consult:"🎁 Free consult",multi_location:"📍 Multi-location"};
 function signalBadges(s){return (s||"").split(",").filter(Boolean).map(x=>`<span class="sig">${SIGNAL_LABEL[x]||x}</span>`).join("");}
@@ -820,6 +854,7 @@ async function renderAutomations(m){
     + `<div id="auStats" class="stats cv-stats"></div>
        <div class="auto-grid" id="auGrid"></div>
        <div class="enroll-box" id="auEnroll"></div>
+       <div class="cv-card" style="margin-top:16px"><h4>Connection check</h4><div id="auStatusBody" class="muted">Loading…</div></div>
        <div class="cv-card" style="margin-top:16px"><h4>Recent activity</h4><div id="auActivity"><p class="muted" style="margin:0">Loading…</p></div></div>`;
 
   try{ const cr=await api("/tenant/clients"); state.convClients=cr.clients||[]; }catch(e){}
@@ -911,6 +946,13 @@ async function renderAutomations(m){
     catch(e){ box.innerHTML=`<div class="result">${esc(e.message)}</div>`; }
   };
 
+  // Connection check
+  try{ const st=await api("/status"); const c=st.checks||{};
+    const label={DB:"D1 database (DB binding)",ANTHROPIC_API_KEY:"AI · Anthropic key",TWILIO_ACCOUNT_SID:"Twilio · account SID",TWILIO_AUTH_TOKEN:"Twilio · auth token",CRON_KEY:"Cron key",GOOGLE_CLIENT_ID:"Google Calendar · client ID",GOOGLE_CLIENT_SECRET:"Google Calendar · secret",RESEND_API_KEY:"Email · Resend key",FROM_EMAIL:"Email · from address"};
+    const order=["DB","ANTHROPIC_API_KEY","TWILIO_ACCOUNT_SID","TWILIO_AUTH_TOKEN","CRON_KEY","GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","RESEND_API_KEY","FROM_EMAIL"];
+    $("#auStatusBody").innerHTML=`<div class="status-grid">${order.map(k=>`<div class="status-row"><span class="status-dot ${c[k]?"ok":"no"}"></span>${label[k]||k}${c[k]?"":` <span class="status-miss">not set</span>`}</div>`).join("")}</div>`;
+  }catch(e){ $("#auStatusBody").textContent="Couldn't load status: "+e.message; }
+
   // Recent activity
   try{ const ev=await api("/tenant/"+state.convClient+"/events");
     const rows=ev.events||[];
@@ -929,6 +971,7 @@ async function renderClientSetup(m, clientId){
   try{ data=await api("/tenant/"+clientId+"/profile"); }catch(e){ $("#csWrap").innerHTML=`<div class="result">${esc(e.message)}</div>`; return; }
   const c=data.client||{}; const brain=c.business_brain||{};
   let services=Array.isArray(brain.services)?brain.services.slice():[];
+  let addOns=Array.isArray(brain.add_ons)?brain.add_ons.slice():[];
   let sequence=Array.isArray(brain.sequence)?brain.sequence.slice():[];
   const days=new Set(Array.isArray(brain.booking_days)?brain.booking_days:[1,2,3,4,5]);
   const F=(label,id,val,ph)=>`<label class="cs-f"><span>${label}</span><input id="${id}" value="${esc(val||"")}" placeholder="${esc(ph||"")}"></label>`;
@@ -948,10 +991,15 @@ async function renderClientSetup(m, clientId){
     </div></div>
 
     <div class="cs-card"><h3>Business brain <span class="cs-hint">— the only facts the AI is allowed to state</span></h3>
-      <label class="cs-f"><span>About</span><textarea id="cs_about" rows="2">${esc(brain.about||"")}</textarea></label>
+      <label class="cs-f"><span>Start from an industry template (sets tone, services, add-ons &amp; sequence — then tweak)</span>
+        <select id="cs_tpl"><option value="">Choose an industry…</option>${BRAIN_TEMPLATES.map(t=>`<option value="${t.key}">${t.label}</option>`).join("")}</select></label>
+      <label class="cs-f" style="margin-top:12px"><span>About</span><textarea id="cs_about" rows="2">${esc(brain.about||"")}</textarea></label>
       <div class="cs-sub">Services &amp; prices</div>
       <div id="cs_services"></div>
       <button class="btn ghost sm" id="cs_addService">+ Add service</button>
+      <div class="cs-sub">Add-on services <span class="cs-hint" style="text-transform:none;letter-spacing:0">— the AI may offer one when a lead is booking</span></div>
+      <div id="cs_addons"></div>
+      <button class="btn ghost sm" id="cs_addAddon">+ Add add-on</button>
       <div class="cs-grid" style="margin-top:12px">
         <label class="cs-f"><span>Open from (hour, 0–23)</span><input id="cs_hstart" type="number" min="0" max="23" value="${brain.booking_hours&&brain.booking_hours.start!=null?brain.booking_hours.start:9}"></label>
         <label class="cs-f"><span>Open until (hour, 0–23)</span><input id="cs_hend" type="number" min="0" max="23" value="${brain.booking_hours&&brain.booking_hours.end!=null?brain.booking_hours.end:17}"></label>
@@ -1008,9 +1056,32 @@ async function renderClientSetup(m, clientId){
       row.querySelector("textarea").oninput=(e)=>{ sequence[i]=e.target.value; };
       row.querySelector(".cs-x").onclick=()=>{ sequence.splice(i,1); drawSequence(); };});
   }
-  drawServices(); drawSequence();
+  function drawAddOns(){
+    $("#cs_addons").innerHTML=addOns.length?addOns.map((s,i)=>`
+      <div class="cs-row" data-i="${i}">
+        <input data-k="name" value="${esc(s.name||"")}" placeholder="Add-on (e.g. Brow wax)">
+        <input data-k="price" value="${esc(s.price||"")}" placeholder="$ price">
+        <button class="cs-x" title="Remove">✕</button>
+      </div>`).join(""):`<p class="muted" style="margin:4px 0">No add-ons.</p>`;
+    $("#cs_addons").querySelectorAll(".cs-row").forEach(row=>{const i=Number(row.dataset.i);
+      row.querySelectorAll("input").forEach(inp=>inp.oninput=()=>{ addOns[i][inp.dataset.k]=inp.value; });
+      row.querySelector(".cs-x").onclick=()=>{ addOns.splice(i,1); drawAddOns(); };});
+  }
+  drawServices(); drawAddOns(); drawSequence();
   $("#cs_addService").onclick=()=>{ services.push({name:"",price:"",duration:null}); drawServices(); };
+  $("#cs_addAddon").onclick=()=>{ addOns.push({name:"",price:""}); drawAddOns(); };
   $("#cs_addStep").onclick=()=>{ sequence.push("Hi {first_name}, this is {business}. Reply STOP to opt out."); drawSequence(); };
+  function applyTemplate(t){ const tb=t.brain;
+    $("#cs_tone").value=tb.tone||"";
+    if(tb.booking_hours){ $("#cs_hstart").value=tb.booking_hours.start; $("#cs_hend").value=tb.booking_hours.end; }
+    $("#cs_never").value=(tb.never_say||[]).join("\n");
+    $("#cs_escalate").value=(tb.escalate_if||[]).join("\n");
+    services=(tb.services||[]).map(s=>({...s})); drawServices();
+    addOns=(tb.add_ons||[]).map(s=>({...s})); drawAddOns();
+    sequence=(tb.sequence||[]).slice(); drawSequence();
+    toast(t.label+" template applied — tweak as needed.");
+  }
+  $("#cs_tpl").onchange=(e)=>{ const t=BRAIN_TEMPLATES.find(x=>x.key===e.target.value); if(t)applyTemplate(t); e.target.value=""; };
 
   async function loadLogins(){
     try{ const r=await api("/auth/users"); const mine=(r.users||[]).filter(u=>u.role==="client"&&u.client_id===clientId);
@@ -1062,6 +1133,7 @@ async function renderClientSetup(m, clientId){
     const brainOut={
       about:$("#cs_about").value.trim()||undefined,
       services:services.filter(s=>s.name),
+      add_ons:addOns.filter(a=>a.name),
       booking_hours:{start:parseInt($("#cs_hstart").value,10)||9,end:parseInt($("#cs_hend").value,10)||17},
       booking_days:selDays,
       location:$("#cs_location").value.trim()||undefined,
