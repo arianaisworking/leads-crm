@@ -287,7 +287,20 @@
   .who{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:10px 4px 8px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft)}
   .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cs-login{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:13px}
-  body.portal #nav{display:none}
+  /* ---- Client portal: white-label professional theme ---- */
+  body.portal{--bg:#f5f7fa;--panel:#ffffff;--pink:#3b5bdb;--pink-deep:#31489f;--pink-wash:#eef2ff;--ink:#1f2733;--ink-soft:#5b6472;--line:#e6e9ef;--line-2:#f2f4f8;--client:#1f9d6b;--shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06)}
+  body.portal .side{background:#0f2033;border-right:none}
+  body.portal .side::before{display:none}
+  body.portal .logo,body.portal .player,body.portal .side .foot,body.portal #nav{display:none}
+  body.portal .who{color:#9fb0c4;border-top-color:rgba(255,255,255,.12)}
+  body.portal .who .btn.ghost{color:#dbe3ee;border-color:rgba(255,255,255,.22);background:transparent}
+  body.portal .who .btn.ghost:hover{background:rgba(255,255,255,.08)}
+  .portal-brand{display:none}
+  body.portal .portal-brand{display:block;font-weight:800;font-size:19px;color:#fff;line-height:1.2}
+  body.portal .portal-brand span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7f93ad;margin-top:5px}
+  .portal-nav{margin-top:22px}
+  .pn-item{padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:600;color:#c9d3e0}
+  .pn-item.on{background:rgba(255,255,255,.10);color:#fff}
 </style>
 </head>
 <body>
@@ -1219,12 +1232,16 @@ function installLogout(){
 }
 async function renderClientPortal(){
   const cid=window.ME.client_id; const m=$("#view");
-  const hero=document.getElementById("hero"); if(hero) hero.innerHTML=`<h1 style="margin:0">Your results</h1><p>Live reporting from Ariana is Working.</p>`;
   m.innerHTML=`<div id="cpWrap"><p class="muted">Loading your reports…</p></div>`;
-  let stats={},threads=[],events=[];
+  let stats={},threads=[],events=[],cinfo={};
   try{ stats=await api("/tenant/"+cid+"/stats"); }catch(e){}
-  try{ const inb=await api("/tenant/"+cid+"/inbox"); threads=inb.threads||[]; }catch(e){}
+  try{ const inb=await api("/tenant/"+cid+"/inbox"); threads=inb.threads||[]; cinfo=inb.client||{}; }catch(e){}
   try{ const ev=await api("/tenant/"+cid+"/events"); events=ev.events||[]; }catch(e){}
+  const bizName=cinfo.name||"Your business";
+  const side=document.querySelector(".side");
+  if(side && !document.getElementById("portalBrand"))
+    side.insertAdjacentHTML("afterbegin", `<div id="portalBrand" class="portal-brand">${esc(bizName)}<span>Client Portal</span><div class="portal-nav"><div class="pn-item on">Dashboard</div></div></div>`);
+  const hero=document.getElementById("hero"); if(hero) hero.innerHTML=`<h1 style="margin:0">Your results</h1><p style="color:var(--ink-soft);margin:6px 0 0">Live reporting${cinfo.name?" for "+esc(cinfo.name):""}.</p>`;
   const f=stats.funnel||{}; const led=stats.daily||[];
   const sent=led.reduce((a,d)=>a+(d.sent||0),0), recv=led.reduce((a,d)=>a+(d.received||0),0), booked=led.reduce((a,d)=>a+(d.booked||0),0);
   const replyRate=sent?Math.round((recv/sent)*100):0;
@@ -1242,7 +1259,7 @@ async function boot(){
   if(me.needsBootstrap){ authScreen("bootstrap"); return; }
   if(!me.authenticated){ authScreen("login"); return; }
   window.ME=me.user; installLogout();
-  if(me.user.role==="client"){ document.body.classList.add("portal"); renderHero(); return renderClientPortal(); }
+  if(me.user.role==="client"){ document.body.classList.add("portal"); return renderClientPortal(); }
   renderHero(); render();
 }
 boot();
