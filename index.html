@@ -275,6 +275,18 @@
   /* ---- Controlled scroll on long lists ---- */
   #tbl .card{max-height:70vh;overflow:auto}
   .kanban .col{max-height:72vh;overflow-y:auto}
+  /* ---- Auth ---- */
+  #authScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+  .auth-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:28px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px}
+  .auth-logo{font-weight:800;color:var(--pink);letter-spacing:.04em;font-size:12px}
+  .auth-card h2{margin:0}
+  .auth-card input{padding:11px 13px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  .auth-card .btn{margin-top:4px}
+  .auth-err{color:var(--pink-deep);font-size:13px;min-height:16px}
+  .who{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px 10px;font-size:12px;color:var(--ink-soft)}
+  .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cs-login{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+  body.portal #nav{display:none}
 </style>
 </head>
 <body>
@@ -908,6 +920,15 @@ async function renderClientSetup(m, clientId){
       <button class="btn ghost sm" id="cs_addStep">+ Add step</button>
     </div>
 
+    <div class="cs-card"><h3>Client portal login <span class="cs-hint">— lets this client log in to see their reports (read-only)</span></h3>
+      <div id="cs_logins" class="muted" style="margin-bottom:10px">Loading…</div>
+      <div class="cs-grid">
+        <label class="cs-f"><span>Email</span><input id="cs_lemail" type="email" placeholder="frontdesk@client.com"></label>
+        <label class="cs-f"><span>Temporary password</span><input id="cs_lpass" placeholder="at least 8 characters"></label>
+      </div>
+      <button class="btn ghost sm" id="cs_addLogin" style="margin-top:10px">Create portal login</button>
+    </div>
+
     <div class="cs-actions"><button class="btn" id="cs_save">Save client setup</button><span id="cs_msg" class="muted"></span></div>`;
 
   function drawServices(){
@@ -932,6 +953,21 @@ async function renderClientSetup(m, clientId){
   drawServices(); drawSequence();
   $("#cs_addService").onclick=()=>{ services.push({name:"",price:"",duration:null}); drawServices(); };
   $("#cs_addStep").onclick=()=>{ sequence.push("Hi {first_name}, this is {business}. Reply STOP to opt out."); drawSequence(); };
+
+  async function loadLogins(){
+    try{ const r=await api("/auth/users"); const mine=(r.users||[]).filter(u=>u.role==="client"&&u.client_id===clientId);
+      $("#cs_logins").innerHTML= mine.length? mine.map(u=>`<div class="cs-login"><span>${esc(u.email)}</span><button class="cs-x" data-uid="${u.id}" title="Remove">✕</button></div>`).join("") : "No portal logins yet.";
+      $("#cs_logins").querySelectorAll(".cs-x").forEach(b=>b.onclick=async()=>{ if(!confirm("Remove this login?"))return; try{ await api("/auth/users/"+b.dataset.uid,{method:"DELETE"}); loadLogins(); }catch(e){ alert(e.message); } });
+    }catch(e){ $("#cs_logins").textContent=e.message; }
+  }
+  loadLogins();
+  $("#cs_addLogin").onclick=async()=>{
+    const email=$("#cs_lemail").value.trim(), password=$("#cs_lpass").value;
+    if(!email||password.length<8){ alert("Enter an email and a password of at least 8 characters."); return; }
+    try{ await api("/auth/users",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password,role:"client",client_id:clientId})});
+      $("#cs_lemail").value=""; $("#cs_lpass").value=""; toast("Portal login created."); loadLogins(); }
+    catch(e){ alert(e.message); }
+  };
 
   $("#cs_save").onclick=async()=>{
     const selDays=[...document.querySelectorAll("#cs_days input:checked")].map(i=>Number(i.value));
@@ -1144,7 +1180,69 @@ async function togglePlayback(){
   if(b)b.onclick=togglePlayback;
   if(v)v.onclick=(e)=>{if(!e.target.closest(".playbtn"))togglePlayback();};})();
 (async function(){const t=await getToken();if(t){loadSDK();}else{window._useEmbed=true;if(window._IFrameAPI)buildEmbed();}})();
-renderHero(); render();
+
+// ---- Auth gate ----
+async function authMe(){ try{ const r=await fetch("/api/auth/me"); const d=await r.json().catch(()=>({})); return {status:r.status, ...d}; }catch(e){ return {authenticated:false}; } }
+function authScreen(mode){
+  const isBoot=mode==="bootstrap";
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="authScreen"><form id="authForm" class="auth-card">
+      <div class="auth-logo">ARIANA IS WORKING · CRM</div>
+      <h2>${isBoot?"Create your admin login":"Sign in"}</h2>
+      <p class="muted" style="margin:0 0 4px">${isBoot?"This first account becomes your team admin.":"Team & client access."}</p>
+      ${isBoot?`<input id="authName" placeholder="Your name">`:""}
+      <input id="authEmail" type="email" placeholder="Email" autocomplete="username" required>
+      <input id="authPass" type="password" placeholder="Password" autocomplete="${isBoot?"new-password":"current-password"}" required>
+      <button class="btn" type="submit">${isBoot?"Create admin":"Sign in"}</button>
+      <div id="authErr" class="auth-err"></div>
+    </form></div>`);
+  document.getElementById("authForm").onsubmit=async(e)=>{
+    e.preventDefault();
+    const email=document.getElementById("authEmail").value.trim(), password=document.getElementById("authPass").value;
+    const name=isBoot?document.getElementById("authName").value.trim():undefined;
+    const err=document.getElementById("authErr"); err.textContent="Working…";
+    try{ const r=await fetch("/api/auth/"+(isBoot?"bootstrap":"login"),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password,name})});
+      const d=await r.json().catch(()=>({})); if(!r.ok){ err.textContent=d.error||"Sign-in failed."; return; } location.reload();
+    }catch(ex){ err.textContent=ex.message; }
+  };
+}
+function installLogout(){
+  const foot=document.querySelector(".side .foot")||document.querySelector(".side");
+  if(foot && !document.getElementById("logoutBtn")){
+    const who=window.ME?(window.ME.name||window.ME.email||""):"";
+    foot.insertAdjacentHTML("afterbegin", `<div class="who"><span>${esc(who)}</span><button id="logoutBtn" class="btn ghost sm">Log out</button></div>`);
+    document.getElementById("logoutBtn").onclick=async()=>{ await fetch("/api/auth/logout",{method:"POST"}); location.reload(); };
+  }
+}
+async function renderClientPortal(){
+  const cid=window.ME.client_id; const m=$("#view");
+  const hero=document.getElementById("hero"); if(hero) hero.innerHTML=`<h1 style="margin:0">Your results</h1><p>Live reporting from Ariana is Working.</p>`;
+  m.innerHTML=`<div id="cpWrap"><p class="muted">Loading your reports…</p></div>`;
+  let stats={},threads=[],events=[];
+  try{ stats=await api("/tenant/"+cid+"/stats"); }catch(e){}
+  try{ const inb=await api("/tenant/"+cid+"/inbox"); threads=inb.threads||[]; }catch(e){}
+  try{ const ev=await api("/tenant/"+cid+"/events"); events=ev.events||[]; }catch(e){}
+  const f=stats.funnel||{}; const led=stats.daily||[];
+  const sent=led.reduce((a,d)=>a+(d.sent||0),0), recv=led.reduce((a,d)=>a+(d.received||0),0), booked=led.reduce((a,d)=>a+(d.booked||0),0);
+  const replyRate=sent?Math.round((recv/sent)*100):0;
+  $("#cpWrap").innerHTML=`
+    <div class="stats cv-stats">
+      <div class="stat"><div class="n">${f.total||threads.length||0}</div><div class="l">Conversations</div></div>
+      <div class="stat"><div class="n">${f.booked||booked||0}</div><div class="l">Appointments</div></div>
+      <div class="stat"><div class="n">${replyRate}%</div><div class="l">Reply rate</div></div>
+      <div class="stat"><div class="n">${sent}</div><div class="l">Messages sent</div></div>
+    </div>
+    <div class="cv-card" style="margin-top:16px"><h4>Recent activity</h4><div>${events.length?events.map(e=>`<div class="auto-act"><span class="auto-kind">${esc(e.kind||"")}</span><span class="auto-time">${esc(shortTime(e.created_at))}</span></div>`).join(""):`<p class="muted" style="margin:0">No activity yet.</p>`}</div></div>`;
+}
+async function boot(){
+  const me=await authMe();
+  if(me.needsBootstrap){ authScreen("bootstrap"); return; }
+  if(!me.authenticated){ authScreen("login"); return; }
+  window.ME=me.user; installLogout();
+  if(me.user.role==="client"){ document.body.classList.add("portal"); renderHero(); return renderClientPortal(); }
+  renderHero(); render();
+}
+boot();
 </script>
 <script async src="https://open.spotify.com/embed/iframe-api/v1"></script>
 </body>
