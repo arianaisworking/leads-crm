@@ -89,6 +89,41 @@ export async function onRequest(context) {
       if (sent.ok) sentCount++;
     }
 
+    // --- Appointment lifecycle: 24h + 2h reminders, then a missed-appointment
+    // nudge. Gated clients get drafts; autonomous clients get sends. ---
+    if (client.reminders_enabled) {
+      const { results: appts } = await db.prepare(
+        `SELECT * FROM conversations
+          WHERE client_id=? AND status='booked' AND ai_paused=0 AND appointment_at IS NOT NULL`
+      ).bind(client.id).all();
+      for (const conv of appts || []) {
+        if (await isOptedOut(db, client.id, conv.phone)) continue;
+        let appt = new Date(conv.appointment_at);
+        if (isNaN(appt)) appt = new Date((conv.appointment_at || '').replace(' ', 'T') + 'Z');
+        if (isNaN(appt)) continue;
+        const hrs = (appt.getTime() - Date.now()) / 3600000;
+        const first = (conv.contact_name || '').split(' ')[0] || 'there';
+        const when = fmtAppt(appt, client.timezone);
+        let body = null, mark = null;
+        if (hrs > 2 && hrs <= 24 && !conv.reminder_24_sent) { body = `Reminder from ${client.name}: ${first}, your appointment is ${when}. Reply C to confirm or R to reschedule.`; mark = 'reminder_24_sent'; }
+        else if (hrs > 0 && hrs <= 2 && !conv.reminder_2_sent) { body = `See you soon, ${first} — your ${client.name} appointment is ${when}.`; mark = 'reminder_2_sent'; }
+        else if (hrs <= -2 && !conv.post_appt_handled) { body = `Hi ${first}, we missed you at ${client.name} today. Want to grab another time? Reply YES and I'll find one.`; mark = 'post_appt_handled'; }
+        if (!body) continue;
+
+        if (gated) {
+          await db.prepare(`INSERT INTO messages (id, conversation_id, client_id, direction, body, author, status)
+              VALUES (?,?,?,?,?, 'ai', 'draft')`).bind(uid('ms_'), conv.id, client.id, 'out', body).run();
+        } else {
+          const sent = await sendSms(env, client, conv.phone, body);
+          await db.prepare(`INSERT INTO messages (id, conversation_id, client_id, direction, body, author, twilio_sid, status, error_code, segments)
+              VALUES (?,?,?,?,?, 'ai', ?,?,?,?)`)
+            .bind(uid('ms_'), conv.id, client.id, 'out', body, sent.sid || null, sent.ok ? sent.status : 'failed', sent.code || null, sent.segments || null).run();
+          if (sent.ok) sentCount++;
+        }
+        await db.prepare(`UPDATE conversations SET ${mark}=1${mark === 'post_appt_handled' ? ", status='active'" : ''} WHERE id=?`).bind(conv.id).run();
+      }
+    }
+
     if (sentCount) {
       await db.prepare('INSERT OR IGNORE INTO send_ledger (client_id, day) VALUES (?,?)')
         .bind(client.id, day).run();
@@ -128,6 +163,11 @@ function nextSendAt(client, step) {
   if (step >= gaps.length) return null;
   const d = new Date(Date.now() + gaps[step] * 24 * 60 * 60 * 1000);
   return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function fmtAppt(d, tz) {
+  try { return d.toLocaleString('en-US', { timeZone: tz || 'America/Chicago', weekday: 'short', hour: 'numeric', minute: '2-digit' }); }
+  catch { return d.toISOString().slice(0, 16).replace('T', ' '); }
 }
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }

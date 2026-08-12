@@ -10,7 +10,7 @@
 //   POST /api/tenant/:clientId/pause             { paused: true|false }  KILL SWITCH
 //   GET  /api/tenant/:clientId/stats
 
-import { getClientById, scoped, json, uid, logEvent, bumpLedger } from '../../_lib/tenant.js';
+import { getClientById, scoped, json, uid, logEvent, bumpLedger, toE164, isOptedOut } from '../../_lib/tenant.js';
 import { sendSms } from '../../_lib/twilio.js';
 
 export async function onRequest(context) {
@@ -23,7 +23,7 @@ export async function onRequest(context) {
   if (seg[0] === 'clients') {
     if (method === 'GET') {
       const { results } = await db.prepare(
-        `SELECT c.id, c.name, c.status, c.door, c.brand_color, c.paused, c.auto_send, c.twilio_number,
+        `SELECT c.id, c.name, c.status, c.door, c.brand_color, c.paused, c.auto_send, c.reminders_enabled, c.twilio_number,
                 (SELECT COUNT(*) FROM conversations v WHERE v.client_id=c.id AND v.needs_human=1) AS needs_human,
                 (SELECT COUNT(*) FROM conversations v WHERE v.client_id=c.id AND v.status='booked') AS booked
            FROM clients c ORDER BY c.name`
@@ -156,11 +156,62 @@ export async function onRequest(context) {
     const sets = [], vals = [];
     if ('auto_send' in b) { sets.push('auto_send=?'); vals.push(b.auto_send ? 1 : 0); }
     if ('paused' in b) { sets.push('paused=?'); vals.push(b.paused ? 1 : 0); }
+    if ('reminders_enabled' in b) { sets.push('reminders_enabled=?'); vals.push(b.reminders_enabled ? 1 : 0); }
     if (!sets.length) return json({ error: 'no settings provided' }, 400);
     vals.push(clientId);
     await db.prepare(`UPDATE clients SET ${sets.join(', ')}, updated_at=datetime('now') WHERE id=?`).bind(...vals).run();
     if ('auto_send' in b) await logEvent(db, clientId, 'settings', null, { auto_send: !!b.auto_send });
     return json({ ok: true });
+  }
+
+  // Enroll leads into the reactivation cadence. Creates a conversation per lead
+  // and drops the FIRST message in as a DRAFT for review — bulk enroll never
+  // auto-sends, even for autonomous clients. Later steps follow the client's mode.
+  if (action === 'enroll' && method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    let leads;
+    if (Array.isArray(b.lead_ids) && b.lead_ids.length) {
+      const qs = b.lead_ids.map(() => '?').join(',');
+      const r = await db.prepare(`SELECT id, name, phone FROM leads WHERE client_id=? AND id IN (${qs})`).bind(clientId, ...b.lead_ids).all();
+      leads = r.results || [];
+    } else {
+      const wh = ['client_id=?', "phone IS NOT NULL", "phone != ''"]; const vals = [clientId];
+      if (b.status) { wh.push('status=?'); vals.push(b.status); }
+      if (b.trade) { wh.push('trade=?'); vals.push(b.trade); }
+      const lim = Math.min(Math.max(parseInt(b.limit, 10) || 200, 1), 500);
+      const r = await db.prepare(`SELECT id, name, phone FROM leads WHERE ${wh.join(' AND ')} LIMIT ${lim}`).bind(...vals).all();
+      leads = r.results || [];
+    }
+
+    const brain = safeParse(client.business_brain) || {};
+    const seq = (brain.sequence && brain.sequence.length) ? brain.sequence : defaultSequence(client.name);
+
+    let enrolled = 0, skipped_no_phone = 0, skipped_existing = 0, skipped_optout = 0;
+    for (const lead of leads) {
+      const phone = toE164(lead.phone);
+      if (!phone) { skipped_no_phone++; continue; }
+      if (await isOptedOut(db, clientId, phone)) { skipped_optout++; continue; }
+      const exists = await db.prepare('SELECT id FROM conversations WHERE client_id=? AND phone=?').bind(clientId, phone).first();
+      if (exists) { skipped_existing++; continue; }
+
+      const convId = uid('cv_');
+      await db.prepare(`INSERT INTO conversations
+          (id, client_id, lead_id, phone, contact_name, status, step, next_send_at, context_note)
+          VALUES (?,?,?,?,?, 'queued', 1, ?, 'Enrolled in the reactivation sequence.')`)
+        .bind(convId, clientId, lead.id, phone, lead.name || null, gapAt(1)).run();
+      await db.prepare(`INSERT INTO messages (id, conversation_id, client_id, direction, body, author, status)
+          VALUES (?,?,?,?,?, 'ai', 'draft')`)
+        .bind(uid('ms_'), convId, clientId, 'out', renderTpl(seq[0], lead.name, client.name)).run();
+      enrolled++;
+    }
+    await logEvent(db, clientId, 'campaign_start', null, { enrolled, considered: leads.length });
+    return json({ ok: true, enrolled, skipped_no_phone, skipped_existing, skipped_optout, considered: leads.length });
+  }
+
+  if (action === 'events' && method === 'GET') {
+    const { results } = await scoped(db,
+      'SELECT kind, detail, created_at FROM events WHERE client_id = ? ORDER BY created_at DESC LIMIT 20', clientId).all();
+    return json({ events: results || [] });
   }
 
   if (action === 'stats' && method === 'GET') {
@@ -181,6 +232,25 @@ export async function onRequest(context) {
 function publicClient(c) {
   const { twilio_subaccount_token, google_refresh_token, ...safe } = c;
   return safe;
+}
+
+function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
+function renderTpl(tpl, name, business) {
+  const first = (name || '').split(' ')[0] || 'there';
+  return String(tpl || '').replace(/\{first_name\}/g, first).replace(/\{business\}/g, business);
+}
+function defaultSequence(business) {
+  return [
+    `Hi {first_name}, this is ${business}. You reached out to us a while back and we never got you scheduled. Still interested? Reply STOP to opt out.`,
+    `Hi {first_name} - following up from ${business}. Happy to find you a time this week if you're still looking. Reply STOP to opt out.`,
+    `Last note from ${business}, {first_name} - if the timing isn't right no worries at all. Want me to hold a spot? Reply STOP to opt out.`,
+  ];
+}
+// step 1 -> +2 days from now, as a SQLite datetime string.
+function gapAt(step) {
+  const gaps = [0, 2, 4];
+  const d = new Date(Date.now() + (gaps[step] || 4) * 86400000);
+  return d.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 function hasTwilio(client, env) {

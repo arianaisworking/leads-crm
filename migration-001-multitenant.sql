@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS clients (
   daily_send_cap              INTEGER DEFAULT 100,
   paused                      INTEGER DEFAULT 1,  -- KILL SWITCH. starts paused on purpose.
   auto_send                   INTEGER DEFAULT 0,  -- 0 = approval-gated (AI drafts, human approves); 1 = autonomous
+  reminders_enabled           INTEGER DEFAULT 1,  -- 24h/2h appointment reminders + missed-appointment nudge
 
   created_at                  TEXT DEFAULT (datetime('now')),
   updated_at                  TEXT DEFAULT (datetime('now'))
@@ -93,6 +94,9 @@ CREATE TABLE IF NOT EXISTS conversations (
   last_inbound_at   TEXT,
   last_outbound_at  TEXT,
   next_send_at      TEXT,                       -- the poor-man's queue
+  reminder_24_sent  INTEGER DEFAULT 0,
+  reminder_2_sent   INTEGER DEFAULT 0,
+  post_appt_handled INTEGER DEFAULT 0,
   created_at        TEXT DEFAULT (datetime('now'))
 );
 

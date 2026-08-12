@@ -233,6 +233,27 @@
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:99}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   @media(max-width:1100px){.cv-wrap{grid-template-columns:1fr}.cv-side{order:3}}
+  /* ---- Automations ---- */
+  .auto-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .auto-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .auto-card.is-off{opacity:.72}
+  .auto-card-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .auto-t{font-weight:700;font-size:14.5px}
+  .auto-d{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft);line-height:1.45}
+  .auto-badge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap}
+  .auto-badge.on{background:#e6f6ef;color:var(--client)} .auto-badge.off{background:var(--line-2);color:var(--ink-soft)}
+  .auto-badge.soon{background:#eef0ff;color:#5560d0}
+  .auto-sw{width:42px;height:24px;border-radius:20px;border:none;background:#d8d2de;position:relative;cursor:pointer;transition:.15s;flex-shrink:0}
+  .auto-sw.on{background:var(--client)} .auto-sw span{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
+  .auto-sw.on span{left:21px}
+  .enroll-box{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .enroll-box h4{margin:0 0 4px;font-size:13px}
+  .enroll-warn{background:#fbf3e4;color:#8a6a2a;font-size:12px;border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.45}
+  .enroll-row{display:flex;gap:8px} .enroll-row input{width:90px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  .auto-act{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line-2);font-size:12.5px}
+  .auto-act:first-child{border-top:none} .auto-kind{font-weight:700;min-width:120px;text-transform:capitalize}
+  .auto-time{margin-left:auto;color:var(--ink-soft);font-size:11px;white-space:nowrap}
+  @media(max-width:760px){.auto-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -245,6 +266,7 @@
       <button data-view="clients"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 6M16.5 13.5a5.5 5.5 0 0 1 4 5.5"/></svg></span> Clients <span class="ct" id="ct-clients">0</span></button>
       <button data-view="nurture"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7-1.3C19 11.5 12 20 12 20Z"/></svg></span> Nurture <span class="ct" id="ct-nurture">0</span></button>
       <button data-view="conversations"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span> Conversations <span class="ct" id="ct-convos">0</span></button>
+      <button data-view="automations"><span class="ic"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg></span> Automations</button>
       <button data-view="finder"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></span> Find Leads</button>
     </nav>
     <div class="player">
@@ -357,6 +379,7 @@ async function render(){
   if(state.view==="clients") return renderList(m,"Clients","Won","The businesses you've won.",{status:"Client"});
   if(state.view==="nurture") return renderList(m,"Nurture","Follow up","Follow-ups due today or overdue.",{due:"1"});
   if(state.view==="conversations") return renderConversations(m);
+  if(state.view==="automations") return renderAutomations(m);
   if(state.view==="finder") return renderFinder(m);
 }
 
@@ -700,6 +723,109 @@ async function renderConversations(m){
   async function doHandoff(id){ try{ await act("/handoff/"+id,{}); toast("Flagged for a human."); await loadInbox(); }catch(e){ alert(e.message); } }
 
   await loadInbox();
+}
+
+async function renderAutomations(m){
+  m.innerHTML = head("The engine","Automations",
+    `<div class="cv-top">
+       <select id="auClient" class="cv-client"></select>
+       <span class="cv-live"><span class="dot"></span>LIVE</span>
+       <button class="btn ghost" id="auMode"></button>
+       <button class="btn ghost" id="auKill">⏻ Kill switch</button>
+     </div>`)
+    + `<div id="auStats" class="stats cv-stats"></div>
+       <div class="auto-grid" id="auGrid"></div>
+       <div class="enroll-box" id="auEnroll"></div>
+       <div class="cv-card" style="margin-top:16px"><h4>Recent activity</h4><div id="auActivity"><p class="muted" style="margin:0">Loading…</p></div></div>`;
+
+  try{ const cr=await api("/tenant/clients"); state.convClients=cr.clients||[]; }catch(e){}
+  if(!state.convClients.length) state.convClients=[{id:"networkboss",name:"The Network Boss (house)"}];
+  if(!state.convClients.find(c=>c.id===state.convClient)) state.convClient=state.convClients[0].id;
+  const curClient=()=>state.convClients.find(c=>c.id===state.convClient)||{};
+  const asel=$("#auClient");
+  asel.innerHTML=state.convClients.map(c=>`<option value="${c.id}" ${c.id===state.convClient?"selected":""}>${esc(c.name)}</option>`).join("");
+  asel.onchange=(e)=>{ state.convClient=e.target.value; renderAutomations(m); };
+
+  function renderMode(){ const b=$("#auMode"); if(!b)return; const on=!!curClient().auto_send;
+    b.innerHTML=on?"⚡ Autonomous":"✋ Approval mode"; b.classList.toggle("mode-on",on);
+    b.title=on?"AI sends automatically.":"AI drafts; you approve each send."; }
+  async function setSetting(patch){ await api("/tenant/"+state.convClient+"/settings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(patch)}); Object.assign(curClient(),patch); }
+  $("#auMode").onclick=async()=>{ const c=curClient(); const next=c.auto_send?0:1;
+    if(next===1 && !confirm("Switch “"+(c.name||state.convClient)+"” to AUTONOMOUS? The AI will send without your approval."))return;
+    try{ await setSetting({auto_send:next}); renderMode(); toast(next?"Autonomous.":"Approval mode."); }catch(e){ alert(e.message); } };
+  $("#auKill").onclick=async()=>{ if(!confirm("Pause ALL outbound for this client?"))return;
+    try{ await api("/tenant/"+state.convClient+"/pause",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({paused:true})}); toast("Paused."); }catch(e){ alert(e.message); } };
+  renderMode();
+
+  // Stats
+  let funnel={}, threads=[];
+  try{ const s=await api("/tenant/"+state.convClient+"/stats"); funnel=s.funnel||{}; }catch(e){}
+  try{ const inb=await api("/tenant/"+state.convClient+"/inbox"); threads=inb.threads||[]; }catch(e){}
+  const drafts=threads.filter(x=>x.last_message_status==="draft").length;
+  $("#ct-convos").textContent=threads.filter(x=>x.status!=="closed"&&x.status!=="opted_out").length;
+  $("#auStats").innerHTML=`
+    <div class="stat"><div class="n">${funnel.total||threads.length||0}</div><div class="l">Conversations</div></div>
+    <div class="stat"><div class="n">${drafts}</div><div class="l">AI drafts</div></div>
+    <div class="stat"><div class="n">${funnel.booked||0}</div><div class="l">Booked</div></div>
+    <div class="stat due"><div class="n">${funnel.needs_human||0}</div><div class="l">Needs you</div></div>`;
+
+  // Automation cards
+  function pill(on){ return `<span class="auto-badge ${on?"on":"off"}">${on?"On":"Off"}</span>`; }
+  function drawGrid(){
+    const c=curClient();
+    const gated=!c.auto_send;
+    const cards=[
+      {t:"New lead response",d:"Drafts a reply the moment a lead texts in.",state:gated?"Approval":"Autonomous",on:true,kind:"mode"},
+      {t:"No-response follow-up",d:"Nudges leads who go quiet, on a polite 0/2/4-day cadence.",on:true,kind:"info"},
+      {t:"Appointment reminders",d:"Sends 24-hour and 2-hour reminders before each booking.",on:!!c.reminders_enabled,kind:"toggle",key:"reminders_enabled"},
+      {t:"Missed appointment",d:"Reaches out to rebook after a no-show.",on:!!c.reminders_enabled,kind:"tie"},
+      {t:"Long-term nurture",d:"Monthly check-ins for leads not ready yet.",on:false,kind:"soon"},
+      {t:"Human handoff",d:"Alerts you for angry, legal, medical, or uncertain replies. Always on.",on:true,kind:"safety"},
+    ];
+    $("#auGrid").innerHTML=cards.map((k,i)=>`
+      <div class="auto-card ${k.on?"":"is-off"}" data-i="${i}">
+        <div class="auto-card-h"><span class="auto-t">${k.t}</span>${
+          k.kind==="toggle"?`<button class="auto-sw ${k.on?"on":""}" data-key="${k.key}"><span></span></button>`
+          :k.kind==="soon"?`<span class="auto-badge soon">Coming soon</span>`
+          :k.kind==="mode"?`<span class="auto-badge on">${k.state}</span>`
+          :pill(k.on)}</div>
+        <p class="auto-d">${k.d}</p>
+      </div>`).join("");
+    document.querySelectorAll("#auGrid .auto-sw").forEach(sw=>sw.onclick=async()=>{
+      const c=curClient(); const next=c.reminders_enabled?0:1;
+      try{ await setSetting({reminders_enabled:next}); drawGrid(); toast(next?"Reminders on.":"Reminders off."); }catch(e){ alert(e.message); }
+    });
+  }
+  drawGrid();
+
+  // Enroll
+  $("#auEnroll").innerHTML=`
+    <h4>Enroll leads into the follow-up sequence</h4>
+    <p class="muted" style="margin:2px 0 10px">Creates a conversation for each lead with a phone number and drops the first message in as a <b>draft</b> to review — enrolling never auto-sends, even in Autonomous mode.</p>
+    <div class="enroll-warn">⚠ Compliance: only text people who agreed to hear from you. Cold-texting scraped businesses can violate TCPA / DNC / CAN-SPAM. These are <b>${esc(state.convClient)}</b>'s leads — make sure there's consent.</div>
+    <div class="enroll-row">
+      <input id="auEnrollLimit" type="number" min="1" max="500" value="50" title="How many leads">
+      <button class="btn" id="auEnrollGo">Enroll leads with a phone</button>
+    </div>
+    <div id="auEnrollResult" style="margin-top:8px"></div>`;
+  $("#auEnrollGo").onclick=async()=>{
+    const lim=parseInt($("#auEnrollLimit").value,10)||50;
+    if(!confirm("Enroll up to "+lim+" leads into the sequence? First message will be a draft for your review."))return;
+    const box=$("#auEnrollResult"); box.innerHTML=`<p class="muted">Enrolling…</p>`;
+    try{ const r=await api("/tenant/"+state.convClient+"/enroll",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({all:true,limit:lim})});
+      box.innerHTML=`<div class="result">Enrolled ${r.enrolled} · ${r.skipped_existing} already in · ${r.skipped_no_phone} no phone · ${r.skipped_optout} opted out (of ${r.considered} considered). Drafts are waiting in Conversations.</div>`;
+      toast("Enrolled "+r.enrolled+" leads."); }
+    catch(e){ box.innerHTML=`<div class="result">${esc(e.message)}</div>`; }
+  };
+
+  // Recent activity
+  try{ const ev=await api("/tenant/"+state.convClient+"/events");
+    const rows=ev.events||[];
+    $("#auActivity").innerHTML = rows.length ? rows.map(e=>{
+      let det=""; try{ det=e.detail?JSON.stringify(JSON.parse(e.detail)):""; }catch{ det=e.detail||""; }
+      return `<div class="auto-act"><span class="auto-kind">${esc(e.kind||"")}</span><span class="muted">${esc((det||"").slice(0,60))}</span><span class="auto-time">${esc(shortTime(e.created_at))}</span></div>`;
+    }).join("") : `<p class="muted" style="margin:0">No activity yet — it fills in as the engine drafts, escalates, and books.</p>`;
+  }catch(e){ $("#auActivity").innerHTML=`<p class="muted" style="margin:0">${esc(e.message)}</p>`; }
 }
 
 function renderFinder(m){
