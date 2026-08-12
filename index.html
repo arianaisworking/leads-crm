@@ -254,6 +254,27 @@
   .auto-act:first-child{border-top:none} .auto-kind{font-weight:700;min-width:120px;text-transform:capitalize}
   .auto-time{margin-left:auto;color:var(--ink-soft);font-size:11px;white-space:nowrap}
   @media(max-width:760px){.auto-grid{grid-template-columns:1fr}}
+  /* ---- Client setup editor ---- */
+  .cs-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
+  .cs-card h3{margin:0 0 14px;font-size:15px}
+  .cs-hint{font-weight:400;font-size:12px;color:var(--ink-soft)}
+  .cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .cs-f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink-soft)}
+  .cs-f input,.cs-f textarea{padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit;font-weight:400;color:var(--ink)}
+  .cs-sub{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:16px 0 8px}
+  .cs-row{display:flex;gap:8px;margin-bottom:8px}.cs-row input{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  .cs-seq{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+  .cs-seq-n{width:24px;height:24px;border-radius:50%;background:var(--pink-wash);color:var(--pink-deep);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:6px}
+  .cs-seq textarea{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  .cs-x{border:none;background:var(--line-2);color:var(--ink-soft);width:32px;border-radius:9px;cursor:pointer;font-size:13px;flex-shrink:0}
+  .cs-x:hover{background:var(--pink-wash);color:var(--pink-deep)}
+  .cs-days{display:flex;gap:8px;flex-wrap:wrap}.cs-day{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:10px;padding:7px 11px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .btn.sm{padding:7px 12px;font-size:12px}
+  .cs-actions{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  @media(max-width:760px){.cs-grid{grid-template-columns:1fr}}
+  /* ---- Controlled scroll on long lists ---- */
+  #tbl .card{max-height:70vh;overflow:auto}
+  .kanban .col{max-height:72vh;overflow-y:auto}
 </style>
 </head>
 <body>
@@ -731,6 +752,8 @@ async function renderAutomations(m){
        <select id="auClient" class="cv-client"></select>
        <span class="cv-live"><span class="dot"></span>LIVE</span>
        <button class="btn ghost" id="auMode"></button>
+       <button class="btn ghost" id="auSetup">⚙ Client setup</button>
+       <button class="btn ghost" id="auNew">＋ New client</button>
        <button class="btn ghost" id="auKill">⏻ Kill switch</button>
      </div>`)
     + `<div id="auStats" class="stats cv-stats"></div>
@@ -756,6 +779,15 @@ async function renderAutomations(m){
   $("#auKill").onclick=async()=>{ if(!confirm("Pause ALL outbound for this client?"))return;
     try{ await api("/tenant/"+state.convClient+"/pause",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({paused:true})}); toast("Paused."); }catch(e){ alert(e.message); } };
   renderMode();
+  $("#auSetup").onclick=()=>renderClientSetup(m, state.convClient);
+  $("#auNew").onclick=async()=>{
+    const name=prompt("New client name (e.g. Bright Med Spa):"); if(!name)return;
+    let id=prompt("Short id / slug (lowercase, no spaces):", name.toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,20)); if(!id)return;
+    id=id.toLowerCase().replace(/[^a-z0-9_]+/g,""); if(!id)return;
+    try{ await api("/tenant/clients",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id,name})});
+      state.convClients=[]; state.convClient=id; toast("Client created — fill in their setup."); renderClientSetup(m,id); }
+    catch(e){ alert(e.message); }
+  };
 
   // Stats
   let funnel={}, threads=[];
@@ -826,6 +858,105 @@ async function renderAutomations(m){
       return `<div class="auto-act"><span class="auto-kind">${esc(e.kind||"")}</span><span class="muted">${esc((det||"").slice(0,60))}</span><span class="auto-time">${esc(shortTime(e.created_at))}</span></div>`;
     }).join("") : `<p class="muted" style="margin:0">No activity yet — it fills in as the engine drafts, escalates, and books.</p>`;
   }catch(e){ $("#auActivity").innerHTML=`<p class="muted" style="margin:0">${esc(e.message)}</p>`; }
+}
+
+async function renderClientSetup(m, clientId){
+  m.innerHTML = head("The engine","Client setup", `<button class="btn ghost" id="csBack">← Back to Automations</button>`)
+    + `<div id="csWrap"><p class="muted">Loading…</p></div>`;
+  $("#csBack").onclick=()=>renderAutomations(m);
+  let data;
+  try{ data=await api("/tenant/"+clientId+"/profile"); }catch(e){ $("#csWrap").innerHTML=`<div class="result">${esc(e.message)}</div>`; return; }
+  const c=data.client||{}; const brain=c.business_brain||{};
+  let services=Array.isArray(brain.services)?brain.services.slice():[];
+  let sequence=Array.isArray(brain.sequence)?brain.sequence.slice():[];
+  const days=new Set(Array.isArray(brain.booking_days)?brain.booking_days:[1,2,3,4,5]);
+  const F=(label,id,val,ph)=>`<label class="cs-f"><span>${label}</span><input id="${id}" value="${esc(val||"")}" placeholder="${esc(ph||"")}"></label>`;
+
+  $("#csWrap").innerHTML=`
+    <div class="cs-card"><h3>Profile</h3><div class="cs-grid">
+      ${F("Business name","cs_name",c.name)}
+      ${F("Timezone","cs_timezone",c.timezone,"America/Chicago")}
+      ${F("Twilio number","cs_twilio_number",c.twilio_number,"+12145551234")}
+      ${F("Calendar (front-desk email)","cs_calendar_id",c.calendar_id)}
+      ${F("Notify email (front desk)","cs_notify_email",c.notify_email)}
+      ${F("Owner cell (hot leads)","cs_hot_lead_phone",c.hot_lead_phone)}
+      ${F("Website","cs_website",c.website)}
+      ${F("Legal name (on EIN)","cs_legal_name",c.legal_name)}
+      ${F("EIN","cs_ein",c.ein)}
+      ${F("Address (must match EIN for 10DLC)","cs_address",c.address)}
+    </div></div>
+
+    <div class="cs-card"><h3>Business brain <span class="cs-hint">— the only facts the AI is allowed to state</span></h3>
+      <label class="cs-f"><span>About</span><textarea id="cs_about" rows="2">${esc(brain.about||"")}</textarea></label>
+      <div class="cs-sub">Services &amp; prices</div>
+      <div id="cs_services"></div>
+      <button class="btn ghost sm" id="cs_addService">+ Add service</button>
+      <div class="cs-grid" style="margin-top:12px">
+        <label class="cs-f"><span>Open from (hour, 0–23)</span><input id="cs_hstart" type="number" min="0" max="23" value="${brain.booking_hours&&brain.booking_hours.start!=null?brain.booking_hours.start:9}"></label>
+        <label class="cs-f"><span>Open until (hour, 0–23)</span><input id="cs_hend" type="number" min="0" max="23" value="${brain.booking_hours&&brain.booking_hours.end!=null?brain.booking_hours.end:17}"></label>
+      </div>
+      <div class="cs-sub">Days open</div>
+      <div class="cs-days" id="cs_days">${[["1","Mon"],["2","Tue"],["3","Wed"],["4","Thu"],["5","Fri"],["6","Sat"],["7","Sun"]].map(([v,l])=>`<label class="cs-day"><input type="checkbox" value="${v}" ${days.has(Number(v))?"checked":""}><span>${l}</span></label>`).join("")}</div>
+      <div class="cs-grid" style="margin-top:12px">${F("Location","cs_location",brain.location)}${F("Parking","cs_parking",brain.parking)}</div>
+      ${F("Tone","cs_tone",brain.tone,"Warm, brief, no hard sell.")}
+      <label class="cs-f"><span>Never say (one per line)</span><textarea id="cs_never" rows="3">${esc((brain.never_say||[]).join("\n"))}</textarea></label>
+      <label class="cs-f"><span>Escalate to a human if… (one per line)</span><textarea id="cs_escalate" rows="3">${esc((brain.escalate_if||[]).join("\n"))}</textarea></label>
+    </div>
+
+    <div class="cs-card"><h3>Follow-up sequence <span class="cs-hint">— {first_name} and {business} auto-fill; keep opt-out language</span></h3>
+      <div id="cs_sequence"></div>
+      <button class="btn ghost sm" id="cs_addStep">+ Add step</button>
+    </div>
+
+    <div class="cs-actions"><button class="btn" id="cs_save">Save client setup</button><span id="cs_msg" class="muted"></span></div>`;
+
+  function drawServices(){
+    $("#cs_services").innerHTML=services.length?services.map((s,i)=>`
+      <div class="cs-row" data-i="${i}">
+        <input data-k="name" value="${esc(s.name||"")}" placeholder="Service (e.g. Botox)">
+        <input data-k="price" value="${esc(s.price||"")}" placeholder="$ price">
+        <input data-k="duration" type="number" value="${esc(s.duration||"")}" placeholder="min" style="width:78px">
+        <button class="cs-x" title="Remove">✕</button>
+      </div>`).join(""):`<p class="muted" style="margin:4px 0">No services yet.</p>`;
+    $("#cs_services").querySelectorAll(".cs-row").forEach(row=>{const i=Number(row.dataset.i);
+      row.querySelectorAll("input").forEach(inp=>inp.oninput=()=>{ services[i][inp.dataset.k]= inp.dataset.k==="duration"?(parseInt(inp.value,10)||null):inp.value; });
+      row.querySelector(".cs-x").onclick=()=>{ services.splice(i,1); drawServices(); };});
+  }
+  function drawSequence(){
+    $("#cs_sequence").innerHTML=sequence.length?sequence.map((s,i)=>`
+      <div class="cs-seq" data-i="${i}"><span class="cs-seq-n">${i+1}</span><textarea rows="2">${esc(s)}</textarea><button class="cs-x" title="Remove">✕</button></div>`).join(""):`<p class="muted" style="margin:4px 0">No steps yet — add your first follow-up.</p>`;
+    $("#cs_sequence").querySelectorAll(".cs-seq").forEach(row=>{const i=Number(row.dataset.i);
+      row.querySelector("textarea").oninput=(e)=>{ sequence[i]=e.target.value; };
+      row.querySelector(".cs-x").onclick=()=>{ sequence.splice(i,1); drawSequence(); };});
+  }
+  drawServices(); drawSequence();
+  $("#cs_addService").onclick=()=>{ services.push({name:"",price:"",duration:null}); drawServices(); };
+  $("#cs_addStep").onclick=()=>{ sequence.push("Hi {first_name}, this is {business}. Reply STOP to opt out."); drawSequence(); };
+
+  $("#cs_save").onclick=async()=>{
+    const selDays=[...document.querySelectorAll("#cs_days input:checked")].map(i=>Number(i.value));
+    const brainOut={
+      about:$("#cs_about").value.trim()||undefined,
+      services:services.filter(s=>s.name),
+      booking_hours:{start:parseInt($("#cs_hstart").value,10)||9,end:parseInt($("#cs_hend").value,10)||17},
+      booking_days:selDays,
+      location:$("#cs_location").value.trim()||undefined,
+      parking:$("#cs_parking").value.trim()||undefined,
+      tone:$("#cs_tone").value.trim()||undefined,
+      never_say:$("#cs_never").value.split("\n").map(x=>x.trim()).filter(Boolean),
+      escalate_if:$("#cs_escalate").value.split("\n").map(x=>x.trim()).filter(Boolean),
+      sequence:sequence.map(x=>x.trim()).filter(Boolean),
+    };
+    const payload={ name:$("#cs_name").value.trim(), timezone:$("#cs_timezone").value.trim(), twilio_number:$("#cs_twilio_number").value.trim(),
+      calendar_id:$("#cs_calendar_id").value.trim(), notify_email:$("#cs_notify_email").value.trim(), hot_lead_phone:$("#cs_hot_lead_phone").value.trim(),
+      website:$("#cs_website").value.trim(), legal_name:$("#cs_legal_name").value.trim(), ein:$("#cs_ein").value.trim(), address:$("#cs_address").value.trim(),
+      business_brain:brainOut };
+    const btn=$("#cs_save"); btn.disabled=true; $("#cs_msg").textContent="Saving…";
+    try{ await api("/tenant/"+clientId+"/profile",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+      $("#cs_msg").textContent="Saved ✓"; toast("Client setup saved."); state.convClients=[]; }
+    catch(e){ $("#cs_msg").textContent=e.message; }
+    finally{ btn.disabled=false; }
+  };
 }
 
 function renderFinder(m){

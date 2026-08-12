@@ -208,6 +208,25 @@ export async function onRequest(context) {
     return json({ ok: true, enrolled, skipped_no_phone, skipped_existing, skipped_optout, considered: leads.length });
   }
 
+  // Full client profile + business brain, for the onboarding/setup editor.
+  if (action === 'profile' && method === 'GET') {
+    const pc = publicClient(client);
+    pc.business_brain = safeParse(client.business_brain) || null;
+    return json({ client: pc });
+  }
+  if (action === 'profile' && method === 'POST') {
+    const b = await request.json();
+    const cols = ['name', 'legal_name', 'ein', 'address', 'website', 'timezone',
+      'twilio_number', 'calendar_id', 'notify_email', 'hot_lead_phone', 'crm_bcc_email'];
+    const sets = [], vals = [];
+    for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c] || null); }
+    if ('business_brain' in b) { sets.push('business_brain=?'); vals.push(b.business_brain ? JSON.stringify(b.business_brain) : null); }
+    if (!sets.length) return json({ error: 'nothing to update' }, 400);
+    sets.push("updated_at=datetime('now')"); vals.push(clientId);
+    await db.prepare(`UPDATE clients SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+    return json({ ok: true });
+  }
+
   if (action === 'events' && method === 'GET') {
     const { results } = await scoped(db,
       'SELECT kind, detail, created_at FROM events WHERE client_id = ? ORDER BY created_at DESC LIMIT 20', clientId).all();
