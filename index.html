@@ -1030,20 +1030,30 @@ async function renderClientSetup(m, clientId){
   let csvLeads=[];
   $("#cs_csv").onchange=(e)=>{
     const file=e.target.files[0]; if(!file)return;
+    $("#cs_csvInfo").textContent="Reading file…";
     const rd=new FileReader();
     rd.onload=()=>{ try{ csvLeads=csvToLeads(rd.result); const withPhone=csvLeads.filter(l=>l.phone).length;
-      $("#cs_csvInfo").innerHTML=`Found <b>${csvLeads.length}</b> row${csvLeads.length===1?"":"s"} · <b>${withPhone}</b> with a phone number${withPhone?"":" — check that your file has a phone/mobile column"}.`;
+      $("#cs_csvInfo").innerHTML=`Found <b>${csvLeads.length.toLocaleString()}</b> row${csvLeads.length===1?"":"s"} · <b>${withPhone.toLocaleString()}</b> with a phone number${withPhone?" — imported in safe batches.":" — check that your file has a phone/mobile column."}`;
       $("#cs_csvGo").disabled=!withPhone;
     }catch(ex){ $("#cs_csvInfo").textContent="Couldn't read that file: "+ex.message; $("#cs_csvGo").disabled=true; } };
     rd.readAsText(file);
   };
   $("#cs_csvGo").onclick=async()=>{
     const enroll=$("#cs_csvEnroll").checked; const box=$("#cs_csvResult"); const btn=$("#cs_csvGo");
-    btn.disabled=true; box.innerHTML=`<p class="muted">Importing ${csvLeads.length} rows…</p>`;
-    try{ const r=await api("/tenant/"+clientId+"/import",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({leads:csvLeads,enroll})});
-      box.innerHTML=`<div class="result">Imported ${r.imported} · ${r.skipped_dupe} already there · ${r.skipped_no_phone} without a phone.${enroll?` Enrolled ${r.enrolled} — first messages are drafted in Conversations.`:""}</div>`;
-      toast("Imported "+r.imported+" leads."); }
-    catch(e){ box.innerHTML=`<div class="result">${esc(e.message)}</div>`; }
+    const valid=csvLeads.filter(l=>l.phone); const noPhone=csvLeads.length-valid.length;
+    if(enroll && valid.length>500 && !confirm(`This will draft a first message for all ${valid.length.toLocaleString()} leads — a lot to review at once.\n\nTip: import WITHOUT enrolling, then enroll in controlled batches from Automations. Continue enrolling all?`)) return;
+    btn.disabled=true;
+    const CHUNK=enroll?120:300; const tot={imported:0,skipped_dupe:0,enrolled:0};
+    try{
+      for(let i=0;i<valid.length;i+=CHUNK){
+        const batch=valid.slice(i,i+CHUNK);
+        box.innerHTML=`<p class="muted">Importing ${Math.min(i+CHUNK,valid.length).toLocaleString()} / ${valid.length.toLocaleString()}…</p>`;
+        const r=await api("/tenant/"+clientId+"/import",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({leads:batch,enroll})});
+        tot.imported+=r.imported||0; tot.skipped_dupe+=r.skipped_dupe||0; tot.enrolled+=r.enrolled||0;
+      }
+      box.innerHTML=`<div class="result">Imported ${tot.imported.toLocaleString()} · ${tot.skipped_dupe.toLocaleString()} already there${noPhone?` · ${noPhone.toLocaleString()} skipped (no phone)`:""}.${enroll?` Enrolled ${tot.enrolled.toLocaleString()} — first messages drafted in Conversations.`:""}</div>`;
+      toast("Imported "+tot.imported.toLocaleString()+" leads.");
+    }catch(e){ box.innerHTML=`<div class="result">Stopped after ${tot.imported.toLocaleString()} imported — ${esc(e.message)}. Re-importing the same file is safe (duplicates skip).</div>`; }
     finally{ btn.disabled=false; }
   };
 
