@@ -291,6 +291,9 @@
   .who{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:10px 4px 8px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft)}
   .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cs-login{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+  .cs-check{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--ink-soft);line-height:1.4}
+  .cs-check input{margin-top:2px}
+  .cs-file{font:inherit;font-size:13px}
   /* ---- Client portal: white-label professional theme ---- */
   body.portal{--bg:#f5f7fa;--panel:#ffffff;--pink:#3b5bdb;--pink-deep:#31489f;--pink-wash:#eef2ff;--ink:#1f2733;--ink-soft:#5b6472;--line:#e6e9ef;--line-2:#f2f4f8;--client:#1f9d6b;--shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06)}
   body.portal .side{background:#0f2033;border-right:none}
@@ -391,6 +394,20 @@ const esc = (s)=> (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":
 function initials(n){const w=(n||"?").replace(/[^a-zA-Z ]/g,"").trim().split(/\s+/);return ((w[0]?.[0]||"")+(w[1]?.[0]||"")).toUpperCase()||"?";}
 function shortTime(ts){ if(!ts) return ""; const d=new Date((ts+"").replace(" ","T")+((ts+"").includes("Z")?"":"Z")); if(isNaN(d)) return ""; const now=new Date(); const sameDay=d.toDateString()===now.toDateString(); return sameDay?d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"}); }
 let _toastT; function toast(msg){ let t=document.getElementById("toast"); if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t);} t.textContent=msg; t.classList.add("show"); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+function parseCSV(text){ const rows=[]; let i=0,field="",row=[],inQ=false; text=text.replace(/^﻿/,"");
+  while(i<text.length){ const c=text[i];
+    if(inQ){ if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQ=false; } else field+=c; }
+    else { if(c==='"') inQ=true; else if(c===",") { row.push(field); field=""; } else if(c==="\n"){ row.push(field); rows.push(row); row=[]; field=""; } else if(c==="\r"){} else field+=c; }
+    i++; }
+  if(field.length||row.length){ row.push(field); rows.push(row); } return rows; }
+function csvToLeads(text){ const rows=parseCSV(text).filter(r=>r.some(c=>(c||"").trim()!=="")); if(!rows.length) return [];
+  const header=rows[0].map(h=>(h||"").trim().toLowerCase());
+  const find=(re)=>header.findIndex(h=>re.test(h));
+  const iPhone=find(/phone|mobile|cell|tel/),iEmail=find(/e-?mail/),iName=find(/^name$|full ?name|contact ?name/),iFirst=find(/first/),iLast=find(/last/),iCity=find(/city|town/),iState=find(/state|province|region/);
+  const out=[]; for(let r=1;r<rows.length;r++){ const row=rows[r]; const g=(i)=> i>=0?(row[i]||"").trim():"";
+    let name=g(iName); if(!name){ name=(g(iFirst)+" "+g(iLast)).trim(); }
+    out.push({name:name||null,phone:g(iPhone)||null,email:g(iEmail)||null,city:g(iCity)||null,state:g(iState)||null}); }
+  return out; }
 function avColor(l){ if(l.trade&&TRADE_COLOR[l.trade])return TRADE_COLOR[l.trade]; let h=0; for(const c of (l.name||"")) h=(h*31+c.charCodeAt(0))>>>0; return POOL[h%POOL.length]; }
 function avatar(l,sm){return `<span class="av${sm?' sm':''}" style="background:${avColor(l)}">${esc(initials(l.name))}</span>`;}
 
@@ -961,6 +978,15 @@ async function renderClientSetup(m, clientId){
       <button class="btn ghost sm" id="cs_addLogin" style="margin-top:10px">Create portal login</button>
     </div>
 
+    <div class="cs-card"><h3>Import leads (CSV) <span class="cs-hint">— export from their CRM; a phone column is required</span></h3>
+      <input type="file" id="cs_csv" accept=".csv,text/csv" class="cs-file">
+      <div id="cs_csvInfo" class="muted" style="margin:8px 0"></div>
+      <label class="cs-check"><input type="checkbox" id="cs_csvEnroll" checked> Start the reactivation sequence (drafts the first message for each — nothing sends without your approval)</label>
+      <button class="btn" id="cs_csvGo" disabled style="margin-top:12px">Import leads</button>
+      <div id="cs_csvResult" style="margin-top:8px"></div>
+      <p class="muted" style="margin:10px 0 0;font-size:12px">⚠ Only import leads the client has consent to contact (TCPA/DNC). Duplicates and numbers already opted out are skipped automatically.</p>
+    </div>
+
     <div class="cs-actions"><button class="btn" id="cs_save">Save client setup</button><span id="cs_msg" class="muted"></span></div>`;
 
   function drawServices(){
@@ -999,6 +1025,26 @@ async function renderClientSetup(m, clientId){
     try{ await api("/auth/users",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password,role:"client",client_id:clientId})});
       $("#cs_lemail").value=""; $("#cs_lpass").value=""; toast("Portal login created."); loadLogins(); }
     catch(e){ alert(e.message); }
+  };
+
+  let csvLeads=[];
+  $("#cs_csv").onchange=(e)=>{
+    const file=e.target.files[0]; if(!file)return;
+    const rd=new FileReader();
+    rd.onload=()=>{ try{ csvLeads=csvToLeads(rd.result); const withPhone=csvLeads.filter(l=>l.phone).length;
+      $("#cs_csvInfo").innerHTML=`Found <b>${csvLeads.length}</b> row${csvLeads.length===1?"":"s"} · <b>${withPhone}</b> with a phone number${withPhone?"":" — check that your file has a phone/mobile column"}.`;
+      $("#cs_csvGo").disabled=!withPhone;
+    }catch(ex){ $("#cs_csvInfo").textContent="Couldn't read that file: "+ex.message; $("#cs_csvGo").disabled=true; } };
+    rd.readAsText(file);
+  };
+  $("#cs_csvGo").onclick=async()=>{
+    const enroll=$("#cs_csvEnroll").checked; const box=$("#cs_csvResult"); const btn=$("#cs_csvGo");
+    btn.disabled=true; box.innerHTML=`<p class="muted">Importing ${csvLeads.length} rows…</p>`;
+    try{ const r=await api("/tenant/"+clientId+"/import",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({leads:csvLeads,enroll})});
+      box.innerHTML=`<div class="result">Imported ${r.imported} · ${r.skipped_dupe} already there · ${r.skipped_no_phone} without a phone.${enroll?` Enrolled ${r.enrolled} — first messages are drafted in Conversations.`:""}</div>`;
+      toast("Imported "+r.imported+" leads."); }
+    catch(e){ box.innerHTML=`<div class="result">${esc(e.message)}</div>`; }
+    finally{ btn.disabled=false; }
   };
 
   $("#cs_save").onclick=async()=>{

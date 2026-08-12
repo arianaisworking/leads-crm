@@ -210,6 +210,49 @@ export async function onRequest(context) {
     return json({ ok: true, enrolled, skipped_no_phone, skipped_existing, skipped_optout, considered: leads.length });
   }
 
+  // Import a CSV of the client's own leads (mapped to {name, phone, email, ...}).
+  // Optionally enrolls each into the reactivation sequence as a draft.
+  if (action === 'import' && method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const rows = Array.isArray(b.leads) ? b.leads : [];
+    if (!rows.length) return json({ error: 'no rows to import' }, 400);
+    const doEnroll = !!b.enroll;
+    const brain = safeParse(client.business_brain) || {};
+    const seq = (brain.sequence && brain.sequence.length) ? brain.sequence : defaultSequence(client.name);
+
+    let imported = 0, skipped_no_phone = 0, skipped_dupe = 0, enrolled = 0;
+    for (const r of rows.slice(0, 2000)) {
+      const phone = toE164(r.phone);
+      if (!phone) { skipped_no_phone++; continue; }
+      const name = (r.name || '').toString().trim() || null;
+      const email = (r.email || '').toString().trim() || null;
+      const source_id = `csv/${clientId}/${phone}`;
+      const res = await db.prepare(
+        `INSERT OR IGNORE INTO leads (name, phone, email, city, state, source, source_id, status, client_id)
+         VALUES (?,?,?,?,?, 'csv', ?, 'New', ?)`
+      ).bind(name || phone, phone, email, r.city || null, r.state || null, source_id, clientId).run();
+      if (res.meta.changes > 0) imported++; else skipped_dupe++;
+
+      if (doEnroll) {
+        if (await isOptedOut(db, clientId, phone)) continue;
+        const exists = await db.prepare('SELECT id FROM conversations WHERE client_id=? AND phone=?').bind(clientId, phone).first();
+        if (exists) continue;
+        const lead = await db.prepare('SELECT id, name FROM leads WHERE client_id=? AND phone=? LIMIT 1').bind(clientId, phone).first();
+        const cvid = uid('cv_');
+        await db.prepare(
+          `INSERT INTO conversations (id, client_id, lead_id, phone, contact_name, status, step, next_send_at, context_note)
+           VALUES (?,?,?,?,?, 'queued', 1, ?, 'Imported + enrolled in the reactivation sequence.')`
+        ).bind(cvid, clientId, lead ? lead.id : null, phone, (lead && lead.name) || name, gapAt(1)).run();
+        await db.prepare(`INSERT INTO messages (id, conversation_id, client_id, direction, body, author, status)
+          VALUES (?,?,?,?,?, 'ai', 'draft')`)
+          .bind(uid('ms_'), cvid, clientId, 'out', renderTpl(seq[0], (lead && lead.name) || name, client.name)).run();
+        enrolled++;
+      }
+    }
+    await logEvent(db, clientId, 'campaign_start', null, { imported, enrolled, via: 'csv' });
+    return json({ ok: true, imported, skipped_no_phone, skipped_dupe, enrolled, considered: rows.length });
+  }
+
   // Simulate an inbound lead text — runs the real classify -> respond flow and
   // drops the AI reply into the inbox as a draft. Lets you demo/test the AI
   // without Twilio or a phone number. Never sends.
