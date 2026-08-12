@@ -63,7 +63,9 @@ export async function onRequest(context) {
       `SELECT id, phone, contact_name, status, intent, needs_human, ai_paused,
               context_note, appointment_at, last_inbound_at,
               (SELECT body FROM messages m WHERE m.conversation_id = conversations.id
-                ORDER BY created_at DESC LIMIT 1) AS last_message
+                ORDER BY created_at DESC LIMIT 1) AS last_message,
+              (SELECT status FROM messages m WHERE m.conversation_id = conversations.id
+                ORDER BY created_at DESC LIMIT 1) AS last_message_status
          FROM conversations
         WHERE client_id = ?
         ORDER BY needs_human DESC, last_inbound_at DESC
@@ -104,16 +106,38 @@ export async function onRequest(context) {
       'SELECT * FROM conversations WHERE client_id = ? AND id = ?', clientId, ref).first();
     if (!conv) return json({ error: 'not found' }, 404);
 
-    const sent = await sendSms(env, client, conv.phone, b.body);
-    await db.prepare(`INSERT INTO messages
-        (id, conversation_id, client_id, direction, body, author, twilio_sid, status, error_code)
-        VALUES (?,?,?,?,?,'human',?,?,?)`)
-      .bind(uid('ms_'), conv.id, clientId, 'out', b.body,
-        sent.sid || null, sent.ok ? sent.status : 'failed', sent.code || null).run();
-    if (sent.ok) await bumpLedger(db, clientId, client.timezone, 'sent');
+    const d = await dispatch(env, db, client, conv, b.body, 'human');
     await db.prepare("UPDATE conversations SET needs_human=0, ai_paused=1, last_outbound_at=datetime('now') WHERE id=?")
       .bind(conv.id).run();
-    return json({ ok: sent.ok, error: sent.error });
+    return json({ ok: true, delivered: d.delivered, pending: d.pending, error: d.error });
+  }
+
+  // Approve an AI draft (optionally edited) and send it.
+  if (action === 'approve' && method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const conv = await scoped(db,
+      'SELECT * FROM conversations WHERE client_id = ? AND id = ?', clientId, ref).first();
+    if (!conv) return json({ error: 'not found' }, 404);
+
+    const draft = b.message_id
+      ? await scoped(db, 'SELECT * FROM messages WHERE client_id = ? AND conversation_id = ? AND id = ?', clientId, ref, b.message_id).first()
+      : await scoped(db, "SELECT * FROM messages WHERE client_id = ? AND conversation_id = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1", clientId, ref).first();
+    const body = (b.body != null && b.body !== '') ? b.body : (draft ? draft.body : null);
+    if (!body) return json({ error: 'nothing to send' }, 400);
+
+    const d = await dispatch(env, db, client, conv, body, 'ai', draft ? draft.id : null);
+    await db.prepare("UPDATE conversations SET needs_human=0, ai_paused=0, last_outbound_at=datetime('now') WHERE id=?")
+      .bind(conv.id).run();
+    await logEvent(db, clientId, 'ai_reply_approved', conv.id, { delivered: d.delivered });
+    return json({ ok: true, delivered: d.delivered, pending: d.pending, error: d.error });
+  }
+
+  // Flag a thread for a human without typing anything (mock's "Hand off").
+  if (action === 'handoff' && method === 'POST') {
+    await db.prepare('UPDATE conversations SET needs_human=1, ai_paused=1 WHERE client_id=? AND id=?')
+      .bind(clientId, ref).run();
+    await logEvent(db, clientId, 'escalated', ref, { by: 'human' });
+    return json({ ok: true });
   }
 
   // KILL SWITCH. Halts all outbound for this client immediately.
@@ -144,4 +168,35 @@ export async function onRequest(context) {
 function publicClient(c) {
   const { twilio_subaccount_token, google_refresh_token, ...safe } = c;
   return safe;
+}
+
+function hasTwilio(client, env) {
+  const sid = client?.twilio_subaccount_sid || env.TWILIO_ACCOUNT_SID;
+  const token = client?.twilio_subaccount_token || env.TWILIO_AUTH_TOKEN;
+  const from = client?.twilio_messaging_service_sid || client?.twilio_number;
+  return !!(sid && token && from);
+}
+
+// Sends via Twilio when the client is fully configured; otherwise queues the
+// message so the inbox stays clean until Twilio is connected. Writes or updates
+// the message row and reports delivery state back to the inbox.
+async function dispatch(env, db, client, conv, body, author, existingId) {
+  let status = 'queued', sid = null, code = null, delivered = false, error = null;
+  if (hasTwilio(client, env)) {
+    const sent = await sendSms(env, client, conv.phone, body);
+    delivered = sent.ok;
+    status = sent.ok ? (sent.status || 'sent') : 'failed';
+    sid = sent.sid || null; code = sent.code || null; error = sent.error || null;
+    if (sent.ok) await bumpLedger(db, client.id, client.timezone, 'sent');
+  }
+  if (existingId) {
+    await db.prepare('UPDATE messages SET body=?, status=?, twilio_sid=?, error_code=?, author=? WHERE id=?')
+      .bind(body, status, sid, code, author, existingId).run();
+  } else {
+    await db.prepare(`INSERT INTO messages
+        (id, conversation_id, client_id, direction, body, author, twilio_sid, status, error_code)
+        VALUES (?,?,?,?,?,?,?,?,?)`)
+      .bind(uid('ms_'), conv.id, client.id, 'out', body, author, sid, status, code).run();
+  }
+  return { delivered, pending: !delivered && status === 'queued', status, error };
 }

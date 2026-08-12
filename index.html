@@ -182,6 +182,56 @@
     .main{padding:22px}.hero h1{font-size:32px}
   }
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  /* ---- Conversations inbox ---- */
+  .cv-top{display:flex;align-items:center;gap:12px}
+  .cv-client{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-weight:600;font-size:13px}
+  .cv-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--client)}
+  .cv-live .dot{width:8px;height:8px;border-radius:50%;background:var(--client);box-shadow:0 0 0 3px rgba(31,157,107,.15)}
+  .cv-stats{grid-template-columns:repeat(4,1fr)!important;margin-bottom:16px}
+  .cv-wrap{display:grid;grid-template-columns:320px 1fr 280px;gap:16px;align-items:start}
+  .cv-list,.cv-thread,.cv-side{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .cv-list{padding:12px;display:flex;flex-direction:column;min-height:560px}
+  .cv-list .search{width:100%;margin-bottom:10px}
+  .cv-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .cv-filters button{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+  .cv-filters button.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+  .cv-items{overflow-y:auto;flex:1}
+  .cv-item{display:flex;gap:10px;padding:10px;border-radius:12px;cursor:pointer;transition:.12s}
+  .cv-item:hover{background:var(--line-2)} .cv-item.on{background:var(--pink-wash)}
+  .cv-item-b{flex:1;min-width:0} .cv-item-h{display:flex;justify-content:space-between;gap:8px}
+  .cv-name{font-weight:700;font-size:13.5px} .cv-time{font-size:11px;color:var(--ink-soft);white-space:nowrap}
+  .cv-prev{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 4px}
+  .cv-av{width:38px;height:38px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+  .cv-av.sm{width:34px;height:34px;font-size:12px}
+  .cv-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .cv-tag.needs{background:#fdeef4;color:var(--pink-deep)} .cv-tag.draft{background:#eef0ff;color:#5560d0}
+  .cv-tag.booked{background:#e6f6ef;color:var(--client)} .cv-tag.open{background:var(--line-2);color:var(--ink-soft)}
+  .cv-tag.dnc{background:#f1eef0;color:var(--dead)}
+  .cv-thread{display:flex;flex-direction:column;min-height:560px}
+  .cv-th-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .cv-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;max-height:440px}
+  .cv-bubble{max-width:76%;padding:9px 13px;border-radius:15px;font-size:13.5px;line-height:1.4;position:relative}
+  .cv-bubble.in{align-self:flex-start;background:var(--line-2);border-bottom-left-radius:5px}
+  .cv-bubble.out{align-self:flex-end;background:var(--pink-wash);border-bottom-right-radius:5px}
+  .cv-b-time{display:block;font-size:10px;color:var(--ink-soft);margin-top:4px}
+  .cv-draft{align-self:flex-end;max-width:82%;background:#eef0ff;border:1px solid #d8dcff;border-radius:15px;padding:11px 13px}
+  .cv-draft-h{font-size:10.5px;font-weight:700;color:#5560d0;letter-spacing:.04em;margin-bottom:5px}
+  .cv-draft-body{font-size:13.5px;line-height:1.4} .cv-draft-body.editing{outline:2px solid var(--pink);border-radius:6px;padding:4px}
+  .cv-draft-actions{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .cv-draft-actions .btn{padding:7px 12px;font-size:12px}
+  .cv-compose{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
+  .cv-compose input{flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:10px;font:inherit}
+  .cv-warn{font-size:11px;color:#b8863a;background:#fbf3e4;margin:0;padding:8px 14px;text-align:center}
+  .cv-side{padding:14px;display:flex;flex-direction:column;gap:12px}
+  .cv-card{border:1px solid var(--line);border-radius:12px;padding:12px}
+  .cv-card h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft)}
+  .cv-kv{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+  .cv-kv span{color:var(--ink-soft)} .cv-kv b.ok{color:var(--client)}
+  .cv-empty{padding:30px 16px;text-align:center;font-size:13px;color:var(--ink-soft)}
+  .cv-empty.big{display:flex;align-items:center;justify-content:center;min-height:520px}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:99}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media(max-width:1100px){.cv-wrap{grid-template-columns:1fr}.cv-side{order:3}}
 </style>
 </head>
 <body>
@@ -193,6 +243,7 @@
       <button data-view="pipeline"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span> Pipeline</button>
       <button data-view="clients"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 6M16.5 13.5a5.5 5.5 0 0 1 4 5.5"/></svg></span> Clients <span class="ct" id="ct-clients">0</span></button>
       <button data-view="nurture"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7-1.3C19 11.5 12 20 12 20Z"/></svg></span> Nurture <span class="ct" id="ct-nurture">0</span></button>
+      <button data-view="conversations"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span> Conversations <span class="ct" id="ct-convos">0</span></button>
       <button data-view="finder"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></span> Find Leads</button>
     </nav>
     <div class="player">
@@ -258,11 +309,14 @@ const TRADE_COLOR={roofing:"#f5943b",plumbing:"#8288ea",electrical:"#ed1a78",hva
 const POOL=["#ed1a78","#8288ea","#f5943b","#35c08a","#9b6be0","#2bb5c4"];
 const STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
 
-let state = { view:"database", leads:[], stats:{}, q:"", fTrade:"", fState:"", fStatus:"", fReviews:"", fSort:"" };
+let state = { view:"database", leads:[], stats:{}, q:"", fTrade:"", fState:"", fStatus:"", fReviews:"", fSort:"",
+  convClient:"networkboss", convClients:[], convFilter:"all", convQ:"", convActive:null, convThreads:[] };
 
 const $ = (s,r=document)=>r.querySelector(s);
 const esc = (s)=> (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function initials(n){const w=(n||"?").replace(/[^a-zA-Z ]/g,"").trim().split(/\s+/);return ((w[0]?.[0]||"")+(w[1]?.[0]||"")).toUpperCase()||"?";}
+function shortTime(ts){ if(!ts) return ""; const d=new Date((ts+"").replace(" ","T")+((ts+"").includes("Z")?"":"Z")); if(isNaN(d)) return ""; const now=new Date(); const sameDay=d.toDateString()===now.toDateString(); return sameDay?d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"}); }
+let _toastT; function toast(msg){ let t=document.getElementById("toast"); if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t);} t.textContent=msg; t.classList.add("show"); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove("show"),2600); }
 function avColor(l){ if(l.trade&&TRADE_COLOR[l.trade])return TRADE_COLOR[l.trade]; let h=0; for(const c of (l.name||"")) h=(h*31+c.charCodeAt(0))>>>0; return POOL[h%POOL.length]; }
 function avatar(l,sm){return `<span class="av${sm?' sm':''}" style="background:${avColor(l)}">${esc(initials(l.name))}</span>`;}
 
@@ -301,6 +355,7 @@ async function render(){
   if(state.view==="pipeline") return renderPipeline(m);
   if(state.view==="clients") return renderList(m,"Clients","Won","The businesses you've won.",{status:"Client"});
   if(state.view==="nurture") return renderList(m,"Nurture","Follow up","Follow-ups due today or overdue.",{due:"1"});
+  if(state.view==="conversations") return renderConversations(m);
   if(state.view==="finder") return renderFinder(m);
 }
 
@@ -467,6 +522,169 @@ function openAdd(){
       phone:$("#aPhone").value||null,email:$("#aEmail").value||null,website:$("#aWebsite").value||null})});
     closeDrawer(); render();
   };
+}
+
+async function renderConversations(m){
+  m.innerHTML = head("The engine","Conversations",
+    `<div class="cv-top">
+       <select id="cvClient" class="cv-client"></select>
+       <span class="cv-live"><span class="dot"></span>LIVE</span>
+       <button class="btn ghost" id="cvKill">⏻ Kill switch</button>
+     </div>`)
+    + `<div id="cvStats" class="stats cv-stats"></div>
+       <div class="cv-wrap">
+         <div class="cv-list">
+           <input class="search" id="cvSearch" placeholder="Search conversations…" value="${esc(state.convQ)}">
+           <div class="cv-filters" id="cvFilters">
+             ${[["all","All"],["needs","Needs reply"],["draft","AI drafted"],["booked","Booked"]].map(([k,l])=>`<button data-f="${k}" class="${state.convFilter===k?"on":""}">${l}</button>`).join("")}
+           </div>
+           <div id="cvItems" class="cv-items"></div>
+         </div>
+         <div class="cv-thread" id="cvThread"></div>
+         <div class="cv-side" id="cvSide"></div>
+       </div>`;
+
+  try{ const cr=await api("/tenant/clients"); state.convClients=cr.clients||[]; }
+  catch(e){ state.convClients=[{id:"networkboss",name:"The Network Boss (house)"}]; }
+  if(!state.convClients.length) state.convClients=[{id:"networkboss",name:"The Network Boss (house)"}];
+  if(!state.convClients.find(c=>c.id===state.convClient)) state.convClient=state.convClients[0].id;
+  const csel=$("#cvClient");
+  csel.innerHTML=state.convClients.map(c=>`<option value="${c.id}" ${c.id===state.convClient?"selected":""}>${esc(c.name)}</option>`).join("");
+  csel.onchange=(e)=>{ state.convClient=e.target.value; state.convActive=null; loadInbox(); };
+
+  $("#cvKill").onclick=async()=>{
+    if(!confirm("Kill switch: pause ALL outbound messages for this client? Nothing will send until you turn it back on."))return;
+    try{ await api("/tenant/"+state.convClient+"/pause",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({paused:true})}); toast("Paused — all outbound stopped for this client."); }
+    catch(e){ alert(e.message); }
+  };
+  $("#cvSearch").oninput=(e)=>{ state.convQ=e.target.value; renderItems(); };
+  document.querySelectorAll("#cvFilters button").forEach(b=>b.onclick=()=>{
+    state.convFilter=b.dataset.f;
+    document.querySelectorAll("#cvFilters button").forEach(x=>x.classList.toggle("on",x===b));
+    renderItems();
+  });
+
+  async function loadInbox(){
+    $("#cvItems").innerHTML=`<p class="muted" style="padding:14px">Loading…</p>`;
+    try{ const r=await api("/tenant/"+state.convClient+"/inbox"); state.convThreads=r.threads||[]; }
+    catch(e){ state.convThreads=[]; $("#cvItems").innerHTML=`<div class="cv-empty">${esc(e.message)}</div>`; }
+    renderStats(); renderItems();
+    if(state.convActive && state.convThreads.find(t=>t.id===state.convActive)) openThread(state.convActive);
+    else if(state.convThreads.length) openThread(state.convThreads[0].id);
+    else renderEmptyThread();
+  }
+  function renderStats(){
+    const t=state.convThreads;
+    const open=t.filter(x=>x.status!=="closed"&&x.status!=="opted_out").length;
+    const needs=t.filter(x=>x.needs_human).length;
+    const drafts=t.filter(x=>x.last_message_status==="draft").length;
+    const booked=t.filter(x=>x.status==="booked").length;
+    $("#ct-convos").textContent=open;
+    $("#cvStats").innerHTML=`
+      <div class="stat"><div class="n">${open}</div><div class="l">Open</div></div>
+      <div class="stat"><div class="n">${needs}</div><div class="l">Need reply</div></div>
+      <div class="stat"><div class="n">${drafts}</div><div class="l">AI drafted</div></div>
+      <div class="stat"><div class="n">${booked}</div><div class="l">Booked</div></div>`;
+  }
+  function filtered(){
+    let rows=state.convThreads.slice();
+    const f=state.convFilter;
+    if(f==="needs") rows=rows.filter(x=>x.needs_human);
+    else if(f==="booked") rows=rows.filter(x=>x.status==="booked");
+    else if(f==="draft") rows=rows.filter(x=>x.last_message_status==="draft");
+    if(state.convQ){ const q=state.convQ.toLowerCase(); rows=rows.filter(x=>((x.contact_name||"")+(x.phone||"")+(x.last_message||"")).toLowerCase().includes(q)); }
+    return rows;
+  }
+  function threadTag(x){
+    if(x.needs_human) return `<span class="cv-tag needs">Needs reply</span>`;
+    if(x.last_message_status==="draft") return `<span class="cv-tag draft">AI drafted</span>`;
+    if(x.status==="booked") return `<span class="cv-tag booked">Booked</span>`;
+    if(x.status==="opted_out") return `<span class="cv-tag dnc">Opted out</span>`;
+    return `<span class="cv-tag open">${esc(x.status||"open")}</span>`;
+  }
+  function renderItems(){
+    const rows=filtered();
+    if(!rows.length){ $("#cvItems").innerHTML=`<div class="cv-empty">No conversations here yet.<br><span class="muted">Threads appear when a lead texts back or the SMS engine starts one.</span></div>`; return; }
+    $("#cvItems").innerHTML=rows.map(x=>`
+      <div class="cv-item ${state.convActive===x.id?"on":""}" data-id="${esc(x.id)}">
+        <div class="cv-av sm">${esc(initials(x.contact_name||x.phone))}</div>
+        <div class="cv-item-b">
+          <div class="cv-item-h"><span class="cv-name">${esc(x.contact_name||x.phone||"Unknown")}</span><span class="cv-time">${esc(shortTime(x.last_inbound_at))}</span></div>
+          <div class="cv-prev">${esc((x.last_message||"—").slice(0,64))}</div>
+          <div>${threadTag(x)}</div>
+        </div>
+      </div>`).join("");
+    document.querySelectorAll("#cvItems .cv-item").forEach(el=>el.onclick=()=>openThread(el.dataset.id));
+  }
+  async function openThread(id){
+    state.convActive=id; renderItems();
+    $("#cvThread").innerHTML=`<p class="muted" style="padding:20px">Loading…</p>`; $("#cvSide").innerHTML="";
+    let data;
+    try{ data=await api("/tenant/"+state.convClient+"/thread/"+id); }
+    catch(e){ $("#cvThread").innerHTML=`<div class="cv-empty big">${esc(e.message)}</div>`; return; }
+    renderThread(data); renderSide(data);
+  }
+  function renderThread(d){
+    const c=d.conversation||{}; const msgs=d.messages||[];
+    const bubbles=msgs.map(mm=>{
+      if(mm.status==="draft"){
+        return `<div class="cv-draft">
+          <div class="cv-draft-h">✦ AI DRAFT${mm.intent?" · "+esc(mm.intent):""}</div>
+          <div class="cv-draft-body" id="draftBody">${esc(mm.body)}</div>
+          <div class="cv-draft-actions">
+            <button class="btn" id="cvApprove">Approve &amp; send</button>
+            <button class="btn ghost" id="cvEdit">Edit</button>
+            <button class="btn ghost" id="cvHandoff">Hand off</button>
+          </div></div>`;
+      }
+      const side=mm.direction==="in"?"in":"out";
+      const flag=mm.status==="queued"?" · queued":mm.status==="failed"?" · not sent":"";
+      return `<div class="cv-bubble ${side}">${esc(mm.body)}<span class="cv-b-time">${esc(shortTime(mm.created_at))}${flag}</span></div>`;
+    }).join("");
+    $("#cvThread").innerHTML=`
+      <div class="cv-th-head"><div class="cv-av sm">${esc(initials(c.contact_name||c.phone))}</div>
+        <div><div class="cv-name">${esc(c.contact_name||c.phone||"Unknown")}</div><div class="muted" style="font-size:12px">${esc(c.phone||"")}</div></div></div>
+      <div class="cv-msgs" id="cvMsgs">${bubbles||`<p class="muted" style="padding:20px;text-align:center">No messages yet.</p>`}</div>
+      <div class="cv-compose"><input id="cvReply" placeholder="Write a message…"><button class="btn" id="cvSend">Send</button></div>
+      <p class="cv-warn">⚠ Human review required for legal, medical, angry, or uncertain replies.</p>`;
+    const scroll=$("#cvMsgs"); if(scroll) scroll.scrollTop=scroll.scrollHeight;
+    const ap=$("#cvApprove");
+    if(ap){
+      ap.onclick=()=>doApprove(c.id,null);
+      $("#cvEdit").onclick=()=>{ const el=$("#draftBody"); el.contentEditable="true"; el.classList.add("editing"); el.focus(); ap.textContent="Send edited"; ap.onclick=()=>doApprove(c.id, el.textContent.trim()); };
+      $("#cvHandoff").onclick=()=>doHandoff(c.id);
+    }
+    $("#cvSend").onclick=()=>doReply(c.id);
+    $("#cvReply").onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); doReply(c.id); } };
+  }
+  function renderSide(d){
+    const c=d.conversation||{}; const lead=d.lead||{};
+    $("#cvSide").innerHTML=`
+      <div class="cv-card"><h4>Lead details</h4>
+        <div class="cv-kv"><span>Client</span><b>${esc(state.convClient)}</b></div>
+        <div class="cv-kv"><span>Phone</span><b>${esc(c.phone||"—")}</b></div>
+        <div class="cv-kv"><span>Source</span><b>${esc(lead.source||"—")}</b></div>
+        <div class="cv-kv"><span>Pipeline</span><b>${esc(lead.status||"—")}</b></div>
+        <div class="cv-kv"><span>Thread</span><b>${esc(c.status||"—")}</b></div>
+      </div>
+      ${c.context_note?`<div class="cv-card"><h4>Next best action</h4><p style="margin:0;color:var(--ink-soft)">${esc(c.context_note)}</p></div>`:""}
+      <div class="cv-card"><h4>Safety rails</h4>
+        <div class="cv-kv"><span>STOP monitoring</span><b class="ok">On</b></div>
+        <div class="cv-kv"><span>Quiet hours</span><b class="ok">On</b></div>
+        <div class="cv-kv"><span>Human review</span><b class="ok">On</b></div>
+        <div class="cv-kv"><span>AI on this thread</span><b>${c.ai_paused?"Paused":"Active"}</b></div>
+      </div>
+      ${c.appointment_at?`<div class="cv-card"><h4>Appointment</h4><p style="margin:0">${esc(c.appointment_at)}</p></div>`:""}`;
+  }
+  function renderEmptyThread(){ $("#cvThread").innerHTML=`<div class="cv-empty big">Select a conversation to see the thread.</div>`; $("#cvSide").innerHTML=""; }
+
+  async function act(path,body){ return api("/tenant/"+state.convClient+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}); }
+  const sendMsg=(r)=>toast(r.delivered?"Sent.":r.pending?"Queued — connect Twilio to deliver.":"Done.");
+  async function doApprove(id,editBody){ try{ const r=await act("/approve/"+id, editBody?{body:editBody}:{}); sendMsg(r); await loadInbox(); }catch(e){ alert(e.message); } }
+  async function doReply(id){ const el=$("#cvReply"); const v=(el.value||"").trim(); if(!v)return; el.value=""; try{ const r=await act("/reply/"+id,{body:v}); sendMsg(r); await loadInbox(); }catch(e){ alert(e.message); } }
+  async function doHandoff(id){ try{ await act("/handoff/"+id,{}); toast("Flagged for a human."); await loadInbox(); }catch(e){ alert(e.message); } }
+
+  await loadInbox();
 }
 
 function renderFinder(m){
