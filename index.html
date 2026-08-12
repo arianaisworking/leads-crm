@@ -187,6 +187,7 @@
   .cv-client{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-weight:600;font-size:13px}
   .cv-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--client)}
   .cv-live .dot{width:8px;height:8px;border-radius:50%;background:var(--client);box-shadow:0 0 0 3px rgba(31,157,107,.15)}
+  #cvMode.mode-on{color:var(--client);border-color:var(--client)}
   .cv-stats{grid-template-columns:repeat(4,1fr)!important;margin-bottom:16px}
   .cv-wrap{display:grid;grid-template-columns:320px 1fr 280px;gap:16px;align-items:start}
   .cv-list,.cv-thread,.cv-side{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
@@ -529,6 +530,7 @@ async function renderConversations(m){
     `<div class="cv-top">
        <select id="cvClient" class="cv-client"></select>
        <span class="cv-live"><span class="dot"></span>LIVE</span>
+       <button class="btn ghost" id="cvMode"></button>
        <button class="btn ghost" id="cvKill">⏻ Kill switch</button>
      </div>`)
     + `<div id="cvStats" class="stats cv-stats"></div>
@@ -550,7 +552,20 @@ async function renderConversations(m){
   if(!state.convClients.find(c=>c.id===state.convClient)) state.convClient=state.convClients[0].id;
   const csel=$("#cvClient");
   csel.innerHTML=state.convClients.map(c=>`<option value="${c.id}" ${c.id===state.convClient?"selected":""}>${esc(c.name)}</option>`).join("");
-  csel.onchange=(e)=>{ state.convClient=e.target.value; state.convActive=null; loadInbox(); };
+  csel.onchange=(e)=>{ state.convClient=e.target.value; state.convActive=null; renderMode(); loadInbox(); };
+
+  function curClient(){ return state.convClients.find(c=>c.id===state.convClient)||{}; }
+  function renderMode(){ const b=$("#cvMode"); if(!b)return; const on=!!curClient().auto_send;
+    b.innerHTML=on?"⚡ Autonomous":"✋ Approval mode"; b.classList.toggle("mode-on",on);
+    b.title=on?"AI sends automatically. Click to require approval on every message.":"AI drafts; you approve each send. Click to let it send automatically."; }
+  $("#cvMode").onclick=async()=>{
+    const c=curClient(); const next=c.auto_send?0:1;
+    if(next===1 && !confirm("Switch “"+(c.name||state.convClient)+"” to AUTONOMOUS?\n\nThe AI will send texts and book appointments WITHOUT your approval. Only do this once you trust it."))return;
+    try{ await api("/tenant/"+state.convClient+"/settings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({auto_send:next})});
+      c.auto_send=next; renderMode(); toast(next?"Autonomous — the AI will send on its own.":"Approval mode — the AI drafts for your review."); }
+    catch(e){ alert(e.message); }
+  };
+  renderMode();
 
   $("#cvKill").onclick=async()=>{
     if(!confirm("Kill switch: pause ALL outbound messages for this client? Nothing will send until you turn it back on."))return;

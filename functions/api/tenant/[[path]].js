@@ -23,7 +23,7 @@ export async function onRequest(context) {
   if (seg[0] === 'clients') {
     if (method === 'GET') {
       const { results } = await db.prepare(
-        `SELECT c.id, c.name, c.status, c.door, c.brand_color, c.paused, c.twilio_number,
+        `SELECT c.id, c.name, c.status, c.door, c.brand_color, c.paused, c.auto_send, c.twilio_number,
                 (SELECT COUNT(*) FROM conversations v WHERE v.client_id=c.id AND v.needs_human=1) AS needs_human,
                 (SELECT COUNT(*) FROM conversations v WHERE v.client_id=c.id AND v.status='booked') AS booked
            FROM clients c ORDER BY c.name`
@@ -148,6 +148,19 @@ export async function onRequest(context) {
       .bind(paused, clientId).run();
     await logEvent(db, clientId, 'paused', null, { paused: !!paused });
     return json({ ok: true, paused: !!paused });
+  }
+
+  // Per-client settings toggles (approval vs autonomous, pause).
+  if (action === 'settings' && method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const sets = [], vals = [];
+    if ('auto_send' in b) { sets.push('auto_send=?'); vals.push(b.auto_send ? 1 : 0); }
+    if ('paused' in b) { sets.push('paused=?'); vals.push(b.paused ? 1 : 0); }
+    if (!sets.length) return json({ error: 'no settings provided' }, 400);
+    vals.push(clientId);
+    await db.prepare(`UPDATE clients SET ${sets.join(', ')}, updated_at=datetime('now') WHERE id=?`).bind(...vals).run();
+    if ('auto_send' in b) await logEvent(db, clientId, 'settings', null, { auto_send: !!b.auto_send });
+    return json({ ok: true });
   }
 
   if (action === 'stats' && method === 'GET') {

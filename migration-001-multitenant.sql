@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS clients (
   send_window_end             INTEGER DEFAULT 19, -- local hour, exclusive
   daily_send_cap              INTEGER DEFAULT 100,
   paused                      INTEGER DEFAULT 1,  -- KILL SWITCH. starts paused on purpose.
+  auto_send                   INTEGER DEFAULT 0,  -- 0 = approval-gated (AI drafts, human approves); 1 = autonomous
 
   created_at                  TEXT DEFAULT (datetime('now')),
   updated_at                  TEXT DEFAULT (datetime('now'))
@@ -63,6 +64,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_number ON clients(twilio_number);
 -- "duplicate column name", the migration already ran - delete them and continue.
 ALTER TABLE leads ADD COLUMN client_id TEXT DEFAULT 'networkboss';
 ALTER TABLE notes ADD COLUMN client_id TEXT DEFAULT 'networkboss';
+-- If the clients table pre-dates the approval-gating flag, add it once:
+-- ALTER TABLE clients ADD COLUMN auto_send INTEGER DEFAULT 0;
 
 UPDATE leads SET client_id = 'networkboss' WHERE client_id IS NULL;
 UPDATE notes SET client_id = 'networkboss' WHERE client_id IS NULL;

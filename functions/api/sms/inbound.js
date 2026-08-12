@@ -114,11 +114,17 @@ export async function onRequestPost(context) {
     return twiml();
   }
 
+  // Approval-gated (default) = the AI drafts, a human approves from the inbox.
+  // Autonomous (client.auto_send=1) = the AI sends and books on its own.
+  const gated = !client.auto_send;
+
   // --- 5. BOOK -------------------------------------------------------------
+  // Autonomous clients book directly. Gated clients never write to the calendar
+  // without a human — the proposed time goes out as a draft to approve first.
   let bookedLabel = null;
   if (out.action === 'book' && out.book_slot) {
     const slot = slots.find((s) => s.id === out.book_slot);
-    if (slot) {
+    if (slot && !gated) {
       try {
         const ev = await bookSlot(env, client, slot, {
           name: conv.contact_name, phone: from,
@@ -135,27 +141,41 @@ export async function onRequestPost(context) {
         await notifyOwner(env, client, `Booking FAILED for ${from} - please call them.`);
         return twiml();
       }
+    } else if (slot && gated) {
+      out.needs_human = true;
+      out.context_note = (out.context_note ? out.context_note + ' ' : '') +
+        `[AI proposes booking ${slot.label} — approve the draft to confirm]`;
     }
   }
 
-  // --- 6. SEND + LOG -------------------------------------------------------
+  // --- 6. SEND (autonomous) or DRAFT (approval-gated) ----------------------
   if (out.reply) {
-    const sent = await sendSms(env, client, from, out.reply);
-    await insertMessage(db, conv, client, 'out', out.reply, 'ai', {
-      twilio_sid: sent.sid, status: sent.ok ? sent.status : 'failed',
-      error_code: sent.code, intent: cls.intent, confidence: out.confidence,
-      segments: sent.segments,
-    });
-    if (sent.ok) await bumpLedger(db, client.id, client.timezone, 'sent');
+    if (gated) {
+      // Land it in the inbox as a draft. Nothing is sent until a human approves.
+      await insertMessage(db, conv, client, 'out', out.reply, 'ai', {
+        status: 'draft', intent: cls.intent, confidence: out.confidence,
+      });
+    } else {
+      const sent = await sendSms(env, client, from, out.reply);
+      await insertMessage(db, conv, client, 'out', out.reply, 'ai', {
+        twilio_sid: sent.sid, status: sent.ok ? sent.status : 'failed',
+        error_code: sent.code, intent: cls.intent, confidence: out.confidence,
+        segments: sent.segments,
+      });
+      if (sent.ok) await bumpLedger(db, client.id, client.timezone, 'sent');
+    }
   }
 
+  const didSend = !gated && !!out.reply;
   await db.prepare(`UPDATE conversations
-       SET intent=?, context_note=?, needs_human=?, turn_count=turn_count+1,
-           last_inbound_at=datetime('now'), last_outbound_at=datetime('now'),
+       SET intent=?, context_note=?, needs_human=?, turn_count=turn_count+?,
+           last_inbound_at=datetime('now'),
+           last_outbound_at=CASE WHEN ?=1 THEN datetime('now') ELSE last_outbound_at END,
            status=CASE WHEN status='queued' THEN 'active' ELSE status END,
            next_send_at=NULL
      WHERE id=?`)
-    .bind(cls.intent, out.context_note || conv.context_note, out.needs_human ? 1 : 0, conv.id)
+    .bind(cls.intent, out.context_note || conv.context_note, out.needs_human ? 1 : 0,
+          didSend ? 1 : 0, didSend ? 1 : 0, conv.id)
     .run();
 
   if (out.needs_human) await notifyOwner(env, client, `Review needed with ${from}.`);

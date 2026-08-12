@@ -24,6 +24,7 @@ export async function onRequest(context) {
     .all();
 
   for (const client of clients || []) {
+    const gated = !client.auto_send; // gated clients get drafts, not sends
     if (!withinSendWindow(client)) { report.push({ client: client.id, skipped: 'quiet hours' }); continue; }
 
     const day = dayInTz(client.timezone);
@@ -56,6 +57,22 @@ export async function onRequest(context) {
         continue;
       }
 
+      const next = nextSendAt(client, conv.step + 1);
+
+      if (gated) {
+        // Draft the follow-up for human approval instead of sending. The cadence
+        // still advances so the draft appears on schedule; it costs no send/cap.
+        await db.prepare(`INSERT INTO messages
+            (id, conversation_id, client_id, direction, body, author, status)
+            VALUES (?,?,?,?,?, 'ai', 'draft')`)
+          .bind(uid('ms_'), conv.id, client.id, 'out', body).run();
+        await db.prepare(`UPDATE conversations
+               SET step = step + 1, status = 'active', next_send_at = ?
+             WHERE id = ?`)
+          .bind(next, conv.id).run();
+        continue;
+      }
+
       const sent = await sendSms(env, client, conv.phone, body);
       await db.prepare(`INSERT INTO messages
           (id, conversation_id, client_id, direction, body, author, twilio_sid, status, error_code, segments)
@@ -64,7 +81,6 @@ export async function onRequest(context) {
           sent.sid || null, sent.ok ? sent.status : 'failed', sent.code || null, sent.segments || null)
         .run();
 
-      const next = nextSendAt(client, conv.step + 1);
       await db.prepare(`UPDATE conversations
              SET step = step + 1, status = 'active', last_outbound_at = datetime('now'), next_send_at = ?
            WHERE id = ?`)
