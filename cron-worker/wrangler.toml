@@ -1,0 +1,11 @@
+name = "aiw-crm-tick"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Every 5 minutes. This is the scheduler for the SMS engine.
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Optional: uncomment and set if the app moves to a custom domain.
+# [vars]
+# TICK_URL = "https://app.yourdomain.com/api/sms/tick"
