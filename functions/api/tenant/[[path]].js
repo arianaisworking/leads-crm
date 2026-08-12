@@ -12,6 +12,8 @@
 
 import { getClientById, scoped, json, uid, logEvent, bumpLedger, toE164, isOptedOut } from '../../_lib/tenant.js';
 import { sendSms } from '../../_lib/twilio.js';
+import { classify, respond, isStopKeyword } from '../../_lib/brain.js';
+import { openSlots } from '../../_lib/calendar.js';
 
 export async function onRequest(context) {
   const { request, env, params } = context;
@@ -206,6 +208,71 @@ export async function onRequest(context) {
     }
     await logEvent(db, clientId, 'campaign_start', null, { enrolled, considered: leads.length });
     return json({ ok: true, enrolled, skipped_no_phone, skipped_existing, skipped_optout, considered: leads.length });
+  }
+
+  // Simulate an inbound lead text — runs the real classify -> respond flow and
+  // drops the AI reply into the inbox as a draft. Lets you demo/test the AI
+  // without Twilio or a phone number. Never sends.
+  if (action === 'simulate' && method === 'POST') {
+    if (!env.ANTHROPIC_API_KEY) return json({ error: 'ANTHROPIC_API_KEY is not set. Add it in Cloudflare Pages secrets and redeploy, then try again.' }, 400);
+    const b = await request.json().catch(() => ({}));
+    const text = (b.body || '').trim();
+    if (!text) return json({ error: 'Type what the lead would say.' }, 400);
+    const phone = b.phone || '+15550000001';
+    const name = b.name || 'Demo Lead';
+
+    let conv = await db.prepare('SELECT * FROM conversations WHERE client_id=? AND phone=?').bind(clientId, phone).first();
+    if (!conv) {
+      const cvid = uid('cv_');
+      await db.prepare("INSERT INTO conversations (id, client_id, phone, contact_name, status, last_inbound_at) VALUES (?,?,?,?, 'active', datetime('now'))")
+        .bind(cvid, clientId, phone, name).run();
+      conv = await db.prepare('SELECT * FROM conversations WHERE id=?').bind(cvid).first();
+    }
+    const inId = uid('ms_');
+    await db.prepare("INSERT INTO messages (id, conversation_id, client_id, direction, body, author, status) VALUES (?,?,?,?,?, 'lead', 'delivered')")
+      .bind(inId, conv.id, clientId, 'in', text).run();
+    await db.prepare("UPDATE conversations SET last_inbound_at=datetime('now') WHERE id=?").bind(conv.id).run();
+
+    if (isStopKeyword(text)) {
+      await db.prepare("INSERT OR IGNORE INTO opt_outs (client_id, phone, reason) VALUES (?,?,'stop_keyword')").bind(clientId, phone).run();
+      await db.prepare("UPDATE conversations SET status='opted_out', ai_paused=1 WHERE id=?").bind(conv.id).run();
+      return json({ ok: true, outcome: 'opted_out', conversation_id: conv.id });
+    }
+
+    const { results: msgs } = await db.prepare('SELECT direction, body FROM messages WHERE conversation_id=? ORDER BY created_at ASC LIMIT 20').bind(conv.id).all();
+    const thread = (msgs || []).map((mm) => `${mm.direction === 'in' ? 'Lead' : 'Us'}: ${mm.body}`).join('\n');
+
+    let cls;
+    try { cls = await classify(env, thread, text); } catch (e) { return json({ error: 'AI classify failed: ' + e.message }, 502); }
+    await db.prepare('UPDATE messages SET intent=?, confidence=? WHERE id=?').bind(cls.intent, cls.confidence ?? null, inId).run();
+
+    const NEVER_AUTO = ['angry', 'spam_accusation', 'legal_threat', 'medical_or_sensitive', 'opt_out'];
+    if (cls.escalate || NEVER_AUTO.includes(cls.intent)) {
+      await db.prepare('UPDATE conversations SET intent=?, needs_human=1, ai_paused=1 WHERE id=?').bind(cls.intent, conv.id).run();
+      return json({ ok: true, outcome: 'escalated', intent: cls.intent, conversation_id: conv.id });
+    }
+    if (cls.intent === 'not_interested' || cls.intent === 'wrong_number') {
+      await db.prepare("UPDATE conversations SET status='closed', intent=? WHERE id=?").bind(cls.intent, conv.id).run();
+      return json({ ok: true, outcome: 'closed', intent: cls.intent, conversation_id: conv.id });
+    }
+
+    let slots = [];
+    if (['interested', 'booking', 'reschedule'].includes(cls.intent) && client.calendar_id && client.google_refresh_token) {
+      try { slots = await openSlots(env, client, { max: 3 }); } catch (e) { /* no calendar in demo */ }
+    }
+
+    const brain = safeParse(client.business_brain) || {};
+    let out;
+    try { out = await respond(env, client, brain, slots, thread, text); } catch (e) { return json({ error: 'AI respond failed: ' + e.message }, 502); }
+
+    if (out.reply) {
+      await db.prepare("INSERT INTO messages (id, conversation_id, client_id, direction, body, author, status, intent, confidence) VALUES (?,?,?,?,?, 'ai', 'draft', ?, ?)")
+        .bind(uid('ms_'), conv.id, clientId, 'out', out.reply, cls.intent, out.confidence ?? null).run();
+    }
+    await db.prepare('UPDATE conversations SET intent=?, context_note=?, needs_human=? WHERE id=?')
+      .bind(cls.intent, out.context_note || conv.context_note, out.needs_human ? 1 : 0, conv.id).run();
+
+    return json({ ok: true, outcome: 'drafted', intent: cls.intent, confidence: out.confidence, reply: out.reply, needs_human: !!out.needs_human, conversation_id: conv.id });
   }
 
   // Full client profile + business brain, for the onboarding/setup editor.

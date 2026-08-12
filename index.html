@@ -193,6 +193,9 @@
   .cv-list,.cv-thread,.cv-side{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
   .cv-list{padding:12px;display:flex;flex-direction:column;min-height:560px}
   .cv-list .search{width:100%;margin-bottom:10px}
+  .cv-sim{display:flex;gap:6px;margin-bottom:10px}
+  .cv-sim input{flex:1;padding:9px 11px;border:1px dashed var(--pink);border-radius:10px;font:inherit;background:var(--pink-wash)}
+  .cv-sim .btn.sm{padding:8px 12px}
   .cv-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
   .cv-filters button{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--ink-soft);cursor:pointer}
   .cv-filters button.on{background:var(--pink);color:#fff;border-color:var(--pink)}
@@ -606,6 +609,7 @@ async function renderConversations(m){
     + `<div id="cvStats" class="stats cv-stats"></div>
        <div class="cv-wrap">
          <div class="cv-list">
+           <div class="cv-sim"><input id="cvSimText" placeholder="🧪 Simulate a lead text…"><button class="btn sm" id="cvSimGo">Send</button></div>
            <input class="search" id="cvSearch" placeholder="Search conversations…" value="${esc(state.convQ)}">
            <div class="cv-filters" id="cvFilters">
              ${[["all","All"],["needs","Needs reply"],["draft","AI drafted"],["booked","Booked"]].map(([k,l])=>`<button data-f="${k}" class="${state.convFilter===k?"on":""}">${l}</button>`).join("")}
@@ -642,6 +646,19 @@ async function renderConversations(m){
     try{ await api("/tenant/"+state.convClient+"/pause",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({paused:true})}); toast("Paused — all outbound stopped for this client."); }
     catch(e){ alert(e.message); }
   };
+  async function simulate(){
+    const el=$("#cvSimText"); const text=(el.value||"").trim(); if(!text)return;
+    const btn=$("#cvSimGo"); btn.disabled=true; const orig=btn.textContent; btn.innerHTML=`<span class="spin"></span>`;
+    try{ const r=await api("/tenant/"+state.convClient+"/simulate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({body:text})});
+      el.value="";
+      const label={drafted:"AI drafted a reply",escalated:"Escalated to a human",closed:"Marked not-interested",opted_out:"Opted out"}[r.outcome]||"Done";
+      toast(label+(r.intent?" · "+r.intent:""));
+      state.convActive=r.conversation_id; await loadInbox();
+    }catch(e){ alert(e.message); }
+    finally{ btn.disabled=false; btn.textContent=orig; }
+  }
+  $("#cvSimGo").onclick=simulate;
+  $("#cvSimText").onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); simulate(); } };
   $("#cvSearch").oninput=(e)=>{ state.convQ=e.target.value; renderItems(); };
   document.querySelectorAll("#cvFilters button").forEach(b=>b.onclick=()=>{
     state.convFilter=b.dataset.f;
