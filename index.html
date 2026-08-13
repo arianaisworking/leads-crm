@@ -618,6 +618,7 @@ async function openLead(id){
       <div class="field"><label>Website</label><div class="val">${lead.website?`<a href="${esc(lead.website)}" target="_blank" rel="noopener">${esc(lead.website.replace(/^https?:\/\//,""))}</a>`:'<span class="sub">—</span>'}</div></div>
       <div class="field"><label>Address</label><div class="val sub">${esc([lead.address,lead.city,lead.state,lead.postcode].filter(Boolean).join(", ")||"—")}</div></div>
       <button class="btn" id="dSave">Save changes</button>
+      <button class="btn ghost" id="dMakeClient" style="margin-top:8px">⚡ Set up as client (automations)</button>
       <div class="field"><label>Notes</label><div class="notes-list" id="dNotes"><div class="sub">Loading…</div></div>
         <div class="noteadd" style="margin-top:8px"><input id="dNoteInput" placeholder="Add a note…"><button class="btn ghost" id="dNoteBtn">Add</button></div></div>
       <button class="del" id="dDelete">Delete this lead</button>
@@ -630,6 +631,21 @@ async function openLead(id){
   };
   $("#dDelete").onclick=async()=>{ if(!confirm("Delete "+lead.name+"? This can't be undone."))return;
     await api("/leads/"+id,{method:"DELETE"}); closeDrawer(); render(); };
+  $("#dMakeClient").onclick=async()=>{
+    const base=(lead.name||"client").toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,24)||"client";
+    let slug=prompt("Set this lead up as a client for the SMS automations.\n\nShort id / slug (lowercase, no spaces):", base);
+    if(!slug)return; slug=slug.toLowerCase().replace(/[^a-z0-9_]+/g,""); if(!slug)return;
+    const payload={ id:slug, name:lead.name, website:lead.website||null,
+      address:[lead.address,lead.city,lead.state,lead.postcode].filter(Boolean).join(", ")||null,
+      notify_email:lead.email||null, hot_lead_phone:lead.phone||null };
+    try{ await api("/tenant/clients",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)}); }
+    catch(e){ alert("Couldn't create client: "+e.message+"\nThe id may already be taken — try another."); return; }
+    try{ await api("/leads/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:"Client"})}); }catch(e){}
+    state.convClient=slug; state.convClients=[]; state.view="automations";
+    document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.view==="automations"));
+    closeDrawer(); toast("Client created — finish their onboarding.");
+    renderClientSetup($("#view"), slug);
+  };
   loadNotes(id);
   $("#dNoteBtn").onclick=async()=>{ const v=$("#dNoteInput").value.trim(); if(!v)return;
     await api("/leads/"+id+"/notes",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({body:v})});
