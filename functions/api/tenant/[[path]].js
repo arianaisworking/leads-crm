@@ -12,7 +12,7 @@
 
 import { getClientById, scoped, json, uid, logEvent, bumpLedger, toE164, isOptedOut } from '../../_lib/tenant.js';
 import { sendSms } from '../../_lib/twilio.js';
-import { classify, respond, isStopKeyword } from '../../_lib/brain.js';
+import { classify, respond, isStopKeyword, personalize } from '../../_lib/brain.js';
 import { openSlots } from '../../_lib/calendar.js';
 
 export async function onRequest(context) {
@@ -174,14 +174,14 @@ export async function onRequest(context) {
     let leads;
     if (Array.isArray(b.lead_ids) && b.lead_ids.length) {
       const qs = b.lead_ids.map(() => '?').join(',');
-      const r = await db.prepare(`SELECT id, name, phone FROM leads WHERE client_id=? AND id IN (${qs})`).bind(clientId, ...b.lead_ids).all();
+      const r = await db.prepare(`SELECT id, name, phone, interest FROM leads WHERE client_id=? AND id IN (${qs})`).bind(clientId, ...b.lead_ids).all();
       leads = r.results || [];
     } else {
       const wh = ['client_id=?', "phone IS NOT NULL", "phone != ''"]; const vals = [clientId];
       if (b.status) { wh.push('status=?'); vals.push(b.status); }
       if (b.trade) { wh.push('trade=?'); vals.push(b.trade); }
       const lim = Math.min(Math.max(parseInt(b.limit, 10) || 200, 1), 500);
-      const r = await db.prepare(`SELECT id, name, phone FROM leads WHERE ${wh.join(' AND ')} LIMIT ${lim}`).bind(...vals).all();
+      const r = await db.prepare(`SELECT id, name, phone, interest FROM leads WHERE ${wh.join(' AND ')} LIMIT ${lim}`).bind(...vals).all();
       leads = r.results || [];
     }
 
@@ -196,14 +196,16 @@ export async function onRequest(context) {
       const exists = await db.prepare('SELECT id FROM conversations WHERE client_id=? AND phone=?').bind(clientId, phone).first();
       if (exists) { skipped_existing++; continue; }
 
+      const svc = lead.interest || null;
       const convId = uid('cv_');
       await db.prepare(`INSERT INTO conversations
-          (id, client_id, lead_id, phone, contact_name, status, step, next_send_at, context_note)
-          VALUES (?,?,?,?,?, 'queued', 1, ?, 'Enrolled in the reactivation sequence.')`)
-        .bind(convId, clientId, lead.id, phone, lead.name || null, gapAt(1)).run();
+          (id, client_id, lead_id, phone, contact_name, status, step, next_send_at, interest, context_note)
+          VALUES (?,?,?,?,?, 'queued', 1, ?, ?, ?)`)
+        .bind(convId, clientId, lead.id, phone, lead.name || null, gapAt(1), svc,
+          svc ? `Reached out about ${svc}. Enrolled in reactivation.` : 'Enrolled in the reactivation sequence.').run();
       await db.prepare(`INSERT INTO messages (id, conversation_id, client_id, direction, body, author, status)
           VALUES (?,?,?,?,?, 'ai', 'draft')`)
-        .bind(uid('ms_'), convId, clientId, 'out', renderTpl(seq[0], lead.name, client.name)).run();
+        .bind(uid('ms_'), convId, clientId, 'out', renderTpl(seq[0], lead.name, client.name, svc)).run();
       enrolled++;
     }
     await logEvent(db, clientId, 'campaign_start', null, { enrolled, considered: leads.length });
@@ -226,26 +228,29 @@ export async function onRequest(context) {
       if (!phone) { skipped_no_phone++; continue; }
       const name = (r.name || '').toString().trim() || null;
       const email = (r.email || '').toString().trim() || null;
+      const interest = (r.interest || '').toString().trim() || null;
       const source_id = `csv/${clientId}/${phone}`;
       const res = await db.prepare(
-        `INSERT OR IGNORE INTO leads (name, phone, email, city, state, source, source_id, status, client_id)
-         VALUES (?,?,?,?,?, 'csv', ?, 'New', ?)`
-      ).bind(name || phone, phone, email, r.city || null, r.state || null, source_id, clientId).run();
+        `INSERT OR IGNORE INTO leads (name, phone, email, city, state, interest, source, source_id, status, client_id)
+         VALUES (?,?,?,?,?,?, 'csv', ?, 'New', ?)`
+      ).bind(name || phone, phone, email, r.city || null, r.state || null, interest, source_id, clientId).run();
       if (res.meta.changes > 0) imported++; else skipped_dupe++;
 
       if (doEnroll) {
         if (await isOptedOut(db, clientId, phone)) continue;
         const exists = await db.prepare('SELECT id FROM conversations WHERE client_id=? AND phone=?').bind(clientId, phone).first();
         if (exists) continue;
-        const lead = await db.prepare('SELECT id, name FROM leads WHERE client_id=? AND phone=? LIMIT 1').bind(clientId, phone).first();
+        const lead = await db.prepare('SELECT id, name, interest FROM leads WHERE client_id=? AND phone=? LIMIT 1').bind(clientId, phone).first();
+        const svc = interest || (lead && lead.interest) || null;
         const cvid = uid('cv_');
         await db.prepare(
-          `INSERT INTO conversations (id, client_id, lead_id, phone, contact_name, status, step, next_send_at, context_note)
-           VALUES (?,?,?,?,?, 'queued', 1, ?, 'Imported + enrolled in the reactivation sequence.')`
-        ).bind(cvid, clientId, lead ? lead.id : null, phone, (lead && lead.name) || name, gapAt(1)).run();
+          `INSERT INTO conversations (id, client_id, lead_id, phone, contact_name, status, step, next_send_at, interest, context_note)
+           VALUES (?,?,?,?,?, 'queued', 1, ?, ?, ?)`
+        ).bind(cvid, clientId, lead ? lead.id : null, phone, (lead && lead.name) || name, gapAt(1), svc,
+          svc ? `Reached out about ${svc}. Imported + enrolled.` : 'Imported + enrolled in the reactivation sequence.').run();
         await db.prepare(`INSERT INTO messages (id, conversation_id, client_id, direction, body, author, status)
           VALUES (?,?,?,?,?, 'ai', 'draft')`)
-          .bind(uid('ms_'), cvid, clientId, 'out', renderTpl(seq[0], (lead && lead.name) || name, client.name)).run();
+          .bind(uid('ms_'), cvid, clientId, 'out', renderTpl(seq[0], (lead && lead.name) || name, client.name, svc)).run();
         enrolled++;
       }
     }
@@ -283,7 +288,8 @@ export async function onRequest(context) {
     }
 
     const { results: msgs } = await db.prepare('SELECT direction, body FROM messages WHERE conversation_id=? ORDER BY created_at ASC LIMIT 20').bind(conv.id).all();
-    const thread = (msgs || []).map((mm) => `${mm.direction === 'in' ? 'Lead' : 'Us'}: ${mm.body}`).join('\n');
+    const thread = (conv.interest ? `(Lead originally reached out about: ${conv.interest})\n` : '')
+      + (msgs || []).map((mm) => `${mm.direction === 'in' ? 'Lead' : 'Us'}: ${mm.body}`).join('\n');
 
     let cls;
     try { cls = await classify(env, thread, text); } catch (e) { return json({ error: 'AI classify failed: ' + e.message }, 502); }
@@ -316,6 +322,25 @@ export async function onRequest(context) {
       .bind(cls.intent, out.context_note || conv.context_note, out.needs_human ? 1 : 0, conv.id).run();
 
     return json({ ok: true, outcome: 'drafted', intent: cls.intent, confidence: out.confidence, reply: out.reply, needs_human: !!out.needs_human, conversation_id: conv.id });
+  }
+
+  // Rewrite a draft with the AI so it speaks to the lead's original interest.
+  if (action === 'personalize' && method === 'POST') {
+    if (!env.ANTHROPIC_API_KEY) return json({ error: 'ANTHROPIC_API_KEY is not set.' }, 400);
+    const conv = await scoped(db, 'SELECT * FROM conversations WHERE client_id=? AND id=?', clientId, ref).first();
+    if (!conv) return json({ error: 'not found' }, 404);
+    const b = await request.json().catch(() => ({}));
+    const draft = b.message_id
+      ? await scoped(db, 'SELECT * FROM messages WHERE client_id=? AND conversation_id=? AND id=?', clientId, ref, b.message_id).first()
+      : await scoped(db, "SELECT * FROM messages WHERE client_id=? AND conversation_id=? AND status='draft' ORDER BY created_at DESC LIMIT 1", clientId, ref).first();
+    if (!draft) return json({ error: 'no draft to personalize' }, 400);
+    const brain = safeParse(client.business_brain) || {};
+    let text;
+    try { text = await personalize(env, client, brain, conv.interest, draft.body); }
+    catch (e) { return json({ error: 'AI failed: ' + e.message }, 502); }
+    if (!text) return json({ error: 'The AI could not rewrite that.' }, 502);
+    await db.prepare('UPDATE messages SET body=? WHERE id=?').bind(text, draft.id).run();
+    return json({ ok: true, body: text });
   }
 
   // Full client profile + business brain, for the onboarding/setup editor.
@@ -364,13 +389,14 @@ function publicClient(c) {
 }
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
-function renderTpl(tpl, name, business) {
+function renderTpl(tpl, name, business, service) {
   const first = (name || '').split(' ')[0] || 'there';
-  return String(tpl || '').replace(/\{first_name\}/g, first).replace(/\{business\}/g, business);
+  const svc = (service && String(service).trim()) || 'our services';
+  return String(tpl || '').replace(/\{first_name\}/g, first).replace(/\{business\}/g, business).replace(/\{service\}/g, svc);
 }
 function defaultSequence(business) {
   return [
-    `Hi {first_name}, this is ${business}. You reached out to us a while back and we never got you scheduled. Still interested? Reply STOP to opt out.`,
+    `Hi {first_name}, this is ${business}. You reached out about {service} a while back and we never got you scheduled. Still interested? Reply STOP to opt out.`,
     `Hi {first_name} - following up from ${business}. Happy to find you a time this week if you're still looking. Reply STOP to opt out.`,
     `Last note from ${business}, {first_name} - if the timing isn't right no worries at all. Want me to hold a spot? Reply STOP to opt out.`,
   ];

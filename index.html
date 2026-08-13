@@ -391,27 +391,27 @@ const BRAIN_TEMPLATES=[
    services:[{name:"Botox",price:"$12/unit",duration:30},{name:"Hydrafacial",price:"$199",duration:60},{name:"Lip filler",price:"$650",duration:45}],
    add_ons:[{name:"Brow wax",price:"$20"},{name:"LED light therapy",price:"$40"}],booking_hours:{start:9,end:18},
    never_say:["guaranteed results","medical advice","before-and-after promises"],escalate_if:["asks about a bad reaction","mentions a refund","medical condition"],
-   sequence:["Hi {first_name}, it's {business}. You reached out a while back about treatments and we never got you booked — still interested? Reply STOP to opt out.","Hi {first_name}, following up from {business} — happy to find you a time this week if you're still thinking about it. Reply STOP to opt out.","Last note from {business}, {first_name} — want me to hold a spot for you? No worries if the timing's off. Reply STOP to opt out."]}},
+   sequence:["Hi {first_name}, it's {business}. You reached out about {service} a while back and we never got you booked — still interested? Reply STOP to opt out.","Hi {first_name}, following up from {business} — happy to find you a time this week if you're still thinking about it. Reply STOP to opt out.","Last note from {business}, {first_name} — want me to hold a spot for you? No worries if the timing's off. Reply STOP to opt out."]}},
  {key:"salon",label:"Hair / nails / beauty salon",brain:{tone:"Friendly, upbeat and welcoming. Casual and warm.",
    services:[{name:"Women's cut & style",price:"$65",duration:60},{name:"Full highlights",price:"$160",duration:120},{name:"Gel manicure",price:"$45",duration:45}],
    add_ons:[{name:"Deep-conditioning treatment",price:"$25"},{name:"Brow tint",price:"$20"}],booking_hours:{start:9,end:19},
    never_say:["guaranteed color results"],escalate_if:["complaint about past service","refund"],
-   sequence:["Hi {first_name}, it's {business}! You reached out about an appointment a while back — still want to get in? Reply STOP to opt out.","Hey {first_name}, {business} here — we've got openings this week if you're due for a refresh. Reply STOP to opt out.","Last check-in from {business}, {first_name} — want me to save you a spot? Reply STOP to opt out."]}},
+   sequence:["Hi {first_name}, it's {business}! You reached out about {service} a while back — still want to get in? Reply STOP to opt out.","Hey {first_name}, {business} here — we've got openings this week if you're due for a refresh. Reply STOP to opt out.","Last check-in from {business}, {first_name} — want me to save you a spot? Reply STOP to opt out."]}},
  {key:"roofing",label:"Roofing",brain:{tone:"Direct, professional and factual. No fluff, no hype. Respect their time.",
    services:[{name:"Free roof inspection",price:"Free",duration:45},{name:"Roof repair",price:"Quoted after inspection",duration:0},{name:"Full replacement",price:"Quoted after inspection",duration:0}],
    add_ons:[{name:"Gutter inspection",price:"Free with roof inspection"}],booking_hours:{start:7,end:18},
    never_say:["guaranteed insurance approval","final price before inspection"],escalate_if:["insurance claim dispute","storm damage emergency","attorney"],
-   sequence:["Hi {first_name}, this is {business}. You asked about your roof a while back — still want that free inspection? Reply STOP to opt out.","{first_name}, following up from {business} on your roof. We can get an inspector out this week — want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a slot for the free inspection if you still need it. Reply STOP to opt out."]}},
+   sequence:["Hi {first_name}, this is {business}. You asked about {service} a while back — still want that free inspection? Reply STOP to opt out.","{first_name}, following up from {business} on your roof. We can get an inspector out this week — want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a slot for the free inspection if you still need it. Reply STOP to opt out."]}},
  {key:"hvac",label:"HVAC",brain:{tone:"Direct, helpful and factual. Clear and to the point.",
    services:[{name:"Diagnostic / service call",price:"$89",duration:60},{name:"AC tune-up",price:"$129",duration:60},{name:"Replacement estimate",price:"Free",duration:60}],
    add_ons:[{name:"Duct-cleaning quote",price:"Free"},{name:"Maintenance membership",price:"$16/mo"}],booking_hours:{start:7,end:19},
    never_say:["final repair price sight-unseen","guaranteed same-day"],escalate_if:["no heat or no cool emergency","warranty dispute"],
-   sequence:["Hi {first_name}, this is {business}. You reached out about your system a while back — still need it looked at? Reply STOP to opt out.","{first_name}, {business} here — we can get a tech out this week. Want me to grab you a time? Reply STOP to opt out.","Last check-in from {business}, {first_name} — want me to hold a service slot? Reply STOP to opt out."]}},
+   sequence:["Hi {first_name}, this is {business}. You reached out about {service} a while back — still need it looked at? Reply STOP to opt out.","{first_name}, {business} here — we can get a tech out this week. Want me to grab you a time? Reply STOP to opt out.","Last check-in from {business}, {first_name} — want me to hold a service slot? Reply STOP to opt out."]}},
  {key:"dental_implants",label:"Dental implants",brain:{tone:"Reassuring, professional and caring. Calm and confidence-building.",
    services:[{name:"Free implant consultation",price:"Free",duration:45},{name:"Single implant",price:"Quoted at consult",duration:0},{name:"All-on-4",price:"Quoted at consult",duration:0}],
    add_ons:[{name:"3D imaging",price:"Included with consult"},{name:"Financing pre-check",price:"Free"}],booking_hours:{start:8,end:17},
    never_say:["dental advice","guaranteed outcome","final price before consult"],escalate_if:["pain or emergency","complaint","refund","attorney"],
-   sequence:["Hi {first_name}, this is {business}. You asked about implants a while back — still want that free consultation? Reply STOP to opt out.","{first_name}, following up from {business} — we can get you in this week to go over options and financing. Want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a consult spot whenever you're ready. Reply STOP to opt out."]}}
+   sequence:["Hi {first_name}, this is {business}. You asked about {service} a while back — still want that free consultation? Reply STOP to opt out.","{first_name}, following up from {business} — we can get you in this week to go over options and financing. Want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a consult spot whenever you're ready. Reply STOP to opt out."]}}
 ];
 const vLabel=k=>{const v=VERTICALS.find(x=>x.key===k);return v?v.label:(k||"—");};
 const SIGNAL_LABEL={financing:"💳 Financing",free_consult:"🎁 Free consult",multi_location:"📍 Multi-location"};
@@ -437,10 +437,10 @@ function parseCSV(text){ const rows=[]; let i=0,field="",row=[],inQ=false; text=
 function csvToLeads(text){ const rows=parseCSV(text).filter(r=>r.some(c=>(c||"").trim()!=="")); if(!rows.length) return [];
   const header=rows[0].map(h=>(h||"").trim().toLowerCase());
   const find=(re)=>header.findIndex(h=>re.test(h));
-  const iPhone=find(/phone|mobile|cell|tel/),iEmail=find(/e-?mail/),iName=find(/^name$|full ?name|contact ?name/),iFirst=find(/first/),iLast=find(/last/),iCity=find(/city|town/),iState=find(/state|province|region/);
+  const iPhone=find(/phone|mobile|cell|tel/),iEmail=find(/e-?mail/),iName=find(/^name$|full ?name|contact ?name/),iFirst=find(/first/),iLast=find(/last/),iCity=find(/city|town/),iState=find(/state|province|region/),iInterest=find(/service|interest|campaign|inquiry|procedure|treatment|reason|lead ?source|form ?name/);
   const out=[]; for(let r=1;r<rows.length;r++){ const row=rows[r]; const g=(i)=> i>=0?(row[i]||"").trim():"";
     let name=g(iName); if(!name){ name=(g(iFirst)+" "+g(iLast)).trim(); }
-    out.push({name:name||null,phone:g(iPhone)||null,email:g(iEmail)||null,city:g(iCity)||null,state:g(iState)||null}); }
+    out.push({name:name||null,phone:g(iPhone)||null,email:g(iEmail)||null,city:g(iCity)||null,state:g(iState)||null,interest:g(iInterest)||null}); }
   return out; }
 function avColor(l){ if(l.trade&&TRADE_COLOR[l.trade])return TRADE_COLOR[l.trade]; let h=0; for(const c of (l.name||"")) h=(h*31+c.charCodeAt(0))>>>0; return POOL[h%POOL.length]; }
 function avatar(l,sm){return `<span class="av${sm?' sm':''}" style="background:${avColor(l)}">${esc(initials(l.name))}</span>`;}
@@ -787,6 +787,7 @@ async function renderConversations(m){
           <div class="cv-draft-body" id="draftBody">${esc(mm.body)}</div>
           <div class="cv-draft-actions">
             <button class="btn" id="cvApprove">Approve &amp; send</button>
+            <button class="btn ghost" id="cvPersonalize">✨ Personalize</button>
             <button class="btn ghost" id="cvEdit">Edit</button>
             <button class="btn ghost" id="cvHandoff">Hand off</button>
           </div></div>`;
@@ -807,6 +808,9 @@ async function renderConversations(m){
       ap.onclick=()=>doApprove(c.id,null);
       $("#cvEdit").onclick=()=>{ const el=$("#draftBody"); el.contentEditable="true"; el.classList.add("editing"); el.focus(); ap.textContent="Send edited"; ap.onclick=()=>doApprove(c.id, el.textContent.trim()); };
       $("#cvHandoff").onclick=()=>doHandoff(c.id);
+      $("#cvPersonalize").onclick=async()=>{ const pb=$("#cvPersonalize"); pb.disabled=true; pb.innerHTML=`<span class="spin"></span>`;
+        try{ await act("/personalize/"+c.id,{}); toast("Rewritten to match their interest."); await loadInbox(); }
+        catch(e){ alert(e.message); pb.disabled=false; pb.textContent="✨ Personalize"; } };
     }
     $("#cvSend").onclick=()=>doReply(c.id);
     $("#cvReply").onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); doReply(c.id); } };

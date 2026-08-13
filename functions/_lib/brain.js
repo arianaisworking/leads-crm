@@ -118,6 +118,19 @@ Return ONLY this JSON object:
 }`;
 }
 
+// Rewrite one outbound draft so it speaks to what the lead originally wanted,
+// in the business's tone. Used by the inbox "Personalize" action.
+export async function personalize(env, client, brain, interest, draft) {
+  const system = `You rewrite ONE outbound SMS for ${client.name}. Return ONLY JSON: {"reply":"the rewritten text"}.
+TONE to match: ${brain.tone || 'warm and professional'}.
+BUSINESS FACTS (the only facts you may use): ${JSON.stringify(brain)}.
+The lead originally reached out about: ${interest || 'an unspecified service'}.
+Rewrite the draft below so it references what they wanted and feels hand-written. Rules: under 300 characters; keep any opt-out language (e.g. "Reply STOP to opt out"); never assume the lead's gender; never state a price or claim that is not in BUSINESS FACTS.
+Draft: "${draft}"`;
+  const out = await callClaude(env, RESPONDER_MODEL, system, 'Rewrite it now.', 300);
+  return out && out.reply ? out.reply : null;
+}
+
 export async function respond(env, client, brain, slots, threadText, latestMessage) {
   const out = await callClaude(
     env,

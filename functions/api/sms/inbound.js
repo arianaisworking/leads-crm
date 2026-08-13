@@ -62,7 +62,8 @@ export async function onRequestPost(context) {
   }
 
   // --- 2. CLASSIFY ---------------------------------------------------------
-  const thread = await threadText(db, conv.id);
+  let thread = await threadText(db, conv.id);
+  if (conv.interest) thread = `(Lead originally reached out about: ${conv.interest})\n` + thread;
   let cls;
   try {
     cls = await classify(env, thread, body);

@@ -146,12 +146,13 @@ function renderStep(client, conv) {
   const tpl = seq[conv.step];
   if (!tpl) return null;
   const first = (conv.contact_name || '').split(' ')[0] || 'there';
-  return tpl.replace(/\{first_name\}/g, first).replace(/\{business\}/g, client.name);
+  const svc = (conv.interest && String(conv.interest).trim()) || 'our services';
+  return tpl.replace(/\{first_name\}/g, first).replace(/\{business\}/g, client.name).replace(/\{service\}/g, svc);
 }
 
 function defaultSequence(business) {
   return [
-    `Hi {first_name}, this is ${business}. You reached out to us a while back and we never got you scheduled. Still interested? Reply STOP to opt out.`,
+    `Hi {first_name}, this is ${business}. You reached out about {service} a while back and we never got you scheduled. Still interested? Reply STOP to opt out.`,
     `Hi {first_name} - following up from ${business}. Happy to find you a time this week if you're still looking. Reply STOP to opt out.`,
     `Last note from ${business}, {first_name} - if the timing isn't right no worries at all. Want me to hold a spot? Reply STOP to opt out.`,
   ];
