@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Intake — Preview</title>
+<style>
+  :root{--bg:#f4f6f9;--panel:#fff;--ink:#1f2733;--soft:#5b6472;--line:#e3e8ef;--brand:#2f6fed;--brand-wash:#eef3fe;--ok:#1f9d6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 120px}
+  .top{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px}
+  .top h1{margin:0 0 4px;font-size:22px}
+  .top .sub{color:var(--soft);font-size:13px}
+  .badge{display:inline-block;background:var(--brand-wash);color:var(--brand);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:10px;letter-spacing:.03em}
+  .sec{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
+  .sec h2{margin:0 0 4px;font-size:16px}
+  .sec .note{color:var(--soft);font-size:12.5px;margin:0 0 14px}
+  .f{margin-bottom:14px}
+  .f>label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
+  .f input[type=text],.f input[type=date],.f input[type=number],.f input[type=email],.f input[type=tel],.f textarea,.f select{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
+  .f textarea{min-height:74px;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opt{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13.5px;cursor:pointer;background:#fff}
+  .opt input{accent-color:var(--brand)}
+  .opt.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand);font-weight:600}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}
+  .row .lab{font-size:13.5px}
+  .scale{display:flex;gap:5px}
+  .scale label{font-size:11.5px;color:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 8px;cursor:pointer}
+  .scale label.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand);font-weight:700}
+  .scale input{display:none}
+  .consent{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12.5px;color:var(--soft);line-height:1.5;margin-bottom:12px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px 16px;display:flex;justify-content:center}
+  .bar .inner{max-width:760px;width:100%;display:flex;align-items:center;gap:12px;justify-content:space-between}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:11px;padding:12px 22px;font:inherit;font-weight:700;cursor:pointer}
+  .prog{font-size:12px;color:var(--soft)}
+  .done{text-align:center;padding:40px 20px}
+  .done .check{width:56px;height:56px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="bar"><div class="inner"><span class="prog" id="prog"></span><button class="btn" id="submit">Submit intake form</button></div></div>
+<script>
+// ---- Intake form as data (this is one doctor's template; others get their own) ----
+const FORM = {
+  title: "Personal Medical History",
+  org: "City-Médica Nuevo Vallarta · Regenerative Medicine",
+  sections: [
+    { title:"Patient information", fields:[
+      {k:"full_name",label:"Full name",type:"text"},
+      {k:"dob",label:"Date of birth",type:"date"},
+      {k:"age",label:"Age",type:"number"},
+      {k:"gender",label:"Gender",type:"radio",opts:["Male","Female"]},
+      {k:"weight",label:"Usual weight",type:"text"},
+      {k:"height",label:"Height",type:"text"},
+      {k:"address",label:"Permanent address",type:"text"},
+      {k:"city",label:"City",type:"text"},{k:"state",label:"State / Province",type:"text"},
+      {k:"zip",label:"Zip code",type:"text"},{k:"country",label:"Country",type:"text"},
+      {k:"phone",label:"Phone",type:"tel"},{k:"mobile",label:"Mobile phone",type:"tel"},
+      {k:"email",label:"E-mail",type:"email"},
+      {k:"current_doctor",label:"Current doctor / primary health provider",type:"text"},
+    ]},
+    { title:"Consent", consent:true, fields:[
+      {k:"signature",label:"Type your full name as signature",type:"text"},
+      {k:"consent_date",label:"Date",type:"date"},
+    ]},
+    { title:"Personal history", fields:[
+      {k:"birthplace",label:"Place of birth",type:"text"},
+      {k:"residence",label:"Current residence",type:"text"},
+      {k:"marital",label:"Marital status",type:"text"},
+      {k:"religion",label:"Religion",type:"text"},
+      {k:"exercise",label:"Exercise level",type:"radio",opts:["Sedentary","Light (1-2x/wk)","Moderate (3-4x/wk)","Active (5x/wk)","Super active (7x/wk)"]},
+      {k:"animals",label:"Live in contact with animals or insects?",type:"radio",opts:["No","Yes"]},
+      {k:"animals_kind",label:"If yes, what kind?",type:"text"},
+      {k:"occupation",label:"Current occupation",type:"text"},
+    ]},
+    { title:"Consuming habits", note:"For each, mark use and how often.", grid:{
+      items:["Coffee or green tea (caffeine)","Tobacco or vapes","Cannabis","Cocaine / Crystal / Meth","Opioids / Heroin / Morphine / Fentanyl","Mushrooms / Ayahuasca / Kambo & other","Alcohol"],
+      scale:["No","Daily","Weekly","Occasionally"] } },
+    { title:"Dietary preferences", checks:["No restrictions","Vegetarian","Vegan","Ketogenic","Gluten-free","Carbs restricted","Lactose restricted","Red meat restricted","Animal fat reduced","No dairy","Paleolithic"] },
+    { title:"Personal & family medical history", note:"Mark where each applies.", family:[
+      "Heart Attack","Stroke","High Blood Pressure","Other Heart Disease / Arrhythmia","Diabetes / Insulin Resistance","Obesity","Cholesterol","Thyroid Disease","Anxiety / Depression","Kidney Disease","Kidney Stones","Prostate Enlargement","Severe allergies","Immune Deficiency","Arthritis / Lupus","Gout","Fibromyalgia / Chronic Fatigue","Osteoporosis","Gastritis / Ulcers","Colitis / Irritable Colon","Liver Disorders","Hepatitis A, B or C","Asthma","Anemia","Any cancer (breast, prostate, colon, lung, etc.)","Thrombosis / Blood Clot"] },
+    { title:"Allergies", checks:["No allergies to report","Penicillin","Sulfa drugs","Aspirin & other NSAIDs","Codeine","Morphine","Milk & dairy","Seafood","Seasonal (pollen, grass)","Hair dye","Metal jewelry","Chemicals","Foods"],
+      fields:[{k:"allergy_detail",label:"Describe any severe allergic reaction and when it happened",type:"textarea"}] },
+    { title:"Medications & supplements", fields:[
+      {k:"prescriptions",label:"Prescription medicines taken (name, mg, dose) — or write 'none'",type:"textarea"},
+      {k:"hormones",label:"Hormone use history (incl. contraceptives, implants, pellets) — or 'none'",type:"textarea"},
+    ], checks:["OTC: Aspirin","OTC: Tylenol","OTC: Ibuprofen","OTC: Naproxen","OTC: Sleeping aid","OTC: Antacids","Supplements: B-Complex","Supplements: Vitamin D","Supplements: Omega 3 / Fish Oil","Supplements: Collagen","Supplements: Probiotics","Herbal: Turmeric","Herbal: Ashwagandha","Herbal: Milk Thistle"] },
+    { title:"Gynecology history (women only)", women:true, fields:[
+      {k:"pregnancies",label:"Number of pregnancies",type:"number"},
+      {k:"childbirths",label:"Natural childbirths",type:"number"},
+      {k:"cesareans",label:"Cesarean sections",type:"number"},
+      {k:"last_menstruation",label:"Date of last menstruation",type:"text"},
+      {k:"last_papsmear",label:"Date of last Pap smear",type:"text"},
+      {k:"gyn_notes",label:"Hysterectomy / ovary surgery / other — describe",type:"textarea"},
+    ]},
+    { title:"Vaccines / immunization", checks:["Don't know my history","Polio / Sabin","DPT","Tuberculosis","Measles","Mumps","Rubella","Hepatitis A","Hepatitis B","Chicken Pox","Influenza / Flu","Pneumonia","Shingles","HPV","COVID-19"] },
+    { title:"Hospital admissions & significant events", fields:[
+      {k:"hospital",label:"Hospital admissions for significant disease (reason, year) — or 'none'",type:"textarea"},
+      {k:"trauma",label:"Trauma, accidents, fractures (injury, year, complications) — or 'none'",type:"textarea"},
+    ]},
+    { title:"Your current condition & goals", fields:[
+      {k:"symptoms_desc",label:"Describe your current symptoms — when they started, how they changed, treatments tried",type:"textarea"},
+      {k:"goals",label:"Primary health goals & expectations in regenerative medicine (be specific)",type:"textarea"},
+    ]},
+    { title:"Symptom self-rating", note:"Rate how you've been feeling lately.", rate:{
+      scale:["None","Slight","Moderate","Severe"],
+      items:["General discomfort","Stress / Anxiety","Fast aging","Sweet cravings","Salt cravings","Always thirsty","Mood changes","Irritability","Nervousness","Decreased libido","Erectile dysfunction / impotence","Decreased muscle mass / strength","Fatigue in the morning","Fatigue in the afternoon","Headaches / migraine","Depression / sadness","Cold intolerance","Swelling of ankles / wrists","Numb limbs","Memory lapses","Brain fog","Hot flashes","Night sweats","Insomnia / sleep disorder","Weight gain (waist)","Heart palpitations","High blood pressure","Dizziness / vertigo","Tinnitus","Hair loss / thinning","Dry / itchy skin","Skin sagging or thinning","Easy bruising","Fragile nails","Abdominal cramps"] } },
+    { title:"Snoring / sleep apnea assessment", rate:{
+      scale:["None","Slight","Moderate","Severe"],
+      items:["Loud, persistent snoring","Breathing pauses witnessed by another","Waking suddenly choking / wheezing","Frequent early-morning awakenings","Need to urinate several times at night","Dry mouth / sore throat on waking","Excessive daytime sleepiness","Morning headaches","Chronic fatigue / non-restorative sleep","Difficulty concentrating / memory loss","Irritability / mood swings"] } },
+  ]
+};
+
+const answers = {};
+const app = document.getElementById("app");
+
+app.innerHTML = `<div class="top"><div class="badge">SECURE PATIENT INTAKE</div>
+  <h1>${FORM.title}</h1><div class="sub">${FORM.org}</div>
+  <div class="sub" style="margin-top:8px">Please complete this form before your consultation. It goes only to your care team.</div></div>`;
+
+FORM.sections.forEach((s,si)=>{
+  const sec=document.createElement("div"); sec.className="sec";
+  let h=`<h2>${s.title}</h2>`;
+  if(s.women) h+=`<p class="note">Women only — skip if not applicable.</p>`;
+  else if(s.note) h+=`<p class="note">${s.note}</p>`;
+  if(s.consent) h+=`<div class="consent">I give full consent to be assessed by the doctors and professionals of ${FORM.org}. I authorize them to collect, store and use this information to deliver functional health and regenerative medicine services, and confirm it is accurate to the best of my knowledge.</div>
+    <label class="opt" id="consentBox"><input type="checkbox" data-consent> I have read and agree</label>`;
+  // regular fields
+  (s.fields||[]).forEach(f=>{ h+=fieldHTML(f); });
+  // checkbox group
+  if(s.checks){ h+=`<div class="f"><div class="opts">${s.checks.map((c,i)=>`<label class="opt" data-chk="${si}_${i}"><input type="checkbox" data-k="chk_${si}_${i}" data-lab="${esc(c)}"> ${esc(c)}</label>`).join("")}</div></div>`; }
+  // yes/no/family grid
+  if(s.family){ h+=s.family.map((d,i)=>`<div class="row"><span class="lab">${esc(d)}</span><div class="scale" data-k="fam_${si}_${i}" data-lab="${esc(d)}">${["None","Self","Family"].map(o=>`<label><input type="radio" name="fam_${si}_${i}" value="${o}">${o}</label>`).join("")}</div></div>`).join(""); }
+  // habits grid
+  if(s.grid){ h+=s.grid.items.map((d,i)=>`<div class="row"><span class="lab">${esc(d)}</span><div class="scale" data-k="hab_${si}_${i}" data-lab="${esc(d)}">${s.grid.scale.map(o=>`<label><input type="radio" name="hab_${si}_${i}" value="${o}">${o}</label>`).join("")}</div></div>`).join(""); }
+  // rating grid
+  if(s.rate){ h+=s.rate.items.map((d,i)=>`<div class="row"><span class="lab">${esc(d)}</span><div class="scale" data-k="rate_${si}_${i}" data-lab="${esc(d)}">${s.rate.scale.map(o=>`<label><input type="radio" name="rate_${si}_${i}" value="${o}">${o}</label>`).join("")}</div></div>`).join(""); }
+  sec.innerHTML=h; app.appendChild(sec);
+});
+
+function fieldHTML(f){
+  const id="fld_"+f.k;
+  if(f.type==="textarea") return `<div class="f"><label>${esc(f.label)}</label><textarea data-k="${f.k}"></textarea></div>`;
+  if(f.type==="radio") return `<div class="f"><label>${esc(f.label)}</label><div class="opts" data-radio="${f.k}">${f.opts.map(o=>`<label class="opt"><input type="radio" name="${f.k}" value="${esc(o)}" data-k="${f.k}"> ${esc(o)}</label>`).join("")}</div></div>`;
+  return `<div class="f"><label>${esc(f.label)}</label><input type="${f.type}" data-k="${f.k}"></div>`;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+// interactions
+app.addEventListener("input",e=>{ const t=e.target;
+  if(t.dataset.k && (t.type==="text"||t.type==="date"||t.type==="number"||t.type==="email"||t.type==="tel"||t.tagName==="TEXTAREA")) answers[t.dataset.k]=t.value;
+});
+app.addEventListener("change",e=>{ const t=e.target;
+  if(t.type==="checkbox"&&t.dataset.k){ answers[t.dataset.k]=t.checked?t.dataset.lab:""; t.closest(".opt").classList.toggle("sel",t.checked); }
+  if(t.type==="radio"){ const box=t.closest("[data-k]"); if(box){ answers[box.dataset.k]=t.value; box.querySelectorAll("label").forEach(l=>l.classList.toggle("sel",l.contains(t))); }
+    const rw=t.closest("[data-radio]"); if(rw){ answers[rw.dataset.radio]=t.value; rw.querySelectorAll(".opt").forEach(l=>l.classList.toggle("sel",l.contains(t))); } }
+});
+
+function updateProg(){ const total=app.querySelectorAll("[data-k],[data-radio]").length; document.getElementById("prog").textContent=Object.values(answers).filter(v=>v!=="").length+" answered"; }
+app.addEventListener("input",updateProg); app.addEventListener("change",updateProg); updateProg();
+
+document.getElementById("submit").onclick=()=>{
+  const consent=document.querySelector("[data-consent]");
+  if(consent && !consent.checked){ alert("Please read and agree to the consent to continue."); consent.scrollIntoView({behavior:"smooth"}); return; }
+  if(!answers.full_name){ alert("Please enter your full name."); return; }
+  // In the live app this POSTs to /api/intake/submit?token=... and saves to the patient's record.
+  app.innerHTML=`<div class="sec done"><div class="check">✓</div><h2>Thank you, ${esc(answers.full_name)}</h2>
+    <p class="note">Your intake form has been received. Your care team will review it and reach out to schedule your consultation.</p></div>`;
+  document.querySelector(".bar").style.display="none";
+  window.scrollTo(0,0);
+  console.log("INTAKE ANSWERS", answers);
+};
+</script>
+</body>
+</html>
