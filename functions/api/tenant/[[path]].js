@@ -142,6 +142,34 @@ export async function onRequest(context) {
     return json({ ok: true });
   }
 
+  // Approve + send every pending AI draft for this client, in batches.
+  if (action === 'approve-all' && method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const limit = Math.min(Math.max(parseInt(b.limit, 10) || 100, 1), 200);
+    const { results } = await db.prepare(
+      `SELECT c.id AS conv_id, c.phone AS phone, m.id AS msg_id, m.body AS body
+         FROM conversations c
+         JOIN messages m ON m.id = (SELECT id FROM messages mm WHERE mm.conversation_id=c.id ORDER BY created_at DESC LIMIT 1)
+        WHERE c.client_id=? AND c.ai_paused=0 AND m.status='draft'
+        LIMIT ?`
+    ).bind(clientId, limit).all();
+
+    let approved = 0, delivered = 0, queued = 0, skipped = 0;
+    for (const row of results || []) {
+      if (await isOptedOut(db, clientId, row.phone)) { skipped++; continue; }
+      const d = await dispatch(env, db, client, { id: row.conv_id, phone: row.phone }, row.body, 'ai', row.msg_id);
+      await db.prepare("UPDATE conversations SET needs_human=0, ai_paused=0, last_outbound_at=datetime('now') WHERE id=?").bind(row.conv_id).run();
+      approved++; if (d.delivered) delivered++; else if (d.pending) queued++;
+    }
+    const rem = await db.prepare(
+      `SELECT COUNT(*) AS n FROM conversations c
+        WHERE c.client_id=? AND c.ai_paused=0
+          AND (SELECT status FROM messages mm WHERE mm.conversation_id=c.id ORDER BY created_at DESC LIMIT 1)='draft'`
+    ).bind(clientId).first();
+    if (approved) await logEvent(db, clientId, 'campaign_start', null, { approved, via: 'bulk' });
+    return json({ ok: true, approved, delivered, queued, skipped, remaining: rem ? rem.n : 0 });
+  }
+
   // KILL SWITCH. Halts all outbound for this client immediately.
   if (action === 'pause' && method === 'POST') {
     const b = await request.json().catch(() => ({}));

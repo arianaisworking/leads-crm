@@ -200,6 +200,7 @@
   .cv-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
   .cv-filters button{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--ink-soft);cursor:pointer}
   .cv-filters button.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+  .cv-bulk:empty{display:none} .cv-bulk{margin-bottom:8px} .cv-bulk .btn{width:100%}
   .cv-items{overflow-y:auto;flex:1}
   .cv-item{display:flex;gap:10px;padding:10px;border-radius:12px;cursor:pointer;transition:.12s}
   .cv-item:hover{background:var(--line-2)} .cv-item.on{background:var(--pink-wash)}
@@ -411,7 +412,22 @@ const BRAIN_TEMPLATES=[
    services:[{name:"Free implant consultation",price:"Free",duration:45},{name:"Single implant",price:"Quoted at consult",duration:0},{name:"All-on-4",price:"Quoted at consult",duration:0}],
    add_ons:[{name:"3D imaging",price:"Included with consult"},{name:"Financing pre-check",price:"Free"}],booking_hours:{start:8,end:17},
    never_say:["dental advice","guaranteed outcome","final price before consult"],escalate_if:["pain or emergency","complaint","refund","attorney"],
-   sequence:["Hi {first_name}, this is {business}. You asked about {service} a while back — still want that free consultation? Reply STOP to opt out.","{first_name}, following up from {business} — we can get you in this week to go over options and financing. Want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a consult spot whenever you're ready. Reply STOP to opt out."]}}
+   sequence:["Hi {first_name}, this is {business}. You asked about {service} a while back — still want that free consultation? Reply STOP to opt out.","{first_name}, following up from {business} — we can get you in this week to go over options and financing. Want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a consult spot whenever you're ready. Reply STOP to opt out."]}},
+ {key:"plumbing",label:"Plumbing",brain:{tone:"Direct, helpful and factual. Friendly but no fluff.",
+   services:[{name:"Service call / diagnostic",price:"$89",duration:60},{name:"Drain cleaning",price:"$149",duration:60},{name:"Water heater estimate",price:"Free",duration:45}],
+   add_ons:[{name:"Camera line inspection",price:"$99"},{name:"Whole-home plumbing checkup",price:"$49"}],booking_hours:{start:7,end:19},
+   never_say:["final repair price sight-unseen","guaranteed same-day"],escalate_if:["active leak or flooding emergency","warranty dispute"],
+   sequence:["Hi {first_name}, this is {business}. You reached out about {service} a while back — still need a plumber? Reply STOP to opt out.","{first_name}, {business} here — we can get a tech out this week. Want me to grab you a time? Reply STOP to opt out.","Last check-in from {business}, {first_name} — want me to hold a service slot? Reply STOP to opt out."]}},
+ {key:"windows",label:"Windows & doors",brain:{tone:"Direct, professional and factual. Respect their time.",
+   services:[{name:"Free in-home estimate",price:"Free",duration:60},{name:"Window replacement",price:"Quoted at estimate",duration:0},{name:"Patio / entry door",price:"Quoted at estimate",duration:0}],
+   add_ons:[{name:"Door quote with your windows",price:"Free"},{name:"Financing pre-check",price:"Free"}],booking_hours:{start:8,end:18},
+   never_say:["final price before measuring","guaranteed install date"],escalate_if:["warranty dispute","complaint","attorney"],
+   sequence:["Hi {first_name}, this is {business}. You asked about {service} a while back — still want that free in-home estimate? Reply STOP to opt out.","{first_name}, following up from {business} — we can get an estimator out this week. Want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a slot for the free estimate if you still need it. Reply STOP to opt out."]}},
+ {key:"solar",label:"Solar",brain:{tone:"Helpful, factual and low-pressure. Clear about next steps.",
+   services:[{name:"Free solar consultation",price:"Free",duration:45},{name:"System design & quote",price:"Free",duration:60}],
+   add_ons:[{name:"Battery backup quote",price:"Free"},{name:"Roof-health check with your solar quote",price:"Free"}],booking_hours:{start:8,end:19},
+   never_say:["guaranteed savings amount","final price before site review","guaranteed tax credit eligibility"],escalate_if:["contract or refund dispute","attorney"],
+   sequence:["Hi {first_name}, this is {business}. You looked into {service} a while back — still want that free consultation? Reply STOP to opt out.","{first_name}, following up from {business} — we can walk through savings and options this week. Want a time? Reply STOP to opt out.","Last note from {business}, {first_name} — happy to hold a consult spot whenever the timing's right. Reply STOP to opt out."]}}
 ];
 const vLabel=k=>{const v=VERTICALS.find(x=>x.key===k);return v?v.label:(k||"—");};
 const SIGNAL_LABEL={financing:"💳 Financing",free_consult:"🎁 Free consult",multi_location:"📍 Multi-location"};
@@ -666,6 +682,7 @@ async function renderConversations(m){
            <div class="cv-filters" id="cvFilters">
              ${[["all","All"],["needs","Needs reply"],["draft","AI drafted"],["booked","Booked"]].map(([k,l])=>`<button data-f="${k}" class="${state.convFilter===k?"on":""}">${l}</button>`).join("")}
            </div>
+           <div id="cvBulk" class="cv-bulk"></div>
            <div id="cvItems" class="cv-items"></div>
          </div>
          <div class="cv-thread" id="cvThread"></div>
@@ -739,6 +756,19 @@ async function renderConversations(m){
       <div class="stat"><div class="n">${needs}</div><div class="l">Need reply</div></div>
       <div class="stat"><div class="n">${drafts}</div><div class="l">AI drafted</div></div>
       <div class="stat"><div class="n">${booked}</div><div class="l">Booked</div></div>`;
+    const bulk=$("#cvBulk");
+    if(bulk){ bulk.innerHTML = drafts>0 ? `<button class="btn sm" id="cvApproveAll">✓ Approve all ${drafts} draft${drafts===1?"":"s"}</button>` : "";
+      const ab=$("#cvApproveAll"); if(ab) ab.onclick=bulkApprove; }
+  }
+  async function bulkApprove(){
+    const drafts=state.convThreads.filter(x=>x.last_message_status==="draft").length;
+    if(!confirm(`Approve and send all ${drafts} drafted message${drafts===1?"":"s"} for this client?\n\nThey queue until Twilio is connected — nothing reaches a real phone yet.`))return;
+    const ab=$("#cvApproveAll"); if(ab){ ab.disabled=true; ab.innerHTML=`<span class="spin"></span>Approving…`; }
+    let total=0;
+    try{ for(let i=0;i<80;i++){ const r=await api("/tenant/"+state.convClient+"/approve-all",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({limit:100})}); total+=r.approved||0; if(!r.approved||!r.remaining)break; }
+      toast("Approved "+total.toLocaleString()+" draft"+(total===1?"":"s")+"."); }
+    catch(e){ alert(e.message); }
+    finally{ await loadInbox(); }
   }
   function filtered(){
     let rows=state.convThreads.slice();
