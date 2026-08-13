@@ -316,6 +316,14 @@
   .portal-nav{margin-top:22px}
   .pn-item{padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:600;color:#c9d3e0}
   .pn-item.on{background:rgba(255,255,255,.10);color:#fff}
+  /* ---- Account (business) switcher ---- */
+  .acct{position:relative;margin:0 0 14px}
+  .acct-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--ink)}
+  .acct-btn b{color:var(--ink-soft);font-size:11px}
+  .acct-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:4px;display:none;z-index:20}
+  .acct-menu.open{display:block}
+  .acct-item{display:block;padding:8px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--ink);text-decoration:none}
+  .acct-item:hover{background:var(--line-2)} .acct-item.on{background:var(--pink-wash);color:var(--pink-deep)}
 </style>
 </head>
 <body>
@@ -365,6 +373,13 @@ const API = "/api";
 // ▼▼▼ YOUR SPOTIFY PLAYLIST — paste your playlist ID here (the part after /playlist/ in the share link). 0vvXsWCC9xrXsKd4FyS8kM is a lo-fi placeholder.
 const SPOTIFY_PLAYLIST = "6DmrkQbB4S6zYnm49QkhpJ";
 const STATUSES = ["New","Contacted","Qualified","Client","Dead"];
+// Top-level businesses (separate deployments, each its own database). Same code
+// runs on all three; the switcher highlights the current one by hostname.
+const ACCOUNTS=[
+  {label:"Lead Reactivation", host:"leads-crm-2sv.pages.dev"},
+  {label:"Driver Recruiting", host:"aiw-recruiting.pages.dev"},
+  {label:"Doctor Patients",   host:"aiw-patients.pages.dev"},
+];
 const VERTICALS=[
   {key:"roofing",label:"Roofing",group:"Home services",osm:true,phrases:1},
   {key:"plumbing",label:"Plumbing",group:"Home services",osm:true,phrases:1},
@@ -1426,6 +1441,18 @@ function installLogout(){
     document.getElementById("logoutBtn").onclick=async()=>{ await fetch("/api/auth/logout",{method:"POST"}); location.reload(); };
   }
 }
+function installAccountSwitch(){
+  const logo=document.querySelector(".side .logo");
+  if(!logo || document.getElementById("acctSwitch") || ACCOUNTS.length<2) return;
+  const host=location.hostname;
+  logo.insertAdjacentHTML("afterend", `<div id="acctSwitch" class="acct">
+    <button class="acct-btn" id="acctBtn"><span>${esc((ACCOUNTS.find(a=>a.host===host)||ACCOUNTS[0]).label)}</span><b>▾</b></button>
+    <div class="acct-menu" id="acctMenu">${ACCOUNTS.map(a=>`<a class="acct-item${a.host===host?" on":""}" href="https://${a.host}">${esc(a.label)}</a>`).join("")}</div>
+  </div>`);
+  const menu=document.getElementById("acctMenu");
+  document.getElementById("acctBtn").onclick=(e)=>{ e.stopPropagation(); menu.classList.toggle("open"); };
+  document.addEventListener("click",()=>menu.classList.remove("open"));
+}
 async function renderClientPortal(){
   const cid=window.ME.client_id; const m=$("#view");
   m.innerHTML=`<div id="cpWrap"><p class="muted">Loading your reports…</p></div>`;
@@ -1456,7 +1483,7 @@ async function boot(){
   if(!me.authenticated){ authScreen("login"); return; }
   window.ME=me.user; installLogout();
   if(me.user.role==="client"){ document.body.classList.add("portal"); return renderClientPortal(); }
-  renderHero(); render();
+  installAccountSwitch(); renderHero(); render();
 }
 boot();
 </script>
