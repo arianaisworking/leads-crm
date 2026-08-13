@@ -13,9 +13,14 @@
 -- ============================================================
 
 -- Patient-specific fields on the shared leads table.
-ALTER TABLE leads ADD COLUMN questionnaire TEXT;            -- JSON of their answers
+-- Intake pipeline lives in leads.status, e.g.:
+--   New -> Assigned -> Intake sent -> Intake returned -> Sent to doctor
+--       -> Consult scheduled -> Paid -> Active   (or Lost)
+ALTER TABLE leads ADD COLUMN questionnaire TEXT;            -- JSON of the patient's COMPLETED answers
 ALTER TABLE leads ADD COLUMN assigned_doctor TEXT;         -- doctors.id
 ALTER TABLE leads ADD COLUMN acquisition_date TEXT;        -- when we got them
+ALTER TABLE leads ADD COLUMN consult_at TEXT;              -- scheduled consult date/time
+ALTER TABLE leads ADD COLUMN paid_upfront INTEGER DEFAULT 0; -- patient has paid for services/consult
 ALTER TABLE leads ADD COLUMN doctor_fee REAL;              -- what the doctor pays us for this patient
 ALTER TABLE leads ADD COLUMN doctor_fee_status TEXT DEFAULT 'pending';  -- pending | invoiced | paid
 
@@ -25,6 +30,7 @@ CREATE TABLE IF NOT EXISTS doctors (
   specialty     TEXT,
   contact_email TEXT,
   contact_phone TEXT,
+  intake_form   TEXT,                     -- JSON: the questions THIS doctor wants on the intake form
   fee_type      TEXT DEFAULT 'flat',     -- flat | percent
   fee_amount    REAL,                     -- $ per patient, or % if percent
   terms         TEXT,
