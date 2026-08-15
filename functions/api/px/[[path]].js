@@ -34,15 +34,16 @@ export async function onRequest(context) {
       const b = await request.json();
       if (!b.name) return json({ error: 'name required' }, 400);
       const did = b.id || 'dr_' + token().slice(0, 8);
-      await db.prepare(`INSERT INTO doctors (id, name, specialty, contact_email, contact_phone, intake_form, fee_type, fee_amount, terms, notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(
+      await db.prepare(`INSERT INTO doctors (id, name, specialty, contact_email, contact_phone, intake_form, fee_type, fee_amount, terms, notes, address, city)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
         did, b.name, b.specialty || null, b.contact_email || null, b.contact_phone || null,
-        b.intake_form ? JSON.stringify(b.intake_form) : null, b.fee_type || 'flat', b.fee_amount ?? null, b.terms || null, b.notes || null).run();
+        b.intake_form ? JSON.stringify(b.intake_form) : null, b.fee_type || 'flat', b.fee_amount ?? null, b.terms || null, b.notes || null,
+        b.address || null, b.city || null).run();
       return json({ ok: true, id: did });
     }
     if (method === 'PATCH' && id) {
       const b = await request.json();
-      const cols = ['name', 'specialty', 'contact_email', 'contact_phone', 'fee_type', 'fee_amount', 'terms', 'notes'];
+      const cols = ['name', 'specialty', 'contact_email', 'contact_phone', 'fee_type', 'fee_amount', 'terms', 'notes', 'address', 'city'];
       const sets = [], vals = [];
       for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
       if ('intake_form' in b) { sets.push('intake_form=?'); vals.push(b.intake_form ? JSON.stringify(b.intake_form) : null); }
@@ -218,8 +219,11 @@ export async function onRequest(context) {
   // ---------- FINAL CONFIRMATION to the patient (after doctor confirms travel) ----------
   if (res === 'patients' && sub === 'final-confirm' && method === 'POST') {
     const leadId = parseInt(id, 10);
-    const lead = await db.prepare('SELECT id, name, email, travel_dates, travel_confirmed_at FROM leads WHERE id=?').bind(leadId).first();
+    const lead = await db.prepare('SELECT id, name, email, travel_dates, travel_confirmed_at, intake_token FROM leads WHERE id=?').bind(leadId).first();
     if (!lead) return json({ error: 'patient not found' }, 404);
+    let tok = lead.intake_token;
+    if (!tok) { tok = token(); await db.prepare('UPDATE leads SET intake_token=? WHERE id=?').bind(tok, leadId).run(); }
+    const prepUrl = `${new URL(request.url).origin}/prepare.html?token=${tok}`;
     let emailed = false;
     if (lead.email) {
       const first = (lead.name || '').split(' ')[0];
@@ -230,13 +234,14 @@ export async function onRequest(context) {
         html: emailShell('Your treatment is confirmed', `
           <p style="margin:0 0 8px;font-size:16px">Great news${first ? ', ' + esc(first) : ''} — everything is confirmed! 🎉</p>
           ${lead.travel_dates ? `<p style="margin:0 0 12px"><b>Your travel:</b> ${esc(lead.travel_dates)}</p>` : ''}
-          <p style="margin:0 0 12px;color:#3a4353">Your doctor has confirmed your dates and your deposit is secured. We'll now coordinate your travel, lodging and aftercare and share the details shortly.</p>
+          <p style="margin:0 0 14px;color:#3a4353">Your doctor has confirmed your dates and your deposit is secured. Next, open your travel &amp; preparedness plan — your clinic location and map, a passport reminder, and one-tap requests for lodging, meals, airport transfers and aftercare.</p>
+          <p style="margin:0 0 16px"><a href="${prepUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Open your preparedness plan →</a></p>
           <p style="margin:0;color:#5b6472;font-size:13px">Questions? Just reply to this email — we're here to help every step of the way.</p>`, brandName(env)),
       });
       emailed = !!r.ok;
     }
     await db.prepare("UPDATE leads SET final_confirmed_at=datetime('now'), status='Confirmed', updated_at=datetime('now') WHERE id=?").bind(leadId).run();
-    return json({ ok: true, emailed, sent_to: lead.email || null });
+    return json({ ok: true, emailed, sent_to: lead.email || null, prep_url: prepUrl });
   }
 
   // ---------- SEND TO DOCTOR ----------

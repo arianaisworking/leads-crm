@@ -1391,6 +1391,22 @@ async function openPatient(id,onSave){
         ${reviewFull?`<div style="margin-top:10px"><a href="${reviewFull}" target="_blank" rel="noopener" style="font-size:12px">Open full intake &amp; doctor review ↗</a></div>`:``}
       </div></div>`;
   }
+  let prepBlock="";
+  if(id && p.intake_token){
+    let cx={}; try{ cx=p.concierge?JSON.parse(p.concierge):{}; }catch{}
+    const want=[]; if(cx.lodging)want.push("Lodging"); if(cx.meals)want.push("Meals"); if(cx.airport)want.push("Airport transfers"); if(cx.aftercare)want.push("Aftercare"); if(cx.nurse)want.push("Nurse");
+    const hasReq=want.length||cx.flight||cx.notes;
+    if(p.travel_confirmed_at||p.final_confirmed_at||hasReq){
+      prepBlock=`<div class="field" style="margin-top:16px"><label>Preparedness &amp; concierge</label>
+        <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">
+          ${hasReq?`<div style="font-size:13px"><b>Requested:</b> ${want.length?esc(want.join(", ")):"—"}</div>
+            ${cx.flight?`<div class="sub" style="margin-top:4px"><b>Flight:</b> ${esc(cx.flight)}</div>`:``}
+            ${cx.notes?`<div class="sub" style="margin-top:4px;white-space:pre-wrap"><b>Notes:</b> ${esc(cx.notes)}</div>`:``}`
+          :`<p class="sub" style="margin:0">No concierge requests yet.</p>`}
+          <div style="margin-top:8px"><a href="/prepare.html?token=${encodeURIComponent(p.intake_token)}" target="_blank" rel="noopener" style="font-size:12px">Preview preparedness plan ↗</a></div>
+        </div></div>`;
+    }
+  }
   d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
     <div class="dhead">${avatar({name:p.name||"New"})}<div><div class="name">${esc(p.name||"New patient")}</div><div class="sub">${esc(p.interest||"")}</div></div></div>
     <div class="dbody">
@@ -1409,6 +1425,7 @@ async function openPatient(id,onSave){
       <button class="btn" id="pSave">Save patient</button>
       ${wfBlock}
       ${planBlock}
+      ${prepBlock}
       ${id?`<button class="del" id="pDel" style="margin-top:14px">Delete patient</button>`:""}
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
@@ -1500,13 +1517,15 @@ function editDoctor(doc,onSave){
       <div class="field"><label>Name</label><input id="dcName" value="${esc(doc.name||"")}"></div>
       <div class="field"><label>Specialty</label><input id="dcSpec" value="${esc(doc.specialty||"")}"></div>
       <div class="drow"><div class="field"><label>Email</label><input id="dcEmail" value="${esc(doc.contact_email||"")}"></div><div class="field"><label>Phone</label><input id="dcPhone" value="${esc(doc.contact_phone||"")}"></div></div>
+      <div class="field"><label>Clinic city</label><input id="dcCity" value="${esc(doc.city||"")}" placeholder="e.g. Nuevo Vallarta, Nayarit"></div>
+      <div class="field"><label>Clinic address <span class="sub">(shown on the patient's map)</span></label><input id="dcAddress" value="${esc(doc.address||"")}" placeholder="Street, city, country"></div>
       <div class="drow"><div class="field"><label>Fee type</label><select id="dcFeeType"><option value="flat" ${doc.fee_type!=="percent"?"selected":""}>Flat $/patient</option><option value="percent" ${doc.fee_type==="percent"?"selected":""}>Percent</option></select></div><div class="field"><label>Amount</label><input type="number" id="dcFee" value="${esc(doc.fee_amount||"")}"></div></div>
       <div class="field"><label>Terms / notes</label><textarea id="dcNotes">${esc(doc.terms||doc.notes||"")}</textarea></div>
       <p class="sub">Intake form: ${doc.intake_form?"configured ✓ (patients get this doctor's form).":"none yet. City-Médica's form is pre-loaded on that doctor."}</p>
       <button class="btn" id="dcSave">Save doctor</button>${doc.id?`<button class="del" id="dcDel">Delete</button>`:""}
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
-  $("#dcSave").onclick=async()=>{ const body={name:$("#dcName").value,specialty:$("#dcSpec").value||null,contact_email:$("#dcEmail").value||null,contact_phone:$("#dcPhone").value||null,fee_type:$("#dcFeeType").value,fee_amount:$("#dcFee").value?parseFloat($("#dcFee").value):null,terms:$("#dcNotes").value||null};
+  $("#dcSave").onclick=async()=>{ const body={name:$("#dcName").value,specialty:$("#dcSpec").value||null,contact_email:$("#dcEmail").value||null,contact_phone:$("#dcPhone").value||null,city:$("#dcCity").value||null,address:$("#dcAddress").value||null,fee_type:$("#dcFeeType").value,fee_amount:$("#dcFee").value?parseFloat($("#dcFee").value):null,terms:$("#dcNotes").value||null};
     if(!body.name){alert("Name required");return;}
     try{ if(doc.id) await pxapi("/doctors/"+doc.id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); else await pxapi("/doctors",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); closeDrawer(); toast("Saved."); onSave&&onSave(); }catch(e){ alert(e.message); } };
   if(doc.id) $("#dcDel").onclick=async()=>{ if(!confirm("Delete doctor?"))return; await pxapi("/doctors/"+doc.id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };

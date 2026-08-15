@@ -35,14 +35,14 @@ export async function onRequest(context) {
   }
   if (!tok) return json({ error: 'missing token' }, 400);
 
-  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid, protocol, travel_dates, travel_confirmed_at, deposit_link, documents FROM leads WHERE intake_token=?').bind(tok).first();
+  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid, protocol, travel_dates, travel_confirmed_at, deposit_link, documents, concierge FROM leads WHERE intake_token=?').bind(tok).first();
   if (!lead) return json({ error: 'This link is invalid or has expired.' }, 404);
   const parseDocs = () => { try { return lead.documents ? JSON.parse(lead.documents) : []; } catch { return []; } };
 
-  let doctorName = null, doctorForm = null;
+  let doctorName = null, doctorForm = null, doctorRow = null;
   if (lead.assigned_doctor) {
-    const doc = await db.prepare('SELECT name, intake_form FROM doctors WHERE id=?').bind(lead.assigned_doctor).first();
-    if (doc) { doctorName = doc.name; try { doctorForm = doc.intake_form ? JSON.parse(doc.intake_form) : null; } catch { doctorForm = null; } }
+    doctorRow = await db.prepare('SELECT name, intake_form, address, city, contact_phone, contact_email FROM doctors WHERE id=?').bind(lead.assigned_doctor).first();
+    if (doctorRow) { doctorName = doctorRow.name; try { doctorForm = doctorRow.intake_form ? JSON.parse(doctorRow.intake_form) : null; } catch { doctorForm = null; } }
   }
   // Every patient gets a usable form: the doctor's custom one, or the default.
   const form = doctorForm || DEFAULT_FORM;
@@ -115,6 +115,47 @@ export async function onRequest(context) {
       ready: !!lead.pricing_confirmed_at,
       protocol_docs: parseDocs().filter((d) => d.kind === 'protocol').map((d) => ({ key: d.key, name: d.name })),
     });
+  }
+
+  // Patient preparedness plan — clinic location/map, passport reminder, and the
+  // concierge services they can request (lodging, meals, transfers, aftercare/nurse).
+  if (action === 'prepare-info' && request.method === 'GET') {
+    let concierge = {}; try { concierge = lead.concierge ? JSON.parse(lead.concierge) : {}; } catch { concierge = {}; }
+    const clinic = doctorRow ? { name: doctorRow.name, address: doctorRow.address || null, city: doctorRow.city || null, phone: doctorRow.contact_phone || null } : null;
+    return json({ patient_name: lead.name, clinic, protocol: lead.protocol || null,
+      travel_dates: lead.travel_dates || null, travel_confirmed: !!lead.travel_confirmed_at, concierge });
+  }
+
+  if (action === 'prepare' && request.method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const c = {
+      lodging: !!b.lodging, meals: !!b.meals, airport: !!b.airport,
+      aftercare: !!b.aftercare, nurse: !!b.nurse,
+      flight: (b.flight || '').toString().trim().slice(0, 500),
+      notes: (b.notes || '').toString().trim().slice(0, 2000),
+    };
+    await db.prepare("UPDATE leads SET concierge=?, prep_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(c), lead.id).run();
+    const want = [];
+    if (c.lodging) want.push('Lodging'); if (c.meals) want.push('Meals'); if (c.airport) want.push('Airport pickup/drop-off');
+    if (c.aftercare) want.push('Aftercare'); if (c.nurse) want.push('Nurse service');
+    const summary = `
+      <p style="margin:0 0 8px;font-size:16px"><b>${esc(lead.name || 'The patient')}</b> submitted their preparedness plan.</p>
+      <p style="margin:0 0 8px"><b>Requested help:</b> ${want.length ? esc(want.join(', ')) : 'none'}</p>
+      ${lead.travel_dates ? `<p style="margin:0 0 8px"><b>Travel dates:</b> ${esc(lead.travel_dates)}</p>` : ''}
+      ${c.flight ? `<p style="margin:0 0 8px"><b>Flight / arrival:</b> ${esc(c.flight)}</p>` : ''}
+      ${c.notes ? `<p style="margin:0 0 8px"><b>Notes:</b> ${esc(c.notes)}</p>` : ''}`;
+    context.waitUntil(sendEmail(env, { to: teamEmail(env), subject: `Preparedness request — ${lead.name || 'patient'}`,
+      html: emailShell('Patient preparedness request', summary + `<p style="margin:8px 0 0;color:#5b6472">Reach out to coordinate their travel, lodging and aftercare.</p>`, brandName(env)) }));
+    // Aftercare / nurse needs the doctor's awareness too.
+    if ((c.aftercare || c.nurse) && doctorRow && doctorRow.contact_email) {
+      context.waitUntil(sendEmail(env, { to: doctorRow.contact_email, replyTo: replyToEmail(env),
+        subject: `Aftercare note — ${lead.name || 'patient'}`,
+        html: emailShell('Aftercare / nursing', `
+          <p style="margin:0 0 8px;font-size:16px">Dr. ${esc(doctorName || '')}, <b>${esc(lead.name || 'your patient')}</b> flagged ${c.nurse ? 'a possible <b>nurse service</b> need' : ''}${c.nurse && c.aftercare ? ' and ' : ''}${c.aftercare ? '<b>aftercare</b> support' : ''} for their visit.</p>
+          ${c.notes ? `<p style="margin:0 0 8px"><b>Their notes:</b> ${esc(c.notes)}</p>` : ''}
+          <p style="margin:0;color:#5b6472">Please advise what aftercare or nursing the protocol will require so we can arrange it.</p>`, brandName(env)) }));
+    }
+    return json({ ok: true });
   }
 
   // Doctor confirms pricing & leaves feedback after the consultation. Saves the

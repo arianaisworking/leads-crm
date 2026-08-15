@@ -41,6 +41,11 @@ ALTER TABLE leads ADD COLUMN travel_dates TEXT;           -- travel window the p
 ALTER TABLE leads ADD COLUMN travel_confirmed_at TEXT;    -- when the doctor confirmed the travel dates
 ALTER TABLE leads ADD COLUMN deposit_sent_at TEXT;        -- when we sent the patient the confirm/pay page
 ALTER TABLE leads ADD COLUMN final_confirmed_at TEXT;     -- when we sent the final confirmation
+ALTER TABLE leads ADD COLUMN concierge TEXT;              -- JSON: requested prep services (lodging/meals/airport/aftercare/nurse + notes)
+ALTER TABLE leads ADD COLUMN prep_at TEXT;                -- when the patient submitted their preparedness plan
+-- Clinic location for the patient preparedness map
+ALTER TABLE doctors ADD COLUMN address TEXT;             -- clinic street address (shown on the patient's map)
+ALTER TABLE doctors ADD COLUMN city TEXT;                -- clinic city (e.g. Nuevo Vallarta, Guadalajara)
 ALTER TABLE leads ADD COLUMN intake_token TEXT;           -- per-patient secret for the public intake link
 CREATE INDEX IF NOT EXISTS idx_leads_intake_token ON leads(intake_token);
 ALTER TABLE leads ADD COLUMN consult_note TEXT;           -- note the doctor leaves when scheduling the consult
