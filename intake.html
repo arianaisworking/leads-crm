@@ -86,9 +86,10 @@ function render(d){
 }
 function gridRow(k,label,scale){ return `<div class="row"><span class="lab">${esc(label)}</span><div class="scale" data-k="${k}" data-lab="${esc(label)}">${scale.map(o=>`<label><input type="radio" name="${k}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div></div>`; }
 function fieldHTML(f){
-  if(f.type==="textarea") return `<div class="f"><label>${esc(f.label)}</label><textarea data-k="${f.k}"></textarea></div>`;
-  if(f.type==="radio") return `<div class="f"><label>${esc(f.label)}</label><div class="opts" data-radio="${f.k}">${f.opts.map(o=>`<label class="opt"><input type="radio" name="${f.k}" value="${esc(o)}"> ${esc(o)}</label>`).join("")}</div></div>`;
-  return `<div class="f"><label>${esc(f.label)}</label><input type="${esc(f.type||"text")}" data-k="${f.k}"></div>`;
+  const req=f.required?` <span style="color:#e11a3b">*</span>`:``;
+  if(f.type==="textarea") return `<div class="f"><label>${esc(f.label)}${req}</label><textarea data-k="${f.k}"></textarea></div>`;
+  if(f.type==="radio") return `<div class="f"><label>${esc(f.label)}${req}</label><div class="opts" data-radio="${f.k}">${f.opts.map(o=>`<label class="opt"><input type="radio" name="${f.k}" value="${esc(o)}"> ${esc(o)}</label>`).join("")}</div></div>`;
+  return `<div class="f"><label>${esc(f.label)}${req}</label><input type="${esc(f.type||"text")}" data-k="${f.k}"></div>`;
 }
 app.addEventListener("input",e=>{ const t=e.target; if(t.dataset.k && (t.tagName==="TEXTAREA"||["text","date","number","email","tel"].includes(t.type))) answers[t.dataset.k]=t.value; updateProg(); });
 app.addEventListener("change",e=>{ const t=e.target;
@@ -101,6 +102,9 @@ function updateProg(){ document.getElementById("prog").textContent=Object.values
 document.getElementById("submit").onclick=async()=>{
   const consent=document.querySelector("[data-consent]");
   if(consent && !consent.checked){ alert("Please read and agree to the consent to continue."); consent.scrollIntoView({behavior:"smooth"}); return; }
+  const missing=[];
+  (FORM.sections||[]).forEach(s=>(s.fields||[]).forEach(f=>{ if(f.required && (answers[f.k]==null||String(answers[f.k]).trim()==="")) missing.push(f.label); }));
+  if(missing.length){ alert("Please answer the required question"+(missing.length>1?"s":"")+":\n\n• "+missing.join("\n• ")); return; }
   const btn=document.getElementById("submit"); btn.disabled=true; btn.textContent="Submitting…";
   try{ const r=await fetch("/api/intake/submit?token="+encodeURIComponent(TOKEN),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({answers})});
     const d=await r.json(); if(!r.ok) throw new Error(d.error||"Submit failed");
