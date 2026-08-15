@@ -23,6 +23,16 @@ export async function onRequest(context) {
   const action = (params.path || [])[0];
   const url = new URL(request.url);
   const tok = url.searchParams.get('token') || '';
+  // Diagnostic: reports which bindings the live runtime can see (booleans only,
+  // never the secret values). Visit /api/intake/diag to check config.
+  if (action === 'diag') {
+    return json({
+      stripe: !!env.STRIPE_SECRET_KEY,
+      resend: !!env.RESEND_API_KEY,
+      r2_docs: !!env.DOCS,
+      db: !!env.DB,
+    });
+  }
   if (!tok) return json({ error: 'missing token' }, 400);
 
   const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid, protocol, travel_dates, travel_confirmed_at, deposit_link, documents FROM leads WHERE intake_token=?').bind(tok).first();
