@@ -214,12 +214,12 @@ export async function onRequest(context) {
         to: lead.email,
         replyTo: replyToEmail(env),
         subject: 'Your consultation deposit',
-        html: emailShell('Secure your consultation', `
+        html: emailShell('Move forward with your treatment', `
           <p style="margin:0 0 6px;font-size:16px">Hi${first ? ' ' + esc(first) : ''},</p>
-          <p style="margin:0 0 14px;color:#3a4353">To reserve your consultation, please pay your deposit of <b>${money(total)}</b>. It's a quick, secure card payment.</p>
+          <p style="margin:0 0 14px;color:#3a4353">Now that you're ready to move forward, please pay your deposit of <b>${money(total)}</b> to reserve your treatment. It's a quick, secure card payment.</p>
           <table style="font-size:13.5px;margin:0 0 16px;color:#5b6472">
             ${lead.material_deposit ? `<tr><td style="padding:2px 14px 2px 0">Material deposit</td><td style="font-weight:600;color:#1a2230">${money(lead.material_deposit)}</td></tr>` : ''}
-            ${lead.consult_fee ? `<tr><td style="padding:2px 14px 2px 0">Consultation fee</td><td style="font-weight:600;color:#1a2230">${money(lead.consult_fee)}</td></tr>` : ''}
+            ${lead.consult_fee ? `<tr><td style="padding:2px 14px 2px 0">Services deposit (20%)</td><td style="font-weight:600;color:#1a2230">${money(lead.consult_fee)}</td></tr>` : ''}
             ${lead.wire_fee ? `<tr><td style="padding:2px 14px 2px 0">Bank wire fee</td><td style="font-weight:600;color:#1a2230">${money(lead.wire_fee)}</td></tr>` : ''}
             <tr><td style="padding:6px 14px 2px 0;font-weight:700;color:#1a2230">Total deposit</td><td style="font-weight:700;color:#2f6fed;font-size:15px">${money(total)}</td></tr>
           </table>

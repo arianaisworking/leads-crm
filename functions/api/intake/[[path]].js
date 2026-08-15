@@ -75,7 +75,7 @@ export async function onRequest(context) {
         <table style="font-size:14px;margin:0 0 12px">
           <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Treatment total</td><td style="font-weight:600">${money(treatment)}</td></tr>
           <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Material deposit</td><td style="font-weight:600">${money(material)}</td></tr>
-          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Consultation fee (20%)</td><td style="font-weight:600">${money(consultFee)}</td></tr>
+          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Services deposit (20%)</td><td style="font-weight:600">${money(consultFee)}</td></tr>
           <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Bank wire fee</td><td style="font-weight:600">${money(wire)}</td></tr>
           <tr><td style="padding:6px 14px 3px 0;font-weight:700">Deposit to collect</td><td style="font-weight:700;color:#2f6fed;font-size:16px">${money(total)}</td></tr>
         </table>
