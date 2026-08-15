@@ -184,8 +184,8 @@ export async function onRequest(context) {
       ${availRows ? `<div style="background:#eef3fe;border:1px solid #cfe0ff;border-radius:10px;padding:12px 14px;margin:0 0 16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#2f6fed">Their availability for the consultation</div>
         <table style="font-size:14px">${availRows}</table></div>` : ''}
-      <a href="${reviewUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700">Open their completed intake →</a>
-      <p style="margin:16px 0 0;color:#5b6472;font-size:13px">The link opens a printable copy of the patient's intake form. Just reply with a consultation time that works for you and we'll coordinate it with the patient — along with any travel, lodging or aftercare they'd like help arranging.</p>`;
+      <a href="${reviewUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700">Review intake &amp; pick a time →</a>
+      <p style="margin:16px 0 0;color:#5b6472;font-size:13px">The link opens the patient's full intake (printable) with a quick scheduler — just choose a consultation time that works with your calendar and we'll confirm it with the patient and coordinate any travel, lodging or aftercare. Prefer email? Simply reply with a time and we'll handle it.</p>`;
 
     const r = await sendEmail(env, {
       to: doc.contact_email,
