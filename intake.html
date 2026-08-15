@@ -105,6 +105,16 @@ function render(d){
       msg.innerHTML=`<span style="color:#1f9d6b;font-weight:600">✓ Uploaded.</span>`;
     };
   }
+  // Auto-fill Age from Date of birth (still editable afterward).
+  const dobEl=document.querySelector('[data-k="dob"]'), ageEl=document.querySelector('[data-k="age"]');
+  if(dobEl&&ageEl){
+    dobEl.addEventListener("change",()=>{
+      const b=new Date(dobEl.value); if(isNaN(b)) return;
+      const t=new Date(); let a=t.getFullYear()-b.getFullYear();
+      const m=t.getMonth()-b.getMonth(); if(m<0||(m===0&&t.getDate()<b.getDate())) a--;
+      if(a>=0&&a<130){ ageEl.value=a; answers["age"]=String(a); updateProg(); }
+    });
+  }
   bar.classList.add("show"); updateProg();
 }
 function gridRow(k,label,scale){ return `<div class="row"><span class="lab">${esc(label)}</span><div class="scale" data-k="${k}" data-lab="${esc(label)}">${scale.map(o=>`<label><input type="radio" name="${k}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div></div>`; }
