@@ -23,9 +23,16 @@
   <p>You can close this window.</p>
 </div>
 <script>
-  if(new URLSearchParams(location.search).get("status")==="cancel"){
+  var q=new URLSearchParams(location.search);
+  if(q.get("status")==="cancel"){
     var c=document.getElementById("card"); c.className="card cancel";
     c.innerHTML='<div class="brand">MXN Cells</div><div class="check">!</div><h1>Payment canceled</h1><p>No charge was made. If you\'d like to complete your deposit, reopen the payment link we sent you, or reply to our email and we\'ll help.</p>';
+  } else {
+    // Confirm the payment server-side so the deposit is marked paid.
+    var token=q.get("token"), sid=q.get("session_id");
+    if(token && sid){
+      fetch("/api/intake/paid-check?token="+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({session_id:sid})}).catch(function(){});
+    }
   }
 </script>
 </body>

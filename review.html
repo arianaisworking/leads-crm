@@ -133,18 +133,30 @@ async function boot(){
   const P=d.pricing||{};
   const feeGuess = P.consult_fee!=null?P.consult_fee:(P.treatment_amount!=null?Math.round(P.treatment_amount*20)/100:"");
   const pv=(x)=>(x==null?"":x);
-  const pricingInner = `<div class="top"><h3>Confirm pricing &amp; feedback</h3><span class="pill">Doctor</span></div>
-    <p class="note">${P.confirmed_at?"✓ Pricing confirmed — you can update it below if anything changes.":"After the consultation, enter the treatment total and deposit breakdown. If the patient is ready to move forward, we'll collect the deposit from them."}</p>
+  const pricingInner = `<div class="top"><h3>Protocol, pricing &amp; feedback</h3><span class="pill">Doctor</span></div>
+    <p class="note">${P.confirmed_at?"✓ Confirmed — you can update it below if anything changes.":"After the consultation, describe the protocol and set the deposit. The 20% and $25 wire are wrapped into the total; the patient only sees the final deposit."}</p>
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--soft);margin-bottom:6px">Treatment protocol</label>
+    <textarea id="prProtocol" style="margin-top:0;margin-bottom:14px" placeholder="The protocol you're recommending — treatment(s), sessions, what it includes…">${esc(pv(P.protocol))}</textarea>
     <div class="pgrid">
       <div><label>Treatment total ($)</label><input type="number" min="0" step="0.01" id="prTreat" value="${pv(P.treatment_amount)}"></div>
       <div><label>Material deposit ($)</label><input type="number" min="0" step="0.01" id="prMat" value="${pv(P.material_deposit)}"></div>
-      <div><label>Services deposit — 20% ($)</label><input type="number" min="0" step="0.01" id="prFee" value="${pv(feeGuess)}"></div>
+      <div><label>Our fee — 20% ($)</label><input type="number" min="0" step="0.01" id="prFee" value="${pv(feeGuess)}"></div>
       <div><label>Bank wire fee ($)</label><input type="number" min="0" step="0.01" id="prWire" value="${P.wire_fee!=null?P.wire_fee:25}"></div>
     </div>
     <div class="dep-total" id="prTotal"></div>
-    <textarea id="prFeedback" placeholder="Feedback for our team — treatment plan, notes, anything the patient should prepare…">${esc(pv(P.doctor_feedback))}</textarea>
-    <button class="btn" id="prGo" type="button">${P.confirmed_at?"Update pricing":"Confirm pricing"}</button>
+    <p class="note" style="margin:-6px 0 12px">The patient sees only this total — the 20% and wire fee stay hidden.</p>
+    <textarea id="prFeedback" placeholder="Feedback for our team — notes, anything the patient should prepare…">${esc(pv(P.doctor_feedback))}</textarea>
+    <button class="btn" id="prGo" type="button">${P.confirmed_at?"Update protocol &amp; pricing":"Confirm protocol &amp; pricing"}</button>
     <div class="note" id="prMsg" style="margin-top:10px"></div>`;
+
+  const T=d.travel||{};
+  const travelCard = (T.dates && !T.confirmed_at)
+    ? `<div class="card sched noprint"><div class="top"><h3>Confirm travel dates</h3><span class="pill">Doctor</span></div>
+        <p class="note">The patient paid their deposit and requested these travel dates. Confirm the window works for you.</p>
+        <div class="dep-total" style="font-size:16px">${esc(T.dates)}</div>
+        <button class="btn" id="tvGo" type="button">Confirm these travel dates</button>
+        <div class="note" id="tvMsg" style="margin-top:10px"></div></div>`
+    : (T.confirmed_at ? `<div class="card sched noprint"><div class="ok"><span>✓</span> Travel dates confirmed: ${esc(T.dates||'')}</div></div>` : '');
 
   root.innerHTML=`<div class="wrap">
     <div class="card doc hd">
@@ -153,9 +165,17 @@ async function boot(){
     </div>
     ${availOn.length?`<div class="card avail"><h3>Patient's requested availability</h3>${availOn.map(([k,l])=>`<div class="kv"><b>${esc(l)}</b><span>${esc(ans[k])}</span></div>`).join("")}</div>`:""}
     <div class="card sched noprint">${schedInner}</div>
+    ${travelCard}
     <div class="card sched noprint">${pricingInner}</div>
     <div class="card doc">${renderSections(form,ans)}</div>
   </div>`;
+
+  const tvGo=document.getElementById("tvGo");
+  if(tvGo) tvGo.onclick=async()=>{ tvGo.disabled=true; tvGo.textContent="Confirming…"; const tm=document.getElementById("tvMsg");
+    try{ const r=await fetch("/api/intake/travel-confirm?token="+encodeURIComponent(TOKEN),{method:"POST"});
+      const j=await r.json(); if(!r.ok) throw new Error(j.error||"Could not confirm.");
+      tm.innerHTML=`<span style="color:#12704c;font-weight:700">✓ Travel dates confirmed — thank you.</span>`; tvGo.textContent="Confirmed"; }
+    catch(e){ tm.textContent=e.message; tvGo.disabled=false; tvGo.textContent="Confirm these travel dates"; } };
 
   const prTotal=()=>{ const m=parseFloat(document.getElementById("prMat").value||0)||0, f=parseFloat(document.getElementById("prFee").value||0)||0, w=parseFloat(document.getElementById("prWire").value||0)||0;
     document.getElementById("prTotal").textContent="Deposit to collect: "+money(m+f+w); };
@@ -164,7 +184,7 @@ async function boot(){
   prTotal();
   const pg=document.getElementById("prGo");
   pg.onclick=async()=>{ const old=pg.textContent; pg.disabled=true; pg.textContent="Saving…"; const pm=document.getElementById("prMsg"); pm.textContent="";
-    try{ const body={treatment_amount:document.getElementById("prTreat").value,material_deposit:document.getElementById("prMat").value,consult_fee:document.getElementById("prFee").value,wire_fee:document.getElementById("prWire").value,feedback:document.getElementById("prFeedback").value};
+    try{ const body={protocol:document.getElementById("prProtocol").value,treatment_amount:document.getElementById("prTreat").value,material_deposit:document.getElementById("prMat").value,consult_fee:document.getElementById("prFee").value,wire_fee:document.getElementById("prWire").value,feedback:document.getElementById("prFeedback").value};
       const r=await fetch("/api/intake/pricing?token="+encodeURIComponent(TOKEN),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
       const j=await r.json(); if(!r.ok) throw new Error(j.error||"Could not save.");
       pm.innerHTML=`<span style="color:#12704c;font-weight:700">✓ Pricing confirmed — deposit ${money(j.deposit_total)}. Our team will collect it from the patient.</span>`;

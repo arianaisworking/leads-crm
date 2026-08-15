@@ -7,6 +7,7 @@
 import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { DEFAULT_FORM } from '../../_lib/intakedoc.js';
+import { createDepositCheckout } from '../../_lib/stripe.js';
 
 // Availability fields intake.html always appends, surfaced to the team/doctor.
 const AVAIL = [
@@ -24,7 +25,7 @@ export async function onRequest(context) {
   const tok = url.searchParams.get('token') || '';
   if (!tok) return json({ error: 'missing token' }, 400);
 
-  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid FROM leads WHERE intake_token=?').bind(tok).first();
+  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid, protocol, travel_dates, travel_confirmed_at, deposit_link FROM leads WHERE intake_token=?').bind(tok).first();
   if (!lead) return json({ error: 'This link is invalid or has expired.' }, 404);
 
   let doctorName = null, doctorForm = null;
@@ -49,7 +50,23 @@ export async function onRequest(context) {
         consult_fee: lead.consult_fee, wire_fee: lead.wire_fee == null ? 25 : lead.wire_fee,
         deposit_total: lead.deposit_total, doctor_feedback: lead.doctor_feedback,
         confirmed_at: lead.pricing_confirmed_at, deposit_paid: !!lead.deposit_paid,
-      } });
+        protocol: lead.protocol,
+      },
+      travel: { dates: lead.travel_dates, confirmed_at: lead.travel_confirmed_at } });
+  }
+
+  // Patient-facing confirmation page data — ONLY the total, never the fee
+  // breakdown (the 20% + $25 are wrapped in and must stay invisible to patients).
+  if (action === 'confirm-info' && request.method === 'GET') {
+    return json({
+      patient_name: lead.name, doctor_name: doctorName,
+      protocol: lead.protocol || null,
+      deposit_total: lead.deposit_total || null,
+      deposit_paid: !!lead.deposit_paid,
+      travel_dates: lead.travel_dates || null,
+      travel_confirmed_at: lead.travel_confirmed_at || null,
+      ready: !!lead.pricing_confirmed_at,
+    });
   }
 
   // Doctor confirms pricing & leaves feedback after the consultation. Saves the
@@ -64,25 +81,95 @@ export async function onRequest(context) {
     const wire = num(b.wire_fee) != null ? num(b.wire_fee) : 25;
     const total = Math.round((material + consultFee + wire) * 100) / 100;
     const feedback = (b.feedback || '').toString().trim().slice(0, 4000) || null;
-    await db.prepare(`UPDATE leads SET treatment_amount=?, material_deposit=?, consult_fee=?, wire_fee=?, deposit_total=?, doctor_feedback=?, pricing_confirmed_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
-      .bind(treatment, material, consultFee, wire, total, feedback, lead.id).run();
+    const protocol = (b.protocol || '').toString().trim().slice(0, 6000) || null;
+    await db.prepare(`UPDATE leads SET protocol=?, treatment_amount=?, material_deposit=?, consult_fee=?, wire_fee=?, deposit_total=?, doctor_feedback=?, pricing_confirmed_at=datetime('now'), status='Protocol set', updated_at=datetime('now') WHERE id=?`)
+      .bind(protocol, treatment, material, consultFee, wire, total, feedback, lead.id).run();
     const money = (n) => '$' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     context.waitUntil(sendEmail(env, {
       to: teamEmail(env),
       subject: `Pricing confirmed — ${lead.name || 'patient'}`,
-      html: emailShell('Doctor confirmed pricing', `
-        <p style="margin:0 0 10px;font-size:16px"><b>${esc(doctorName || 'The doctor')}</b> confirmed pricing for <b>${esc(lead.name || 'the patient')}</b>.</p>
+      html: emailShell('Doctor confirmed the protocol', `
+        <p style="margin:0 0 10px;font-size:16px"><b>${esc(doctorName || 'The doctor')}</b> set the protocol &amp; pricing for <b>${esc(lead.name || 'the patient')}</b>.</p>
+        ${protocol ? `<div style="background:#f4f6f9;border:1px solid #e3e8ef;border-radius:10px;padding:12px 14px;margin:0 0 14px"><div style="font-weight:700;font-size:13px;margin-bottom:4px">Protocol</div><div style="white-space:pre-wrap">${esc(protocol)}</div></div>` : ''}
         <table style="font-size:14px;margin:0 0 12px">
           <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Treatment total</td><td style="font-weight:600">${money(treatment)}</td></tr>
           <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Material deposit</td><td style="font-weight:600">${money(material)}</td></tr>
-          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Services deposit (20%)</td><td style="font-weight:600">${money(consultFee)}</td></tr>
+          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Our fee (20%)</td><td style="font-weight:600">${money(consultFee)}</td></tr>
           <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Bank wire fee</td><td style="font-weight:600">${money(wire)}</td></tr>
-          <tr><td style="padding:6px 14px 3px 0;font-weight:700">Deposit to collect</td><td style="font-weight:700;color:#2f6fed;font-size:16px">${money(total)}</td></tr>
+          <tr><td style="padding:6px 14px 3px 0;font-weight:700">Patient deposit (fees wrapped in)</td><td style="font-weight:700;color:#2f6fed;font-size:16px">${money(total)}</td></tr>
         </table>
         ${feedback ? `<p style="margin:0 0 4px;color:#5b6472;font-weight:600">Doctor's feedback</p><p style="margin:0 0 12px">${esc(feedback)}</p>` : ''}
-        <p style="margin:0;color:#5b6472">Open the patient in the CRM and use “Send deposit request” to collect the deposit.</p>`, brandName(env)),
+        <p style="margin:0;color:#5b6472">Open the patient in the CRM and use “Send to patient” to collect the deposit &amp; travel dates.</p>`, brandName(env)),
     }));
     return json({ ok: true, deposit_total: total, consult_fee: consultFee, material_deposit: material, wire_fee: wire });
+  }
+
+  // Patient submits their travel dates and pays — from the confirmation page.
+  // Saves the dates, creates a Stripe deposit checkout, returns the pay URL.
+  if (action === 'confirm-travel' && request.method === 'POST') {
+    if (!lead.pricing_confirmed_at) return json({ error: 'This isn\'t ready yet.' }, 400);
+    const total = Number(lead.deposit_total);
+    if (!Number.isFinite(total) || total <= 0) return json({ error: 'No deposit set.' }, 400);
+    const b = await request.json().catch(() => ({}));
+    const dates = (b.travel_dates || '').toString().trim().slice(0, 500);
+    if (!dates) return json({ error: 'Please add the travel dates you\'re interested in.' }, 400);
+    await db.prepare("UPDATE leads SET travel_dates=?, updated_at=datetime('now') WHERE id=?").bind(dates, lead.id).run();
+    const origin = new URL(request.url).origin;
+    const chk = await createDepositCheckout(env, {
+      amountCents: Math.round(total * 100),
+      label: `Treatment deposit — ${lead.name || 'patient'}`,
+      successUrl: `${origin}/paid.html?token=${tok}&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${origin}/confirm.html?token=${tok}&status=cancel`,
+      metadata: { lead_id: String(lead.id), patient: lead.name || '' },
+    });
+    if (chk.skipped) return json({ error: 'Payments are not set up yet. Please contact us.' }, 400);
+    if (!chk.ok) return json({ error: 'Could not start the payment. ' + (chk.error || '') }, 502);
+    context.waitUntil(db.prepare("UPDATE leads SET deposit_link=? WHERE id=?").bind(chk.url, lead.id).run());
+    return json({ ok: true, url: chk.url });
+  }
+
+  // Payment success callback (from paid.html). Verifies the Stripe session is
+  // actually paid, marks the deposit paid, and alerts the team + doctor.
+  if (action === 'paid-check' && request.method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const sessionId = (b.session_id || '').toString().trim();
+    if (!sessionId || !env.STRIPE_SECRET_KEY) return json({ ok: false }, 400);
+    if (lead.deposit_paid) return json({ ok: true, already: true });
+    let paid = false;
+    try {
+      const r = await fetch('https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(sessionId), {
+        headers: { authorization: `Bearer ${env.STRIPE_SECRET_KEY}` },
+      });
+      const s = await r.json().catch(() => ({}));
+      paid = r.ok && s && s.payment_status === 'paid';
+    } catch { paid = false; }
+    if (!paid) return json({ ok: false }, 400);
+    await db.prepare("UPDATE leads SET deposit_paid=1, status='Deposit paid', updated_at=datetime('now') WHERE id=?").bind(lead.id).run();
+    const money = (n) => '$' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    context.waitUntil(sendEmail(env, {
+      to: teamEmail(env),
+      subject: `Deposit paid — ${lead.name || 'patient'}`,
+      html: emailShell('Deposit paid', `
+        <p style="margin:0 0 8px;font-size:16px"><b>${esc(lead.name || 'The patient')}</b> paid their deposit of <b>${money(lead.deposit_total)}</b>.</p>
+        ${lead.travel_dates ? `<p style="margin:0 0 8px"><b>Travel dates they want:</b> ${esc(lead.travel_dates)}</p>` : ''}
+        <p style="margin:0;color:#5b6472">Next: the doctor confirms the travel dates, then you send the final confirmation.</p>`, brandName(env)),
+    }));
+    return json({ ok: true });
+  }
+
+  // Doctor confirms the patient's requested travel dates (from the review page).
+  if (action === 'travel-confirm' && request.method === 'POST') {
+    if (!lead.travel_dates) return json({ error: 'No travel dates submitted yet.' }, 400);
+    await db.prepare("UPDATE leads SET travel_confirmed_at=datetime('now'), status='Travel confirmed', updated_at=datetime('now') WHERE id=?").bind(lead.id).run();
+    context.waitUntil(sendEmail(env, {
+      to: teamEmail(env),
+      subject: `Travel confirmed — ${lead.name || 'patient'}`,
+      html: emailShell('Doctor confirmed travel', `
+        <p style="margin:0 0 8px;font-size:16px"><b>${esc(doctorName || 'The doctor')}</b> confirmed the travel dates for <b>${esc(lead.name || 'the patient')}</b>.</p>
+        <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#2f6fed">${esc(lead.travel_dates || '')}</p>
+        <p style="margin:0;color:#5b6472">Send the patient their final confirmation from the CRM.</p>`, brandName(env)),
+    }));
+    return json({ ok: true });
   }
 
   // Doctor confirms a consultation time from the review page. Sets the consult,

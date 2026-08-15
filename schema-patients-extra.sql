@@ -35,6 +35,12 @@ ALTER TABLE leads ADD COLUMN doctor_feedback TEXT;         -- doctor's post-cons
 ALTER TABLE leads ADD COLUMN pricing_confirmed_at TEXT;    -- when the doctor confirmed pricing
 ALTER TABLE leads ADD COLUMN deposit_paid INTEGER DEFAULT 0; -- 1 once the deposit is paid
 ALTER TABLE leads ADD COLUMN deposit_link TEXT;            -- Stripe Checkout URL for the deposit
+-- Protocol + travel workflow
+ALTER TABLE leads ADD COLUMN protocol TEXT;               -- doctor's treatment protocol (shown to the patient)
+ALTER TABLE leads ADD COLUMN travel_dates TEXT;           -- travel window the patient requested
+ALTER TABLE leads ADD COLUMN travel_confirmed_at TEXT;    -- when the doctor confirmed the travel dates
+ALTER TABLE leads ADD COLUMN deposit_sent_at TEXT;        -- when we sent the patient the confirm/pay page
+ALTER TABLE leads ADD COLUMN final_confirmed_at TEXT;     -- when we sent the final confirmation
 ALTER TABLE leads ADD COLUMN intake_token TEXT;           -- per-patient secret for the public intake link
 CREATE INDEX IF NOT EXISTS idx_leads_intake_token ON leads(intake_token);
 ALTER TABLE leads ADD COLUMN consult_note TEXT;           -- note the doctor leaves when scheduling the consult

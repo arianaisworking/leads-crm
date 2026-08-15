@@ -1323,6 +1323,53 @@ async function openPatient(id,onSave){
   const feeFlat=(p.fee_type!=="percent"&&p.doctor_fee!=null)?p.doctor_fee:"";
   const feeTreat=p.treatment_amount!=null?p.treatment_amount:"";
   const feeRate=p.fee_rate!=null?p.fee_rate:((feeType==="percent"&&fdoc&&fdoc.fee_type==="percent")?fdoc.fee_amount:"");
+  let wfBlock="";
+  if(id){
+    const st=[
+      {label:"Intake completed", done:!!p.questionnaire},
+      {label:"With doctor (protocol & deposit)", done:!!p.pricing_confirmed_at},
+      {label:"Sent to patient", done:!!p.deposit_sent_at},
+      {label:"Deposit paid + travel dates", done:!!(p.deposit_paid&&p.travel_dates)},
+      {label:"Doctor confirmed travel", done:!!p.travel_confirmed_at},
+      {label:"Confirmed with patient", done:!!p.final_confirmed_at},
+    ];
+    let cur=st.findIndex(s=>!s.done); if(cur<0) cur=st.length;
+    const dep=p.deposit_total?("$"+(Math.round(p.deposit_total*100)/100).toFixed(2)):"";
+    const stepsHTML=st.map((s,i)=>`<div style="display:flex;align-items:center;gap:9px;padding:3px 0">
+      <span style="width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:${s.done?'#35c08a':(i===cur?'var(--pink)':'#e9e4ee')};color:${(s.done||i===cur)?'#fff':'#a79ba2'}">${s.done?'✓':i+1}</span>
+      <span style="font-size:13px;font-weight:${i===cur?700:500};color:${i===cur?'var(--ink)':(s.done?'var(--ink-soft)':'#a79ba2')}">${s.label}</span></div>`).join("");
+    let action="";
+    if(cur===0){ action=`<p class="sub" style="margin:0 0 8px">Send the patient their intake form.</p>
+      <div class="drow" style="gap:8px"><button class="btn" id="pLink" type="button">Get intake link</button>${p.email?`<button class="btn ghost" id="pEmailIntake" type="button">✉️ Email to patient</button>`:``}</div>
+      <div id="pLinkOut" class="sub" style="margin-top:8px"></div>`; }
+    else if(cur===1){ action=`<div class="drow" style="gap:8px;margin-bottom:8px"><button class="btn ghost" id="pViewIntake" type="button">View answers</button><button class="btn ghost" id="pPrintDoc" type="button">Printable doc</button></div>
+      <button class="btn" id="pSendDoc" type="button">Send to doctor →</button>
+      <p class="sub" style="margin:8px 0 0">The doctor consults, then sets the protocol &amp; deposit on their link. You'll be notified.</p>`; }
+    else if(cur===2){ action=`<p class="sub" style="margin:0 0 4px">Doctor set the deposit: <b style="color:var(--pink)">${dep}</b>.</p>
+      ${p.doctor_feedback?`<div class="sub" style="margin:0 0 8px;white-space:pre-wrap"><b>Doctor's feedback:</b> ${esc(p.doctor_feedback)}</div>`:``}
+      <button class="btn" id="pSendPatient" type="button">Send to patient →</button>
+      <p class="sub" style="margin:8px 0 0">Sends the plan, deposit ${dep} &amp; travel-date page. Fees stay hidden from the patient.</p>`; }
+    else if(cur===3){ action=`<p class="sub" style="margin:0">⏳ Waiting on the patient to pay <b style="color:var(--pink)">${dep}</b> &amp; choose travel dates.</p>
+      ${p.travel_dates?`<p class="sub" style="margin:8px 0 0"><b>Requested travel:</b> ${esc(p.travel_dates)}</p>`:``}
+      <button class="btn ghost" id="pSendPatient" type="button" style="margin-top:8px">Resend to patient</button>`; }
+    else if(cur===4){ action=`<p class="sub" style="margin:0">✓ Deposit paid. ⏳ Waiting on the doctor to confirm the travel dates on their link.</p>
+      ${p.travel_dates?`<p class="sub" style="margin:8px 0 0"><b>Requested travel:</b> ${esc(p.travel_dates)}</p>`:``}`; }
+    else if(cur===5){ action=`<p class="sub" style="margin:0 0 8px">✓ Doctor confirmed travel. Send the patient their final confirmation.</p>
+      ${p.travel_dates?`<p class="sub" style="margin:0 0 8px"><b>Travel:</b> ${esc(p.travel_dates)}</p>`:``}
+      <button class="btn" id="pFinal" type="button">Send final confirmation →</button>`; }
+    else { action=`<div class="result">✓ All confirmed${p.travel_dates?` — travel ${esc(p.travel_dates)}`:``}</div>`; }
+    const more=`<details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;color:var(--ink-soft)">More actions</summary>
+      <div class="drow" style="gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn ghost" id="pLink2" type="button">Intake link</button>
+        ${p.email?`<button class="btn ghost" id="pEmailIntake2" type="button">Email intake</button>`:``}
+        ${p.questionnaire?`<button class="btn ghost" id="pViewIntake2" type="button">View answers</button><button class="btn ghost" id="pPrintDoc2" type="button">Printable doc</button><button class="btn ghost" id="pSendDoc2" type="button">Send to doctor</button>`:``}
+        ${(p.pricing_confirmed_at&&p.email)?`<button class="btn ghost" id="pSendPatient2" type="button">Send to patient</button>`:``}
+        ${p.travel_confirmed_at?`<button class="btn ghost" id="pFinal2" type="button">Final confirmation</button>`:``}
+      </div><div id="pLinkOut2" class="sub" style="margin-top:8px"></div></details>`;
+    wfBlock=`<div class="field" style="margin-top:16px"><label>Workflow</label>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px">${stepsHTML}</div>
+      <div>${action}</div>${more}</div>`;
+  }
   d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
     <div class="dhead">${avatar({name:p.name||"New"})}<div><div class="name">${esc(p.name||"New patient")}</div><div class="sub">${esc(p.interest||"")}</div></div></div>
     <div class="dbody">
@@ -1339,20 +1386,8 @@ async function openPatient(id,onSave){
       <div class="sub" id="pFeeCalc" style="margin:-4px 0 12px;font-weight:600;color:var(--brand,#2f6fed)"></div>
       <label class="opt" style="margin-bottom:12px"><input type="checkbox" id="pPaid" ${p.paid_upfront?"checked":""}> Patient paid upfront</label>
       <button class="btn" id="pSave">Save patient</button>
-      ${id?`<div class="field" style="margin-top:14px"><label>Intake &amp; consultation</label>
-        ${p.questionnaire
-          ? `<div class="result" style="margin-bottom:8px">✓ Intake completed</div>
-             <div class="drow" style="gap:8px;margin-bottom:8px"><button class="btn ghost" id="pViewIntake" type="button">View answers</button><button class="btn ghost" id="pPrintDoc" type="button">Printable doc</button></div>
-             <button class="btn" id="pSendDoc" type="button" style="margin-bottom:10px">Send to doctor →</button>`
-          : `<p class="sub" style="margin:2px 0 8px">Intake not returned yet. Send the patient their link:</p>`}
-        <div class="drow" style="gap:8px"><button class="btn ghost" id="pLink" type="button">Get intake link</button>${p.email?`<button class="btn ghost" id="pEmailIntake" type="button">✉️ Email to patient</button>`:""}</div>
-        <div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
-        ${(id&&p.deposit_total)?`<div class="field" style="margin-top:14px"><label>Deposit</label>
-          <div class="sub" style="margin-bottom:6px">Total <b style="color:var(--brand,#2f6fed)">$${(Math.round(p.deposit_total*100)/100).toFixed(2)}</b>${p.deposit_paid?` · <span style="color:#12704c;font-weight:700">Paid</span>`:``}</div>
-          ${p.doctor_feedback?`<div class="sub" style="margin-bottom:8px;white-space:pre-wrap"><b>Doctor's feedback:</b> ${esc(p.doctor_feedback)}</div>`:``}
-          <button class="btn" id="pDeposit" type="button">💳 ${p.email?`Send deposit request`:`Create deposit link`}</button>
-          <div id="pDepOut" class="sub" style="margin-top:8px">${p.deposit_link?`<a href="${esc(p.deposit_link)}" target="_blank" rel="noopener">Open current payment link ↗</a>`:``}</div></div>`:``}
-        <button class="del" id="pDel">Delete patient</button>`:""}
+      ${wfBlock}
+      ${id?`<button class="del" id="pDel" style="margin-top:14px">Delete patient</button>`:""}
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
   const money=n=>"$"+(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1397,31 +1432,34 @@ async function openPatient(id,onSave){
     let form=null; try{ form=doc&&doc.intake_form?(typeof doc.intake_form==="string"?JSON.parse(doc.intake_form):doc.intake_form):null; }catch{}
     let ans={}; try{ ans=p.questionnaire?JSON.parse(p.questionnaire):{}; }catch{}
     const reviewUrl=p.intake_token?("/review.html?token="+encodeURIComponent(p.intake_token)):null;
-    $("#pLink").onclick=async()=>{ try{ const r=await pxapi("/patients/"+id+"/intake-link",{method:"POST"});
-      $("#pLinkOut").innerHTML=`<input class="search" style="width:100%" readonly value="${esc(r.url)}" onclick="this.select()"><span class="sub">Send this to the patient — it opens their doctor's intake form.</span>`; }catch(e){ alert(e.message); } };
-    const pdep=$("#pDeposit"); if(pdep) pdep.onclick=async()=>{
-      pdep.disabled=true; pdep.textContent="Creating…";
-      try{ const r=await pxapi("/patients/"+id+"/deposit-link",{method:"POST"});
-        $("#pDepOut").innerHTML=`<a href="${esc(r.url)}" target="_blank" rel="noopener">Open payment link ↗</a>`+(r.emailed?` · <span style="color:#12704c">emailed to ${esc(r.sent_to)}</span>`:``);
-        toast(r.emailed?("Deposit link emailed to "+r.sent_to):"Deposit link created."); pdep.disabled=false; pdep.textContent="💳 Resend deposit request"; }
-      catch(e){ alert(e.message); pdep.disabled=false; pdep.textContent="💳 Send deposit request"; } };
-    const pei=$("#pEmailIntake"); if(pei) pei.onclick=async()=>{
-      if(!confirm("Email the intake form to "+esc(p.email)+"? They'll get a link to fill it out and pick their availability.")) return;
-      pei.disabled=true; pei.textContent="Sending…";
-      try{ const r=await pxapi("/patients/"+id+"/email-intake",{method:"POST"});
-        toast(r.emailed?("Intake emailed to "+r.sent_to):"Email not configured yet."); pei.textContent="✓ Emailed"; }
-      catch(e){ alert(e.message); pei.disabled=false; pei.textContent="✉️ Email to patient"; } };
-    $("#pDel").onclick=async()=>{ if(!confirm("Delete this patient?"))return; await pxapi("/patients/"+id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };
-    const vi=$("#pViewIntake"); if(vi) vi.onclick=()=>openModal({title:(p.name||"Patient")+" — intake answers",sub:doc?doc.name:"",
+    const bind=(ids,fn)=>ids.forEach(x=>{const el=$("#"+x); if(el) el.onclick=()=>fn(el);});
+    async function doGetLink(){ try{ const r=await pxapi("/patients/"+id+"/intake-link",{method:"POST"});
+      const o=$("#pLinkOut")||$("#pLinkOut2"); if(o) o.innerHTML=`<input class="search" style="width:100%" readonly value="${esc(r.url)}" onclick="this.select()"><span class="sub">Send this to the patient — it opens their intake form.</span>`; }catch(e){ alert(e.message); } }
+    async function doEmailIntake(el){ if(!confirm("Email the intake form to "+esc(p.email)+"?")) return; el.disabled=true; el.textContent="Sending…";
+      try{ const r=await pxapi("/patients/"+id+"/email-intake",{method:"POST"}); toast(r.emailed?("Intake emailed to "+r.sent_to):"Email not configured yet."); el.textContent="✓ Emailed"; }
+      catch(e){ alert(e.message); el.disabled=false; el.textContent="✉️ Email to patient"; } }
+    async function doSendDoc(el){ if(!p.assigned_doctor){ alert("Assign a doctor above and Save first."); return; }
+      if(!confirm("Email this patient's intake to "+(doc?doc.name:"the assigned doctor")+"?")) return; el.disabled=true; el.textContent="Sending…";
+      try{ const r=await pxapi("/patients/"+id+"/send-to-doctor",{method:"POST"}); toast(r.emailed?("Sent to "+r.sent_to):"Marked sent (email not configured yet)."); closeDrawer(); onSave&&onSave(); }
+      catch(e){ alert(e.message); el.disabled=false; el.textContent="Send to doctor →"; } }
+    async function doSendPatient(el){ if(!confirm("Send the treatment plan, deposit & travel page to "+esc(p.email||"the patient")+"?")) return; el.disabled=true; el.textContent="Sending…";
+      try{ const r=await pxapi("/patients/"+id+"/send-to-patient",{method:"POST"}); toast(r.emailed?("Sent to "+r.sent_to):"Sent."); closeDrawer(); onSave&&onSave(); }
+      catch(e){ alert(e.message); el.disabled=false; el.textContent="Send to patient →"; } }
+    async function doFinal(el){ if(!confirm("Send the final confirmation to the patient?")) return; el.disabled=true; el.textContent="Sending…";
+      try{ const r=await pxapi("/patients/"+id+"/final-confirm",{method:"POST"}); toast(r.emailed?("Confirmation sent to "+r.sent_to):"Confirmed."); closeDrawer(); onSave&&onSave(); }
+      catch(e){ alert(e.message); el.disabled=false; el.textContent="Send final confirmation →"; } }
+    function doView(){ openModal({title:(p.name||"Patient")+" — intake answers",sub:doc?doc.name:"",
       body:intakeAnswersHTML(form,ans),
-      foot:`<button class="btn ghost" type="button" onclick="closeModal()">Close</button>`+(reviewUrl?`<button class="btn" type="button" onclick="window.open('${reviewUrl}','_blank')">Open printable doc</button>`:"")});
-    const pd=$("#pPrintDoc"); if(pd) pd.onclick=()=>{ if(reviewUrl) window.open(reviewUrl,"_blank"); else alert("Generate the intake link first."); };
-    const sd=$("#pSendDoc"); if(sd) sd.onclick=async()=>{ if(!p.assigned_doctor){ alert("Assign a doctor above and Save first."); return; }
-      if(!confirm("Email this patient's intake to "+(doc?doc.name:"the assigned doctor")+"?")) return;
-      sd.disabled=true; sd.textContent="Sending…";
-      try{ const r=await pxapi("/patients/"+id+"/send-to-doctor",{method:"POST"});
-        toast(r.emailed?("Sent to "+r.sent_to):"Marked sent (email not configured yet)."); closeDrawer(); onSave&&onSave(); }
-      catch(e){ alert(e.message); sd.disabled=false; sd.textContent="Send to doctor →"; } };
+      foot:`<button class="btn ghost" type="button" onclick="closeModal()">Close</button>`+(reviewUrl?`<button class="btn" type="button" onclick="window.open('${reviewUrl}','_blank')">Open printable doc</button>`:"")}); }
+    function doPrint(){ if(reviewUrl) window.open(reviewUrl,"_blank"); else alert("Generate the intake link first."); }
+    bind(["pLink","pLink2"],doGetLink);
+    bind(["pEmailIntake","pEmailIntake2"],doEmailIntake);
+    bind(["pSendDoc","pSendDoc2"],doSendDoc);
+    bind(["pSendPatient","pSendPatient2"],doSendPatient);
+    bind(["pFinal","pFinal2"],doFinal);
+    bind(["pViewIntake","pViewIntake2"],doView);
+    bind(["pPrintDoc","pPrintDoc2"],doPrint);
+    $("#pDel").onclick=async()=>{ if(!confirm("Delete this patient?"))return; await pxapi("/patients/"+id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };
   }
 }
 
