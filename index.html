@@ -1345,7 +1345,8 @@ async function openPatient(id,onSave){
              <div class="drow" style="gap:8px;margin-bottom:8px"><button class="btn ghost" id="pViewIntake" type="button">View answers</button><button class="btn ghost" id="pPrintDoc" type="button">Printable doc</button></div>
              <button class="btn" id="pSendDoc" type="button" style="margin-bottom:10px">Send to doctor →</button>`
           : `<p class="sub" style="margin:2px 0 8px">Intake not returned yet. Send the patient their link:</p>`}
-        <button class="btn ghost" id="pLink" type="button">Get intake link</button><div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
+        <div class="drow" style="gap:8px"><button class="btn ghost" id="pLink" type="button">Get intake link</button>${p.email?`<button class="btn ghost" id="pEmailIntake" type="button">✉️ Email to patient</button>`:""}</div>
+        <div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
         <button class="del" id="pDel">Delete patient</button>`:""}
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
@@ -1393,6 +1394,12 @@ async function openPatient(id,onSave){
     const reviewUrl=p.intake_token?("/review.html?token="+encodeURIComponent(p.intake_token)):null;
     $("#pLink").onclick=async()=>{ try{ const r=await pxapi("/patients/"+id+"/intake-link",{method:"POST"});
       $("#pLinkOut").innerHTML=`<input class="search" style="width:100%" readonly value="${esc(r.url)}" onclick="this.select()"><span class="sub">Send this to the patient — it opens their doctor's intake form.</span>`; }catch(e){ alert(e.message); } };
+    const pei=$("#pEmailIntake"); if(pei) pei.onclick=async()=>{
+      if(!confirm("Email the intake form to "+esc(p.email)+"? They'll get a link to fill it out and pick their availability.")) return;
+      pei.disabled=true; pei.textContent="Sending…";
+      try{ const r=await pxapi("/patients/"+id+"/email-intake",{method:"POST"});
+        toast(r.emailed?("Intake emailed to "+r.sent_to):"Email not configured yet."); pei.textContent="✓ Emailed"; }
+      catch(e){ alert(e.message); pei.disabled=false; pei.textContent="✉️ Email to patient"; } };
     $("#pDel").onclick=async()=>{ if(!confirm("Delete this patient?"))return; await pxapi("/patients/"+id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };
     const vi=$("#pViewIntake"); if(vi) vi.onclick=()=>openModal({title:(p.name||"Patient")+" — intake answers",sub:doc?doc.name:"",
       body:intakeAnswersHTML(form,ans),

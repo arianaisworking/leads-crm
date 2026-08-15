@@ -160,6 +160,33 @@ export async function onRequest(context) {
     return json({ ok: true, token: tok, url: `${origin}/intake.html?token=${tok}` });
   }
 
+  // ---------- EMAIL THE INTAKE TO THE PATIENT (optional; only if we have their email) ----------
+  if (res === 'patients' && sub === 'email-intake' && method === 'POST') {
+    const leadId = parseInt(id, 10);
+    const lead = await db.prepare('SELECT id, name, email, intake_token FROM leads WHERE id=?').bind(leadId).first();
+    if (!lead) return json({ error: 'patient not found' }, 404);
+    if (!lead.email) return json({ error: 'This patient has no email on file. Add one first, or use “Get intake link”.' }, 400);
+    let tok = lead.intake_token;
+    if (!tok) { tok = token(); await db.prepare('UPDATE leads SET intake_token=? WHERE id=?').bind(tok, leadId).run(); }
+    const origin = new URL(request.url).origin;
+    const link = `${origin}/intake.html?token=${tok}`;
+    const first = (lead.name || '').split(' ')[0];
+    const inner = `
+      <p style="margin:0 0 6px;font-size:16px">Hi${first ? ' ' + esc(first) : ''},</p>
+      <p style="margin:0 0 14px;color:#3a4353">Ahead of your consultation, please complete this short medical intake form. It only takes a few minutes — just answer to the best of your knowledge, and note any dates and times you're available so we can arrange a consultation that works for you.</p>
+      <p style="margin:0 0 18px"><a href="${link}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Open your intake form →</a></p>
+      <p style="margin:0 0 6px;color:#5b6472;font-size:13px">When you press submit, your answers come straight back to our team automatically — nothing to print, scan or send.</p>
+      <p style="margin:0;color:#5b6472;font-size:13px">Have a question? Just reply to this email and we'll help.</p>`;
+    const r = await sendEmail(env, {
+      to: lead.email,
+      replyTo: replyToEmail(env),
+      subject: 'Your medical intake form',
+      html: emailShell('Your intake form', inner, brandName(env)),
+    });
+    if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
+    return json({ ok: true, sent_to: lead.email, emailed: !!r.ok });
+  }
+
   // ---------- SEND TO DOCTOR ----------
   if (res === 'patients' && sub === 'send-to-doctor' && method === 'POST') {
     const leadId = parseInt(id, 10);
