@@ -149,6 +149,9 @@ async function boot(){
     <button class="btn" id="prGo" type="button">${P.confirmed_at?"Update protocol &amp; pricing":"Confirm protocol &amp; pricing"}</button>
     <div class="note" id="prMsg" style="margin-top:10px"></div>`;
 
+  const docsCard = (d.documents&&d.documents.length)
+    ? `<div class="card avail"><h3>Patient documents</h3>${d.documents.map(x=>`<div style="padding:4px 0"><a href="/api/intake/file?token=${encodeURIComponent(TOKEN)}&key=${encodeURIComponent(x.key)}" target="_blank" rel="noopener">📎 ${esc(x.name)}</a></div>`).join("")}</div>`
+    : "";
   const T=d.travel||{};
   const travelCard = (T.dates && !T.confirmed_at)
     ? `<div class="card sched noprint"><div class="top"><h3>Confirm travel dates</h3><span class="pill">Doctor</span></div>
@@ -164,6 +167,7 @@ async function boot(){
       <div class="meta"><span><b>Patient:</b> ${esc(d.patient_name||"—")}</span><span><b>Assigned doctor:</b> ${esc(d.doctor_name||"—")}</span><span><b>Status:</b> ${esc(d.status||"—")}</span></div>
     </div>
     ${availOn.length?`<div class="card avail"><h3>Patient's requested availability</h3>${availOn.map(([k,l])=>`<div class="kv"><b>${esc(l)}</b><span>${esc(ans[k])}</span></div>`).join("")}</div>`:""}
+    ${docsCard}
     <div class="card sched noprint">${schedInner}</div>
     ${travelCard}
     <div class="card sched noprint">${pricingInner}</div>

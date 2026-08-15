@@ -25,8 +25,9 @@ export async function onRequest(context) {
   const tok = url.searchParams.get('token') || '';
   if (!tok) return json({ error: 'missing token' }, 400);
 
-  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid, protocol, travel_dates, travel_confirmed_at, deposit_link FROM leads WHERE intake_token=?').bind(tok).first();
+  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid, protocol, travel_dates, travel_confirmed_at, deposit_link, documents FROM leads WHERE intake_token=?').bind(tok).first();
   if (!lead) return json({ error: 'This link is invalid or has expired.' }, 404);
+  const parseDocs = () => { try { return lead.documents ? JSON.parse(lead.documents) : []; } catch { return []; } };
 
   let doctorName = null, doctorForm = null;
   if (lead.assigned_doctor) {
@@ -37,7 +38,41 @@ export async function onRequest(context) {
   const form = doctorForm || DEFAULT_FORM;
 
   if (action === 'form' && request.method === 'GET') {
-    return json({ patient_name: lead.name, doctor_name: doctorName, form, submitted: !!lead.questionnaire });
+    return json({ patient_name: lead.name, doctor_name: doctorName, form, submitted: !!lead.questionnaire,
+      uploads_enabled: !!env.DOCS, documents: parseDocs().map((d) => ({ key: d.key, name: d.name })) });
+  }
+
+  // Patient uploads a lab/document file — stored in R2, keyed to this patient.
+  if (action === 'upload' && request.method === 'POST') {
+    if (!env.DOCS) return json({ error: 'File uploads are not enabled yet.' }, 400);
+    const fd = await request.formData().catch(() => null);
+    const file = fd && fd.get('file');
+    if (!file || typeof file === 'string') return json({ error: 'No file received.' }, 400);
+    if (file.size > 15 * 1024 * 1024) return json({ error: 'That file is too large (15 MB max).' }, 400);
+    const clean = (file.name || 'file').replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '_').slice(-80) || 'file';
+    const key = `${tok}/${crypto.randomUUID()}-${clean}`;
+    await env.DOCS.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || 'application/octet-stream' } });
+    const docs = parseDocs();
+    const meta = { key, name: clean, size: file.size, type: file.type || '' };
+    docs.push(meta);
+    await db.prepare("UPDATE leads SET documents=?, updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(docs), lead.id).run();
+    return json({ ok: true, file: { key, name: clean }, count: docs.length });
+  }
+
+  // Serve a stored file (doctor/team open these from the review page). Access is
+  // gated by knowing the patient's token — the key must live under that token.
+  if (action === 'file' && request.method === 'GET') {
+    if (!env.DOCS) return json({ error: 'not found' }, 404);
+    const key = url.searchParams.get('key') || '';
+    if (!key || !key.startsWith(tok + '/')) return json({ error: 'not found' }, 404);
+    const obj = await env.DOCS.get(key);
+    if (!obj) return json({ error: 'not found' }, 404);
+    const headers = new Headers();
+    obj.writeHttpMetadata(headers);
+    headers.set('cache-control', 'private, max-age=3600');
+    const name = key.split('/').pop().replace(/^[0-9a-f-]{36}-/, '');
+    headers.set('content-disposition', `inline; filename="${name.replace(/[^\w.\- ]+/g, '')}"`);
+    return new Response(obj.body, { headers });
   }
 
   if (action === 'review' && request.method === 'GET') {
@@ -52,7 +87,8 @@ export async function onRequest(context) {
         confirmed_at: lead.pricing_confirmed_at, deposit_paid: !!lead.deposit_paid,
         protocol: lead.protocol,
       },
-      travel: { dates: lead.travel_dates, confirmed_at: lead.travel_confirmed_at } });
+      travel: { dates: lead.travel_dates, confirmed_at: lead.travel_confirmed_at },
+      documents: parseDocs() });
   }
 
   // Patient-facing confirmation page data — ONLY the total, never the fee

@@ -82,6 +82,29 @@ function render(d){
     <div class="f"><label>Your time zone (e.g. PST, EST, CST)</label><input type="text" data-k="avail_tz"></div>
     <div class="f"><label>Best phone number for the consult</label><input type="tel" data-k="avail_phone"></div>`;
   app.appendChild(sch);
+  if(d.uploads_enabled){
+    const up=document.createElement("div"); up.className="sec";
+    up.innerHTML=`<h2>Upload labs &amp; documents</h2>
+      <p class="note">Attach any recent lab results, imaging or records — photos, PDFs or docs (max 15 MB each).</p>
+      <div id="upList" style="margin-bottom:10px"></div>
+      <label class="opt" style="cursor:pointer;display:inline-flex"><input type="file" id="upFile" accept="image/*,application/pdf,.pdf,.doc,.docx,.txt,.heic" multiple style="display:none"> ＋ Add file(s)</label>
+      <div class="note" id="upMsg" style="margin-top:8px"></div>`;
+    app.appendChild(up);
+    const upFile=document.getElementById("upFile"), list=document.getElementById("upList"), msg=document.getElementById("upMsg");
+    const chips=(d.documents||[]).slice();
+    const draw=()=>{ list.innerHTML=chips.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13.5px"><span>📎</span><span>${esc(c.name)}</span></div>`).join(""); };
+    draw();
+    upFile.onchange=async()=>{
+      const files=[...upFile.files]; upFile.value="";
+      for(const f of files){ msg.textContent="Uploading "+f.name+"…";
+        const fd=new FormData(); fd.append("file",f);
+        try{ const r=await fetch("/api/intake/upload?token="+encodeURIComponent(TOKEN),{method:"POST",body:fd});
+          const j=await r.json(); if(!r.ok) throw new Error(j.error||"Upload failed");
+          chips.push(j.file); draw(); }
+        catch(e){ msg.textContent=e.message; return; } }
+      msg.innerHTML=`<span style="color:#1f9d6b;font-weight:600">✓ Uploaded.</span>`;
+    };
+  }
   bar.classList.add("show"); updateProg();
 }
 function gridRow(k,label,scale){ return `<div class="row"><span class="lab">${esc(label)}</span><div class="scale" data-k="${k}" data-lab="${esc(label)}">${scale.map(o=>`<label><input type="radio" name="${k}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div></div>`; }
