@@ -138,7 +138,7 @@
   .scrim{position:fixed;inset:0;background:rgba(27,22,32,.4);opacity:0;pointer-events:none;transition:.18s;z-index:9}
   .scrim.show{opacity:1;pointer-events:auto}
   .drawer{position:fixed;top:50%;left:50%;width:min(560px,94vw);max-height:90vh;background:var(--card);border-radius:18px;box-shadow:0 30px 80px rgba(27,22,32,.34);
-    opacity:0;pointer-events:none;transform:translate(-50%,-48%) scale(.98);transition:.2s cubic-bezier(.4,0,.2,1);overflow-y:auto;z-index:10}
+    opacity:0;pointer-events:none;transform:translate(-50%,-48%) scale(.98);transition:.2s cubic-bezier(.4,0,.2,1);overflow-y:auto;overflow-x:hidden;z-index:10}
   .drawer.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
   .mscrim{position:fixed;inset:0;background:rgba(27,22,32,.5);opacity:0;pointer-events:none;transition:.16s;z-index:20}
   .mscrim.show{opacity:1;pointer-events:auto}
@@ -149,12 +149,12 @@
   .modal .mhead{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--pink-tint)}
   .modal .mhead .mt{font-family:var(--serif);font-size:18px;font-weight:600}
   .modal .mhead .ms{font-size:12px;color:var(--ink-soft);margin-top:2px}
-  .modal .mbody{padding:18px 20px;overflow-y:auto}
+  .modal .mbody{padding:18px 20px;overflow-y:auto;overflow-x:hidden;min-width:0}
   .modal .mfoot{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;background:var(--bg)}
   .iq{margin:0 0 14px}
   .iq .qh{font-size:13px;font-weight:700;color:var(--ink);margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
   .iq .row{display:grid;grid-template-columns:minmax(120px,220px) 1fr;gap:4px 14px;font-size:13.5px;padding:3px 0}
-  .iq .row .k{color:var(--ink-soft)}.iq .row .v{font-weight:600}.iq .row .v.em{font-weight:400;color:#b3adba}
+  .iq .row .k{color:var(--ink-soft);min-width:0;overflow-wrap:anywhere}.iq .row .v{font-weight:600;min-width:0;overflow-wrap:anywhere}.iq .row .v.em{font-weight:400;color:#b3adba}
   .iq .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
   .iq .chip{background:var(--pink-tint);border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:12.5px}
   .availbox{background:var(--pink-tint);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 16px}
@@ -163,11 +163,13 @@
   .dhead .name{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.01em}
   .dclose{position:absolute;top:16px;right:16px;background:rgba(27,22,32,.06);border:0;width:30px;height:30px;border-radius:9px;font-size:15px;color:var(--ink-soft)}
   .dclose:hover{background:rgba(27,22,32,.12)}
-  .dbody{padding:22px 24px;display:flex;flex-direction:column;gap:18px}
-  .field{display:flex;flex-direction:column;gap:6px}
+  .dbody{padding:22px 24px;display:flex;flex-direction:column;gap:18px;min-width:0}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
   .field label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--pink)}
   .field .val{font-size:14px}
+  .dbody input,.dbody select,.dbody textarea{width:100%;max-width:100%;min-width:0}
   .drow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .drow>*{min-width:0}
   .notes-list{display:flex;flex-direction:column;gap:8px}
   .note{background:var(--pink-tint);border:1px solid var(--line-2);border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.5}
   .note .t{font-size:11px;color:var(--ink-faint);margin-top:6px}
