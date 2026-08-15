@@ -88,8 +88,10 @@ function gcalLink(when,title,details){
 
 function scheduledHtml(when,note,patient){
   const pretty=String(when).replace("T"," ");
+  const link=location.origin+"/review.html?token="+encodeURIComponent(TOKEN);
   const g=gcalLink(when, "Consultation — "+(patient||"patient"),
-    (note?("Note: "+note+"\n"):"")+"Patient consultation arranged via MXN Cells.");
+    (note?("Note to patient: "+note+"\n\n"):"")+
+    "MXN Cells patient link — open this to review the intake, set the treatment protocol & pricing, and confirm travel dates:\n"+link);
   return `<div class="ok"><span>✓</span> Consultation scheduled for ${esc(pretty)}</div>
     ${note?`<p class="note" style="margin:12px 0 0">Note for the patient: ${esc(note)}</p>`:""}
     ${g?`<div class="cal-btns"><a class="btn ghost" href="${g}" target="_blank" rel="noopener">📅 Add to Google Calendar</a></div>`:""}
@@ -136,7 +138,9 @@ async function boot(){
   const pricingInner = `<div class="top"><h3>Protocol, pricing &amp; feedback</h3><span class="pill">Doctor</span></div>
     <p class="note">${P.confirmed_at?"✓ Confirmed — you can update it below if anything changes.":"After the consultation, describe the protocol and set the deposit. The 20% and $25 wire are wrapped into the total; the patient only sees the final deposit."}</p>
     <label style="display:block;font-size:12px;font-weight:700;color:var(--soft);margin-bottom:6px">Treatment protocol</label>
-    <textarea id="prProtocol" style="margin-top:0;margin-bottom:14px" placeholder="The protocol you're recommending — treatment(s), sessions, what it includes…">${esc(pv(P.protocol))}</textarea>
+    <textarea id="prProtocol" style="margin-top:0;margin-bottom:8px" placeholder="The protocol you're recommending — treatment(s), sessions, what it includes… (or attach a document below)">${esc(pv(P.protocol))}</textarea>
+    <div id="prDocs" style="margin-bottom:6px"></div>
+    ${d.uploads_enabled?`<label class="btn ghost small" style="display:inline-flex;cursor:pointer;margin-bottom:14px">＋ Attach protocol document<input type="file" id="prFile" accept="image/*,application/pdf,.pdf,.doc,.docx" style="display:none"></label><span class="note" id="prUpMsg" style="margin-left:8px"></span>`:``}
     <div class="pgrid">
       <div><label>Treatment total ($)</label><input type="number" min="0" step="0.01" id="prTreat" value="${pv(P.treatment_amount)}"></div>
       <div><label>Material deposit ($)</label><input type="number" min="0" step="0.01" id="prMat" value="${pv(P.material_deposit)}"></div>
@@ -149,9 +153,11 @@ async function boot(){
     <button class="btn" id="prGo" type="button">${P.confirmed_at?"Update protocol &amp; pricing":"Confirm protocol &amp; pricing"}</button>
     <div class="note" id="prMsg" style="margin-top:10px"></div>`;
 
-  const docsCard = (d.documents&&d.documents.length)
-    ? `<div class="card avail"><h3>Patient documents</h3>${d.documents.map(x=>`<div style="padding:4px 0"><a href="/api/intake/file?token=${encodeURIComponent(TOKEN)}&key=${encodeURIComponent(x.key)}" target="_blank" rel="noopener">📎 ${esc(x.name)}</a></div>`).join("")}</div>`
+  const labDocs=(d.documents||[]).filter(x=>x.kind!=="protocol");
+  const docsCard = labDocs.length
+    ? `<div class="card avail"><h3>Patient documents</h3>${labDocs.map(x=>`<div style="padding:4px 0"><a href="/api/intake/file?token=${encodeURIComponent(TOKEN)}&key=${encodeURIComponent(x.key)}" target="_blank" rel="noopener">📎 ${esc(x.name)}</a></div>`).join("")}</div>`
     : "";
+  const protoDocs=(d.documents||[]).filter(x=>x.kind==="protocol");
   const T=d.travel||{};
   const travelCard = (T.dates && !T.confirmed_at)
     ? `<div class="card sched noprint"><div class="top"><h3>Confirm travel dates</h3><span class="pill">Doctor</span></div>
@@ -173,6 +179,17 @@ async function boot(){
     <div class="card sched noprint">${pricingInner}</div>
     <div class="card doc">${renderSections(form,ans)}</div>
   </div>`;
+
+  function drawProto(){ const el=document.getElementById("prDocs"); if(!el) return;
+    el.innerHTML=protoDocs.map(x=>`<div style="padding:3px 0;font-size:13px"><a href="/api/intake/file?token=${encodeURIComponent(TOKEN)}&key=${encodeURIComponent(x.key)}" target="_blank" rel="noopener">📎 ${esc(x.name)}</a></div>`).join(""); }
+  drawProto();
+  const prFile=document.getElementById("prFile");
+  if(prFile) prFile.onchange=async()=>{ const f=prFile.files[0]; prFile.value=""; if(!f) return; const um=document.getElementById("prUpMsg"); um.textContent="Uploading…";
+    const fd=new FormData(); fd.append("file",f);
+    try{ const r=await fetch("/api/intake/upload?token="+encodeURIComponent(TOKEN)+"&kind=protocol",{method:"POST",body:fd});
+      const j=await r.json(); if(!r.ok) throw new Error(j.error||"Upload failed");
+      protoDocs.push(j.file); drawProto(); um.innerHTML=`<span style="color:#12704c;font-weight:700">✓ Attached</span>`; }
+    catch(e){ um.textContent=e.message; } };
 
   const tvGo=document.getElementById("tvGo");
   if(tvGo) tvGo.onclick=async()=>{ tvGo.disabled=true; tvGo.textContent="Confirming…"; const tm=document.getElementById("tvMsg");

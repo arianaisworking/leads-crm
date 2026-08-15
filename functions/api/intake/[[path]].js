@@ -50,10 +50,11 @@ export async function onRequest(context) {
     if (!file || typeof file === 'string') return json({ error: 'No file received.' }, 400);
     if (file.size > 15 * 1024 * 1024) return json({ error: 'That file is too large (15 MB max).' }, 400);
     const clean = (file.name || 'file').replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '_').slice(-80) || 'file';
+    const kind = url.searchParams.get('kind') === 'protocol' ? 'protocol' : 'lab';
     const key = `${tok}/${crypto.randomUUID()}-${clean}`;
     await env.DOCS.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || 'application/octet-stream' } });
     const docs = parseDocs();
-    const meta = { key, name: clean, size: file.size, type: file.type || '' };
+    const meta = { key, name: clean, size: file.size, type: file.type || '', kind };
     docs.push(meta);
     await db.prepare("UPDATE leads SET documents=?, updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(docs), lead.id).run();
     return json({ ok: true, file: { key, name: clean }, count: docs.length });
@@ -88,7 +89,7 @@ export async function onRequest(context) {
         protocol: lead.protocol,
       },
       travel: { dates: lead.travel_dates, confirmed_at: lead.travel_confirmed_at },
-      documents: parseDocs() });
+      documents: parseDocs(), uploads_enabled: !!env.DOCS });
   }
 
   // Patient-facing confirmation page data — ONLY the total, never the fee
@@ -102,6 +103,7 @@ export async function onRequest(context) {
       travel_dates: lead.travel_dates || null,
       travel_confirmed_at: lead.travel_confirmed_at || null,
       ready: !!lead.pricing_confirmed_at,
+      protocol_docs: parseDocs().filter((d) => d.kind === 'protocol').map((d) => ({ key: d.key, name: d.name })),
     });
   }
 

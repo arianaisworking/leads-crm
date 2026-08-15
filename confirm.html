@@ -64,7 +64,9 @@ function render(d){
       <h1>Move forward with your treatment${first?", "+first:""}</h1>
       <p class="sub">Review your plan, choose your travel dates, and secure your spot with a deposit.</p>
     </div>
-    ${d.protocol?`<div class="card"><h2>Your treatment plan</h2><div class="protocol">${esc(d.protocol)}</div></div>`:""}
+    ${(d.protocol||(d.protocol_docs&&d.protocol_docs.length))?`<div class="card"><h2>Your treatment plan</h2>
+      ${d.protocol?`<div class="protocol">${esc(d.protocol)}</div>`:""}
+      ${(d.protocol_docs||[]).map(x=>`<div style="margin-top:10px"><a href="/api/intake/file?token=${encodeURIComponent(TOKEN)}&key=${encodeURIComponent(x.key)}" target="_blank" rel="noopener">📎 ${esc(x.name)}</a></div>`).join("")}</div>`:""}
     <div class="card">
       <h2>Your deposit</h2>
       <div class="total"><span class="sub">Amount due today</span><span class="amt">${money(d.deposit_total)}</span></div>
