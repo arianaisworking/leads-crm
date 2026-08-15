@@ -23,6 +23,8 @@ ALTER TABLE leads ADD COLUMN consult_at TEXT;              -- scheduled consult 
 ALTER TABLE leads ADD COLUMN paid_upfront INTEGER DEFAULT 0; -- patient has paid for services/consult
 ALTER TABLE leads ADD COLUMN doctor_fee REAL;              -- what the doctor pays us for this patient
 ALTER TABLE leads ADD COLUMN doctor_fee_status TEXT DEFAULT 'pending';  -- pending | invoiced | paid
+ALTER TABLE leads ADD COLUMN intake_token TEXT;           -- per-patient secret for the public intake link
+CREATE INDEX IF NOT EXISTS idx_leads_intake_token ON leads(intake_token);
 
 CREATE TABLE IF NOT EXISTS doctors (
   id            TEXT PRIMARY KEY,

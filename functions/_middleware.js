@@ -17,7 +17,7 @@ export async function onRequest(context) {
   const path = new URL(request.url).pathname;
 
   if (!path.startsWith('/api/')) return next();
-  if (path.startsWith('/api/auth/') || path.startsWith('/api/sms/')) return next();
+  if (path.startsWith('/api/auth/') || path.startsWith('/api/sms/') || path.startsWith('/api/intake/')) return next();
 
   const sess = await readSession(context);
   if (!sess) return json({ error: 'unauthorized' }, 401);

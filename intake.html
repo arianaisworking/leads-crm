@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Intake</title>
+<style>
+  :root{--bg:#f4f6f9;--panel:#fff;--ink:#1f2733;--soft:#5b6472;--line:#e3e8ef;--brand:#2f6fed;--brand-wash:#eef3fe;--ok:#1f9d6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 120px}
+  .top,.sec{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
+  .top h1{margin:0 0 4px;font-size:22px}.top .sub{color:var(--soft);font-size:13px}
+  .badge{display:inline-block;background:var(--brand-wash);color:var(--brand);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:10px;letter-spacing:.03em}
+  .sec h2{margin:0 0 4px;font-size:16px}.sec .note{color:var(--soft);font-size:12.5px;margin:0 0 14px}
+  .f{margin-bottom:14px}.f>label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
+  .f input,.f textarea,.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
+  .f textarea{min-height:74px;resize:vertical}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opt{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13.5px;cursor:pointer;background:#fff}
+  .opt.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand);font-weight:600}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}.row .lab{font-size:13.5px}
+  .scale{display:flex;gap:5px;flex-wrap:wrap}
+  .scale label{font-size:11.5px;color:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 8px;cursor:pointer}
+  .scale label.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand);font-weight:700}
+  .scale input{display:none}
+  .consent{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12.5px;color:var(--soft);line-height:1.5;margin-bottom:12px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px 16px;display:none;justify-content:center}
+  .bar.show{display:flex}
+  .bar .inner{max-width:760px;width:100%;display:flex;align-items:center;gap:12px;justify-content:space-between}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:11px;padding:12px 22px;font:inherit;font-weight:700;cursor:pointer}
+  .btn:disabled{opacity:.6}
+  .prog{font-size:12px;color:var(--soft)}
+  .msg{text-align:center;padding:44px 20px}
+  .check{width:56px;height:56px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="sec msg"><p class="note">Loading your form…</p></div></div>
+<div class="bar" id="bar"><div class="inner"><span class="prog" id="prog"></span><button class="btn" id="submit">Submit intake form</button></div></div>
+<script>
+const app=document.getElementById("app"), bar=document.getElementById("bar");
+const TOKEN=new URLSearchParams(location.search).get("token")||"";
+const answers={}; let FORM=null;
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function msg(html){ app.innerHTML=`<div class="sec msg">${html}</div>`; bar.classList.remove("show"); }
+
+async function boot(){
+  if(!TOKEN){ return msg(`<h2>Invalid link</h2><p class="note">This intake link is missing its code.</p>`); }
+  let d;
+  try{ const r=await fetch("/api/intake/form?token="+encodeURIComponent(TOKEN)); d=await r.json(); if(!r.ok) return msg(`<h2>Link problem</h2><p class="note">${esc(d.error||"This link is invalid.")}</p>`); }
+  catch(e){ return msg(`<h2>Connection issue</h2><p class="note">Please try again in a moment.</p>`); }
+  if(d.submitted){ return msg(`<div class="check">✓</div><h2>Already received</h2><p class="note">Thanks${d.patient_name?", "+esc(d.patient_name):""} — we already have your intake form. Your care team will be in touch.</p>`); }
+  if(!d.form || !d.form.sections){ return msg(`<h2>Almost ready</h2><p class="note">Your form isn't set up yet. Please check back shortly or contact us.</p>`); }
+  FORM=d.form; render(d);
+}
+
+function render(d){
+  app.innerHTML=`<div class="top"><div class="badge">SECURE PATIENT INTAKE</div>
+    <h1>${esc(FORM.title||"Patient Intake")}</h1><div class="sub">${esc(FORM.org||d.doctor_name||"")}</div>
+    <div class="sub" style="margin-top:8px">${d.patient_name?"Hi "+esc(d.patient_name)+" — please":"Please"} complete this before your consultation. It goes only to your care team.</div></div>`;
+  FORM.sections.forEach((s,si)=>{
+    const sec=document.createElement("div"); sec.className="sec"; let h=`<h2>${esc(s.title)}</h2>`;
+    if(s.women) h+=`<p class="note">Women only — skip if not applicable.</p>`; else if(s.note) h+=`<p class="note">${esc(s.note)}</p>`;
+    if(s.consent) h+=`<div class="consent">${esc(s.consent_text||("I give consent to be assessed by "+(FORM.org||"the clinic")+" and authorize them to use this information to deliver care."))}</div><label class="opt" id="consentBox"><input type="checkbox" data-consent> I have read and agree</label>`;
+    (s.fields||[]).forEach(f=>h+=fieldHTML(f));
+    if(s.checks) h+=`<div class="f"><div class="opts">${s.checks.map((c,i)=>`<label class="opt"><input type="checkbox" data-k="chk_${si}_${i}" data-lab="${esc(c)}"> ${esc(c)}</label>`).join("")}</div></div>`;
+    if(s.family) h+=s.family.map((x,i)=>gridRow("fam_"+si+"_"+i,x,["None","Self","Family"])).join("");
+    if(s.grid) h+=s.grid.items.map((x,i)=>gridRow("hab_"+si+"_"+i,x,s.grid.scale)).join("");
+    if(s.rate) h+=s.rate.items.map((x,i)=>gridRow("rate_"+si+"_"+i,x,s.rate.scale)).join("");
+    sec.innerHTML=h; app.appendChild(sec);
+  });
+  bar.classList.add("show"); updateProg();
+}
+function gridRow(k,label,scale){ return `<div class="row"><span class="lab">${esc(label)}</span><div class="scale" data-k="${k}" data-lab="${esc(label)}">${scale.map(o=>`<label><input type="radio" name="${k}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div></div>`; }
+function fieldHTML(f){
+  if(f.type==="textarea") return `<div class="f"><label>${esc(f.label)}</label><textarea data-k="${f.k}"></textarea></div>`;
+  if(f.type==="radio") return `<div class="f"><label>${esc(f.label)}</label><div class="opts" data-radio="${f.k}">${f.opts.map(o=>`<label class="opt"><input type="radio" name="${f.k}" value="${esc(o)}"> ${esc(o)}</label>`).join("")}</div></div>`;
+  return `<div class="f"><label>${esc(f.label)}</label><input type="${esc(f.type||"text")}" data-k="${f.k}"></div>`;
+}
+app.addEventListener("input",e=>{ const t=e.target; if(t.dataset.k && (t.tagName==="TEXTAREA"||["text","date","number","email","tel"].includes(t.type))) answers[t.dataset.k]=t.value; updateProg(); });
+app.addEventListener("change",e=>{ const t=e.target;
+  if(t.type==="checkbox"&&t.dataset.k){ answers[t.dataset.k]=t.checked?t.dataset.lab:""; t.closest(".opt").classList.toggle("sel",t.checked); }
+  if(t.type==="radio"){ const box=t.closest("[data-k]")||t.closest("[data-radio]"); if(box){ const key=box.dataset.k||box.dataset.radio; answers[key]=t.value; box.querySelectorAll("label").forEach(l=>l.classList.toggle("sel",l.contains(t))); } }
+  updateProg();
+});
+function updateProg(){ document.getElementById("prog").textContent=Object.values(answers).filter(v=>v!=="").length+" answered"; }
+
+document.getElementById("submit").onclick=async()=>{
+  const consent=document.querySelector("[data-consent]");
+  if(consent && !consent.checked){ alert("Please read and agree to the consent to continue."); consent.scrollIntoView({behavior:"smooth"}); return; }
+  const btn=document.getElementById("submit"); btn.disabled=true; btn.textContent="Submitting…";
+  try{ const r=await fetch("/api/intake/submit?token="+encodeURIComponent(TOKEN),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({answers})});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error||"Submit failed");
+    msg(`<div class="check">✓</div><h2>Thank you</h2><p class="note">Your intake form has been received. Your care team will review it and reach out to schedule your consultation.</p>`);
+    window.scrollTo(0,0);
+  }catch(e){ alert(e.message); btn.disabled=false; btn.textContent="Submit intake form"; }
+};
+boot();
+</script>
+</body>
+</html>

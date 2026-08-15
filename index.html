@@ -380,6 +380,10 @@ const ACCOUNTS=[
   {label:"Driver Recruiting", host:"aiw-recruiting.pages.dev"},
   {label:"Doctor Patients",   host:"aiw-patients.pages.dev"},
 ];
+// Which business this deployment is. Patients env swaps in its own modules.
+const PROFILE = ({"aiw-patients.pages.dev":"patients"})[location.hostname] || "reactivation";
+const PX_STAGES=["New","Assigned","Intake sent","Intake returned","Sent to doctor","Consult scheduled","Paid","Active","Lost"];
+const pxapi=(p,o)=>api("/px"+p,o);
 const VERTICALS=[
   {key:"roofing",label:"Roofing",group:"Home services",osm:true,phrases:1},
   {key:"plumbing",label:"Plumbing",group:"Home services",osm:true,phrases:1},
@@ -484,8 +488,8 @@ async function api(path, opts){
 }
 async function loadStats(){
   try{ state.stats = await api("/stats"); }catch(e){ state.stats={}; }
-  const s=state.stats;
-  $("#ct-database").textContent=s.total||0; $("#ct-clients").textContent=s.client||0; $("#ct-nurture").textContent=s.due||0;
+  const s=state.stats; const set=(id,v)=>{const e=document.getElementById(id); if(e)e.textContent=v;};
+  set("ct-database",s.total||0); set("ct-clients",s.client||0); set("ct-nurture",s.due||0);
 }
 async function loadLeads(params={}){
   const qs=new URLSearchParams(params).toString();
@@ -506,7 +510,15 @@ function renderHero(){
 
 function setView(v){ state.view=v; document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v)); render(); }
 async function render(){
-  const m=$("#view"); await loadStats();
+  const m=$("#view");
+  if(PROFILE==="patients"){
+    if(state.view==="doctors") return renderDoctors(m);
+    if(state.view==="partners") return renderPartners(m);
+    if(state.view==="referrals") return renderReferrals(m);
+    if(state.view==="pxmoney") return renderPxMoney(m);
+    return renderPatients(m);
+  }
+  await loadStats();
   if(state.view==="database") return renderDatabase(m);
   if(state.view==="pipeline") return renderPipeline(m);
   if(state.view==="clients") return renderList(m,"Clients","Won","The businesses you've won.",{status:"Client"});
@@ -1220,6 +1232,173 @@ async function renderClientSetup(m, clientId){
   };
 }
 
+// ============ PATIENTS APP (aiw-patients environment) ============
+function applyPatientsProfile(){
+  const nav=document.getElementById("nav"); if(!nav)return;
+  const items=[["patients","Patients"],["doctors","Doctors"],["partners","Partners"],["referrals","Referrals"],["pxmoney","Money"]];
+  nav.innerHTML=items.map(([v,l],i)=>`<button data-view="${v}" class="${i===0?"on":""}"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></span> ${l}</button>`).join("");
+  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+  state.view="patients";
+}
+let PX_DOCTORS=[];
+function docName(id){ const d=PX_DOCTORS.find(x=>x.id===id); return d?d.name:"—"; }
+
+async function renderPatients(m){
+  m.innerHTML=head("Doctor patients","Patients",`<button class="btn ghost" id="pxAdd">+ Add patient</button>`)+`<div id="pxStats" class="stats"></div>
+    <div class="bar"><input class="search" id="pxq" placeholder="Search patients…"><select id="pxfDoc"></select><select id="pxfStatus"><option value="">All stages</option>${PX_STAGES.map(s=>`<option>${s}</option>`).join("")}</select></div>
+    <div id="pxTbl"></div>`;
+  try{ const dr=await pxapi("/doctors"); PX_DOCTORS=dr.doctors||[]; }catch(e){ PX_DOCTORS=[]; }
+  $("#pxfDoc").innerHTML=`<option value="">All doctors</option>`+PX_DOCTORS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");
+  let rows=[];
+  async function load(){ try{ const r=await pxapi("/patients"); rows=r.patients||[]; }catch(e){ rows=[]; }
+    const s={total:rows.length,ret:rows.filter(x=>x.status==="Intake returned").length,consult:rows.filter(x=>x.status==="Consult scheduled").length,paid:rows.filter(x=>x.paid_upfront).length};
+    $("#pxStats").innerHTML=`<div class="stat"><div class="n">${s.total}</div><div class="l">Patients</div></div><div class="stat"><div class="n">${s.ret}</div><div class="l">Intake returned</div></div><div class="stat"><div class="n">${s.consult}</div><div class="l">Consults</div></div><div class="stat"><div class="n">${s.paid}</div><div class="l">Paid</div></div>`;
+    draw(); }
+  function draw(){
+    const q=($("#pxq").value||"").toLowerCase(),fd=$("#pxfDoc").value,fs=$("#pxfStatus").value;
+    let r=rows.filter(x=>(!q||((x.name||"")+(x.phone||"")+(x.interest||"")).toLowerCase().includes(q))&&(!fd||x.assigned_doctor===fd)&&(!fs||x.status===fs));
+    $("#pxTbl").innerHTML=r.length?`<div class="card"><table><thead><tr><th>Patient</th><th>Program</th><th>Doctor</th><th>Stage</th><th>Fee</th></tr></thead><tbody>${r.map(x=>`<tr data-id="${x.id}"><td><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.phone||x.email||"")}</div></td><td>${esc(x.interest||"—")}</td><td>${esc(x.doctor_name||"—")}</td><td><span class="pill ${x.status==="Paid"||x.status==="Active"?"Client":x.status==="Lost"?"Dead":"Contacted"}">${esc(x.status||"New")}</span></td><td class="sub">${x.doctor_fee?("$"+x.doctor_fee+" · "+esc(x.doctor_fee_status||"pending")):"—"}</td></tr>`).join("")}</tbody></table></div>`:`<div class="card"><div class="empty"><div class="mark">✦</div><h3>No patients yet</h3><p>Add one, or import a CSV from your ad platform.</p></div></div>`;
+    $("#pxTbl").querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>openPatient(parseInt(tr.dataset.id,10),load));
+  }
+  $("#pxq").oninput=draw; $("#pxfDoc").onchange=draw; $("#pxfStatus").onchange=draw;
+  $("#pxAdd").onclick=()=>openPatient(null,load);
+  await load();
+}
+
+async function openPatient(id,onSave){
+  let p={};
+  if(id){ try{ const r=await pxapi("/patients/"+id); p=r.patient||{}; }catch(e){} }
+  const d=$("#drawer");
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead">${avatar({name:p.name||"New"})}<div><div class="name">${esc(p.name||"New patient")}</div><div class="sub">${esc(p.interest||"")}</div></div></div>
+    <div class="dbody">
+      <div class="field"><label>Name</label><input id="pName" value="${esc(p.name||"")}"></div>
+      <div class="drow"><div class="field"><label>Phone</label><input id="pPhone" value="${esc(p.phone||"")}"></div><div class="field"><label>Email</label><input id="pEmail" value="${esc(p.email||"")}"></div></div>
+      <div class="field"><label>Program / interest (from the ad)</label><input id="pInterest" value="${esc(p.interest||"")}" placeholder="e.g. Stem cell therapy"></div>
+      <div class="drow"><div class="field"><label>Assigned doctor</label><select id="pDoc"><option value="">—</option>${PX_DOCTORS.map(x=>`<option value="${x.id}" ${p.assigned_doctor===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Stage</label><select id="pStatus">${PX_STAGES.map(s=>`<option ${p.status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
+      <div class="drow"><div class="field"><label>Acquisition date</label><input type="date" id="pAcq" value="${esc(p.acquisition_date||"")}"></div><div class="field"><label>Consult date</label><input type="date" id="pConsult" value="${esc(p.consult_at||"")}"></div></div>
+      <div class="drow"><div class="field"><label>Doctor fee ($)</label><input type="number" id="pFee" value="${esc(p.doctor_fee||"")}"></div><div class="field"><label>Fee status</label><select id="pFeeStatus">${["pending","invoiced","paid"].map(s=>`<option ${p.doctor_fee_status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
+      <label class="opt" style="margin-bottom:12px"><input type="checkbox" id="pPaid" ${p.paid_upfront?"checked":""}> Patient paid upfront</label>
+      <button class="btn" id="pSave">Save patient</button>
+      ${id?`<div class="field" style="margin-top:14px"><label>Intake form</label>
+        ${p.questionnaire?`<div class="result" style="margin-bottom:8px">✓ Intake completed — <a href="#" id="pViewIntake">view answers</a></div>`:`<p class="sub" style="margin:2px 0 8px">Not returned yet.</p>`}
+        <button class="btn ghost" id="pLink">Get intake link</button><div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
+        <button class="del" id="pDel">Delete patient</button>`:""}
+    </div>`;
+  $("#scrim").classList.add("show"); d.classList.add("show");
+  $("#pSave").onclick=async()=>{
+    const body={name:$("#pName").value,phone:$("#pPhone").value||null,email:$("#pEmail").value||null,interest:$("#pInterest").value||null,
+      assigned_doctor:$("#pDoc").value||null,status:$("#pStatus").value,acquisition_date:$("#pAcq").value||null,consult_at:$("#pConsult").value||null,
+      doctor_fee:$("#pFee").value?parseFloat($("#pFee").value):null,doctor_fee_status:$("#pFeeStatus").value,paid_upfront:$("#pPaid").checked?1:0};
+    if(!body.name){alert("Name required");return;}
+    try{ if(id) await pxapi("/patients/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+      else await pxapi("/patients",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+      closeDrawer(); toast("Saved."); onSave&&onSave(); }catch(e){ alert(e.message); }
+  };
+  if(id){
+    $("#pLink").onclick=async()=>{ try{ const r=await pxapi("/patients/"+id+"/intake-link",{method:"POST"});
+      $("#pLinkOut").innerHTML=`<input class="search" style="width:100%" readonly value="${esc(r.url)}" onclick="this.select()"><span class="sub">Send this to the patient — it opens their doctor's intake form.</span>`; }catch(e){ alert(e.message); } };
+    $("#pDel").onclick=async()=>{ if(!confirm("Delete this patient?"))return; await pxapi("/patients/"+id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };
+    const vi=$("#pViewIntake"); if(vi) vi.onclick=(e)=>{ e.preventDefault(); let a={}; try{a=JSON.parse(p.questionnaire);}catch{}
+      alert(Object.entries(a).filter(([k,v])=>v).map(([k,v])=>k+": "+v).join("\n")||"No answers."); };
+  }
+}
+
+async function renderDoctors(m){
+  m.innerHTML=head("Payers","Doctors",`<button class="btn ghost" id="docAdd">+ Add doctor</button>`)+`<div id="docList"></div>`;
+  async function load(){ let r={doctors:[]}; try{ r=await pxapi("/doctors"); }catch(e){} PX_DOCTORS=r.doctors||[];
+    $("#docList").innerHTML=PX_DOCTORS.length?`<div class="card"><table><thead><tr><th>Doctor</th><th>Specialty</th><th>Fee/patient</th><th>Intake form</th></tr></thead><tbody>${PX_DOCTORS.map(d=>`<tr data-id="${d.id}"><td><div class="name">${esc(d.name)}</div><div class="sub">${esc(d.contact_email||"")}</div></td><td>${esc(d.specialty||"—")}</td><td>${d.fee_amount?(d.fee_type==="percent"?d.fee_amount+"%":"$"+d.fee_amount):"—"}</td><td>${d.intake_form?'<span class="pill Client">Configured</span>':'<span class="pill Dead">None</span>'}</td></tr>`).join("")}</tbody></table></div>`:`<div class="card"><div class="empty"><div class="mark">✦</div><h3>No doctors yet</h3><p>Add the practices you generate patients for.</p></div></div>`;
+    $("#docList").querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>editDoctor(PX_DOCTORS.find(x=>x.id===tr.dataset.id),load)); }
+  $("#docAdd").onclick=()=>editDoctor(null,load);
+  await load();
+}
+function editDoctor(doc,onSave){
+  doc=doc||{}; const d=$("#drawer");
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button><div class="dhead"><div><div class="name">${esc(doc.name||"New doctor")}</div></div></div>
+    <div class="dbody">
+      <div class="field"><label>Name</label><input id="dcName" value="${esc(doc.name||"")}"></div>
+      <div class="field"><label>Specialty</label><input id="dcSpec" value="${esc(doc.specialty||"")}"></div>
+      <div class="drow"><div class="field"><label>Email</label><input id="dcEmail" value="${esc(doc.contact_email||"")}"></div><div class="field"><label>Phone</label><input id="dcPhone" value="${esc(doc.contact_phone||"")}"></div></div>
+      <div class="drow"><div class="field"><label>Fee type</label><select id="dcFeeType"><option value="flat" ${doc.fee_type!=="percent"?"selected":""}>Flat $/patient</option><option value="percent" ${doc.fee_type==="percent"?"selected":""}>Percent</option></select></div><div class="field"><label>Amount</label><input type="number" id="dcFee" value="${esc(doc.fee_amount||"")}"></div></div>
+      <div class="field"><label>Terms / notes</label><textarea id="dcNotes">${esc(doc.terms||doc.notes||"")}</textarea></div>
+      <p class="sub">Intake form: ${doc.intake_form?"configured ✓ (patients get this doctor's form).":"none yet. City-Médica's form is pre-loaded on that doctor."}</p>
+      <button class="btn" id="dcSave">Save doctor</button>${doc.id?`<button class="del" id="dcDel">Delete</button>`:""}
+    </div>`;
+  $("#scrim").classList.add("show"); d.classList.add("show");
+  $("#dcSave").onclick=async()=>{ const body={name:$("#dcName").value,specialty:$("#dcSpec").value||null,contact_email:$("#dcEmail").value||null,contact_phone:$("#dcPhone").value||null,fee_type:$("#dcFeeType").value,fee_amount:$("#dcFee").value?parseFloat($("#dcFee").value):null,terms:$("#dcNotes").value||null};
+    if(!body.name){alert("Name required");return;}
+    try{ if(doc.id) await pxapi("/doctors/"+doc.id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); else await pxapi("/doctors",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); closeDrawer(); toast("Saved."); onSave&&onSave(); }catch(e){ alert(e.message); } };
+  if(doc.id) $("#dcDel").onclick=async()=>{ if(!confirm("Delete doctor?"))return; await pxapi("/doctors/"+doc.id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };
+}
+
+async function renderPartners(m){
+  m.innerHTML=head("Referral partners","Partners",`<button class="btn ghost" id="ptAdd">+ Add partner</button>`)+`<p class="muted" style="margin:-8px 0 14px">Hotels, Airbnbs, meal & aftercare services you refer patients to and earn from.</p><div id="ptList"></div>`;
+  async function load(){ let r={partners:[]}; try{ r=await pxapi("/partners"); }catch(e){}
+    const list=r.partners||[];
+    $("#ptList").innerHTML=list.length?`<div class="card"><table><thead><tr><th>Partner</th><th>Type</th><th>We earn</th></tr></thead><tbody>${list.map(p=>`<tr data-id="${p.id}"><td><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.contact_email||"")}</div></td><td>${esc(p.type||"—")}</td><td>${p.commission_rate?(p.commission_type==="percent"?p.commission_rate+"%":"$"+p.commission_rate):"—"}</td></tr>`).join("")}</tbody></table></div>`:`<div class="card"><div class="empty"><div class="mark">✦</div><h3>No partners yet</h3><p>Add a hotel, meal service, or aftercare provider.</p></div></div>`;
+    $("#ptList").querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>editPartner(list.find(x=>x.id===tr.dataset.id),load)); }
+  $("#ptAdd").onclick=()=>editPartner(null,load);
+  await load();
+}
+function editPartner(pt,onSave){
+  pt=pt||{}; const d=$("#drawer");
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button><div class="dhead"><div><div class="name">${esc(pt.name||"New partner")}</div></div></div>
+    <div class="dbody">
+      <div class="field"><label>Name</label><input id="ptName" value="${esc(pt.name||"")}"></div>
+      <div class="field"><label>Type</label><select id="ptType">${["hotel","airbnb","meals","aftercare","transport","other"].map(t=>`<option ${pt.type===t?"selected":""}>${t}</option>`).join("")}</select></div>
+      <div class="drow"><div class="field"><label>Email</label><input id="ptEmail" value="${esc(pt.contact_email||"")}"></div><div class="field"><label>Phone</label><input id="ptPhone" value="${esc(pt.contact_phone||"")}"></div></div>
+      <div class="drow"><div class="field"><label>Commission type</label><select id="ptCType"><option value="flat" ${pt.commission_type!=="percent"?"selected":""}>Flat $/referral</option><option value="percent" ${pt.commission_type==="percent"?"selected":""}>Percent</option></select></div><div class="field"><label>Rate</label><input type="number" id="ptRate" value="${esc(pt.commission_rate||"")}"></div></div>
+      <div class="field"><label>Terms</label><textarea id="ptTerms">${esc(pt.terms||"")}</textarea></div>
+      <button class="btn" id="ptSave">Save partner</button>${pt.id?`<button class="del" id="ptDel">Delete</button>`:""}
+    </div>`;
+  $("#scrim").classList.add("show"); d.classList.add("show");
+  $("#ptSave").onclick=async()=>{ const body={name:$("#ptName").value,type:$("#ptType").value,contact_email:$("#ptEmail").value||null,contact_phone:$("#ptPhone").value||null,commission_type:$("#ptCType").value,commission_rate:$("#ptRate").value?parseFloat($("#ptRate").value):null,terms:$("#ptTerms").value||null};
+    if(!body.name){alert("Name required");return;}
+    try{ if(pt.id) await pxapi("/partners/"+pt.id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); else await pxapi("/partners",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); closeDrawer(); toast("Saved."); onSave&&onSave(); }catch(e){ alert(e.message); } };
+  if(pt.id) $("#ptDel").onclick=async()=>{ if(!confirm("Delete partner?"))return; await pxapi("/partners/"+pt.id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };
+}
+
+async function renderReferrals(m){
+  m.innerHTML=head("Aftercare referrals","Referrals",`<button class="btn ghost" id="rfAdd">+ Log referral</button>`)+`<div id="rfList"></div>`;
+  let patients=[],partners=[];
+  try{ patients=(await pxapi("/patients")).patients||[]; }catch(e){}
+  try{ partners=(await pxapi("/partners")).partners||[]; }catch(e){}
+  async function load(){ let r={referrals:[]}; try{ r=await pxapi("/referrals"); }catch(e){}
+    const list=r.referrals||[];
+    $("#rfList").innerHTML=list.length?`<div class="card"><table><thead><tr><th>Patient</th><th>Partner</th><th>Service</th><th>We earn</th><th>Status</th></tr></thead><tbody>${list.map(x=>`<tr data-id="${x.id}"><td>${esc(x.patient_name||"—")}</td><td>${esc(x.partner_name||"—")}</td><td class="sub">${esc(x.service||"—")}</td><td>${x.amount?"$"+x.amount:"—"}</td><td><span class="pill ${x.status==="paid"?"Client":x.status==="confirmed"?"Qualified":"Contacted"}">${esc(x.status)}</span></td></tr>`).join("")}</tbody></table></div>`:`<div class="card"><div class="empty"><div class="mark">✦</div><h3>No referrals yet</h3><p>Log a patient you sent to a partner.</p></div></div>`;
+    $("#rfList").querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>{ const rf=list.find(x=>x.id===tr.dataset.id); const ns=rf.status==="pending"?"confirmed":rf.status==="confirmed"?"paid":"pending"; if(confirm(`Mark this referral as "${ns}"?`)) pxapi("/referrals/"+rf.id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:ns})}).then(load); }); }
+  $("#rfAdd").onclick=()=>{ const d=$("#drawer");
+    d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button><div class="dhead"><div><div class="name">Log referral</div></div></div><div class="dbody">
+      <div class="field"><label>Patient</label><select id="rfPat"><option value="">—</option>${patients.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select></div>
+      <div class="field"><label>Partner</label><select id="rfPart"><option value="">—</option>${partners.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select></div>
+      <div class="field"><label>Service</label><input id="rfServ" placeholder="e.g. 7-night stay"></div>
+      <div class="field"><label>Our commission ($)</label><input type="number" id="rfAmt"></div>
+      <button class="btn" id="rfSave">Save referral</button></div>`;
+    $("#scrim").classList.add("show"); d.classList.add("show");
+    $("#rfSave").onclick=async()=>{ const body={patient_id:$("#rfPat").value?parseInt($("#rfPat").value,10):null,partner_id:$("#rfPart").value||null,service:$("#rfServ").value||null,amount:$("#rfAmt").value?parseFloat($("#rfAmt").value):null};
+      if(!body.patient_id||!body.partner_id){alert("Pick a patient and partner");return;}
+      try{ await pxapi("/referrals",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); closeDrawer(); toast("Logged."); load(); }catch(e){ alert(e.message); } };
+  };
+  await load();
+}
+
+async function renderPxMoney(m){
+  m.innerHTML=head("Revenue","Money")+`<div id="moWrap"><p class="muted">Loading…</p></div>`;
+  let d={doctor:{},partner:{}}; try{ d=await pxapi("/money"); }catch(e){}
+  const dp=d.doctor||{},pp=d.partner||{};
+  const fmt=n=>"$"+(Math.round((n||0)*100)/100).toLocaleString();
+  $("#moWrap").innerHTML=`
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat"><div class="n">${fmt((dp.doc_pending||0)+(pp.par_pending||0))}</div><div class="l">Owed to you (pending)</div></div>
+      <div class="stat"><div class="n">${fmt((dp.doc_paid||0)+(pp.par_paid||0))}</div><div class="l">Collected (paid)</div></div>
+    </div>
+    <div class="cv-card" style="margin-top:16px"><h4>From doctors (per-patient fees)</h4>
+      <div class="cv-kv"><span>Pending</span><b>${fmt(dp.doc_pending)}</b></div><div class="cv-kv"><span>Paid</span><b class="ok">${fmt(dp.doc_paid)}</b></div></div>
+    <div class="cv-card" style="margin-top:12px"><h4>From partners (aftercare commissions)</h4>
+      <div class="cv-kv"><span>Pending</span><b>${fmt(pp.par_pending)}</b></div><div class="cv-kv"><span>Paid</span><b class="ok">${fmt(pp.par_paid)}</b></div></div>`;
+}
+
 function renderFinder(m){
   const SEL=new Set(); // checked vertical keys, persisted across source switches
   const vertHTML=(srcVal)=>GROUPS.map(g=>{
@@ -1483,6 +1662,7 @@ async function boot(){
   if(!me.authenticated){ authScreen("login"); return; }
   window.ME=me.user; installLogout();
   if(me.user.role==="client"){ document.body.classList.add("portal"); return renderClientPortal(); }
+  if(PROFILE==="patients") applyPatientsProfile();
   installAccountSwitch(); renderHero(); render();
 }
 boot();
