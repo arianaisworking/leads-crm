@@ -24,7 +24,7 @@ export async function onRequest(context) {
   const tok = url.searchParams.get('token') || '';
   if (!tok) return json({ error: 'missing token' }, 400);
 
-  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note FROM leads WHERE intake_token=?').bind(tok).first();
+  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note, treatment_amount, material_deposit, consult_fee, wire_fee, deposit_total, doctor_feedback, pricing_confirmed_at, deposit_paid FROM leads WHERE intake_token=?').bind(tok).first();
   if (!lead) return json({ error: 'This link is invalid or has expired.' }, 404);
 
   let doctorName = null, doctorForm = null;
@@ -43,7 +43,46 @@ export async function onRequest(context) {
     let answers = {};
     try { answers = lead.questionnaire ? JSON.parse(lead.questionnaire) : {}; } catch { answers = {}; }
     return json({ patient_name: lead.name, doctor_name: doctorName, form, answers, status: lead.status,
-      submitted: !!lead.questionnaire, consult_at: lead.consult_at || null, consult_note: lead.consult_note || null });
+      submitted: !!lead.questionnaire, consult_at: lead.consult_at || null, consult_note: lead.consult_note || null,
+      pricing: {
+        treatment_amount: lead.treatment_amount, material_deposit: lead.material_deposit,
+        consult_fee: lead.consult_fee, wire_fee: lead.wire_fee == null ? 25 : lead.wire_fee,
+        deposit_total: lead.deposit_total, doctor_feedback: lead.doctor_feedback,
+        confirmed_at: lead.pricing_confirmed_at, deposit_paid: !!lead.deposit_paid,
+      } });
+  }
+
+  // Doctor confirms pricing & leaves feedback after the consultation. Saves the
+  // treatment total, the fee breakdown (material deposit + 20% consult fee + $25
+  // wire), the computed deposit, and notifies the team so they can collect it.
+  if (action === 'pricing' && request.method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null; };
+    const treatment = num(b.treatment_amount);
+    const material = num(b.material_deposit) || 0;
+    const consultFee = num(b.consult_fee) != null ? num(b.consult_fee) : (treatment != null ? Math.round(treatment * 20) / 100 : 0);
+    const wire = num(b.wire_fee) != null ? num(b.wire_fee) : 25;
+    const total = Math.round((material + consultFee + wire) * 100) / 100;
+    const feedback = (b.feedback || '').toString().trim().slice(0, 4000) || null;
+    await db.prepare(`UPDATE leads SET treatment_amount=?, material_deposit=?, consult_fee=?, wire_fee=?, deposit_total=?, doctor_feedback=?, pricing_confirmed_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
+      .bind(treatment, material, consultFee, wire, total, feedback, lead.id).run();
+    const money = (n) => '$' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    context.waitUntil(sendEmail(env, {
+      to: teamEmail(env),
+      subject: `Pricing confirmed — ${lead.name || 'patient'}`,
+      html: emailShell('Doctor confirmed pricing', `
+        <p style="margin:0 0 10px;font-size:16px"><b>${esc(doctorName || 'The doctor')}</b> confirmed pricing for <b>${esc(lead.name || 'the patient')}</b>.</p>
+        <table style="font-size:14px;margin:0 0 12px">
+          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Treatment total</td><td style="font-weight:600">${money(treatment)}</td></tr>
+          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Material deposit</td><td style="font-weight:600">${money(material)}</td></tr>
+          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Consultation fee (20%)</td><td style="font-weight:600">${money(consultFee)}</td></tr>
+          <tr><td style="padding:3px 14px 3px 0;color:#5b6472">Bank wire fee</td><td style="font-weight:600">${money(wire)}</td></tr>
+          <tr><td style="padding:6px 14px 3px 0;font-weight:700">Deposit to collect</td><td style="font-weight:700;color:#2f6fed;font-size:16px">${money(total)}</td></tr>
+        </table>
+        ${feedback ? `<p style="margin:0 0 4px;color:#5b6472;font-weight:600">Doctor's feedback</p><p style="margin:0 0 12px">${esc(feedback)}</p>` : ''}
+        <p style="margin:0;color:#5b6472">Open the patient in the CRM and use “Send deposit request” to collect the deposit.</p>`, brandName(env)),
+    }));
+    return json({ ok: true, deposit_total: total, consult_fee: consultFee, material_deposit: material, wire_fee: wire });
   }
 
   // Doctor confirms a consultation time from the review page. Sets the consult,

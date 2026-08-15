@@ -45,6 +45,9 @@
   .sched input[type=datetime-local]{min-width:210px}
   .sched input:focus,.sched textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,111,237,.14)}
   .sched textarea{width:100%;min-height:58px;resize:vertical;margin-top:12px}
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 10px}
+  @media(max-width:520px){.pgrid{grid-template-columns:1fr}}
+  .dep-total{font-weight:800;font-size:17px;color:var(--brand);margin:6px 0 12px}
   .ok{background:#e9f8f1;border:1px solid #bfe8d6;color:var(--ok);border-radius:12px;padding:14px 16px;font-weight:700;font-size:15px;display:flex;align-items:center;gap:9px}
   .cal-btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
   @media print{
@@ -63,6 +66,7 @@ const TOKEN=new URLSearchParams(location.search).get("token")||"";
 const root=document.getElementById("root");
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function msg(h){ root.innerHTML=`<div class="msg">${h}</div>`; }
+function money(n){ return "$"+(Math.round((n||0)*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 const AVAIL=[["avail_dates","Preferred dates"],["avail_time","Preferred time of day"],["avail_tz","Time zone"],["avail_phone","Best phone for the consult"]];
 
@@ -126,6 +130,22 @@ async function boot(){
         <textarea id="schNote" placeholder="Optional note for the patient (e.g. fasting, what to bring)…"></textarea>
         <div class="note" id="schMsg" style="margin-top:10px"></div>`;
 
+  const P=d.pricing||{};
+  const feeGuess = P.consult_fee!=null?P.consult_fee:(P.treatment_amount!=null?Math.round(P.treatment_amount*20)/100:"");
+  const pv=(x)=>(x==null?"":x);
+  const pricingInner = `<div class="top"><h3>Confirm pricing &amp; feedback</h3><span class="pill">Doctor</span></div>
+    <p class="note">${P.confirmed_at?"✓ Pricing confirmed — you can update it below if anything changes.":"After the consultation, enter the treatment total and deposit breakdown. We'll collect the deposit from the patient."}</p>
+    <div class="pgrid">
+      <div><label>Treatment total ($)</label><input type="number" min="0" step="0.01" id="prTreat" value="${pv(P.treatment_amount)}"></div>
+      <div><label>Material deposit ($)</label><input type="number" min="0" step="0.01" id="prMat" value="${pv(P.material_deposit)}"></div>
+      <div><label>Consultation fee — 20% ($)</label><input type="number" min="0" step="0.01" id="prFee" value="${pv(feeGuess)}"></div>
+      <div><label>Bank wire fee ($)</label><input type="number" min="0" step="0.01" id="prWire" value="${P.wire_fee!=null?P.wire_fee:25}"></div>
+    </div>
+    <div class="dep-total" id="prTotal"></div>
+    <textarea id="prFeedback" placeholder="Feedback for our team — treatment plan, notes, anything the patient should prepare…">${esc(pv(P.doctor_feedback))}</textarea>
+    <button class="btn" id="prGo" type="button">${P.confirmed_at?"Update pricing":"Confirm pricing"}</button>
+    <div class="note" id="prMsg" style="margin-top:10px"></div>`;
+
   root.innerHTML=`<div class="wrap">
     <div class="card doc hd">
       <h1>${esc(form.title||"Patient Medical Intake")}</h1><div class="org">${esc(form.org||d.doctor_name||"")}</div>
@@ -133,8 +153,23 @@ async function boot(){
     </div>
     ${availOn.length?`<div class="card avail"><h3>Patient's requested availability</h3>${availOn.map(([k,l])=>`<div class="kv"><b>${esc(l)}</b><span>${esc(ans[k])}</span></div>`).join("")}</div>`:""}
     <div class="card sched noprint">${schedInner}</div>
+    <div class="card sched noprint">${pricingInner}</div>
     <div class="card doc">${renderSections(form,ans)}</div>
   </div>`;
+
+  const prTotal=()=>{ const m=parseFloat(document.getElementById("prMat").value||0)||0, f=parseFloat(document.getElementById("prFee").value||0)||0, w=parseFloat(document.getElementById("prWire").value||0)||0;
+    document.getElementById("prTotal").textContent="Deposit to collect: "+money(m+f+w); };
+  document.getElementById("prTreat").oninput=()=>{ const t=parseFloat(document.getElementById("prTreat").value||0)||0; document.getElementById("prFee").value=(Math.round(t*20)/100).toFixed(2); prTotal(); };
+  ["prMat","prFee","prWire"].forEach(i=>document.getElementById(i).oninput=prTotal);
+  prTotal();
+  const pg=document.getElementById("prGo");
+  pg.onclick=async()=>{ const old=pg.textContent; pg.disabled=true; pg.textContent="Saving…"; const pm=document.getElementById("prMsg"); pm.textContent="";
+    try{ const body={treatment_amount:document.getElementById("prTreat").value,material_deposit:document.getElementById("prMat").value,consult_fee:document.getElementById("prFee").value,wire_fee:document.getElementById("prWire").value,feedback:document.getElementById("prFeedback").value};
+      const r=await fetch("/api/intake/pricing?token="+encodeURIComponent(TOKEN),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+      const j=await r.json(); if(!r.ok) throw new Error(j.error||"Could not save.");
+      pm.innerHTML=`<span style="color:#12704c;font-weight:700">✓ Pricing confirmed — deposit ${money(j.deposit_total)}. Our team will collect it from the patient.</span>`;
+      pg.textContent="Update pricing"; pg.disabled=false;
+    }catch(e){ pm.textContent=e.message; pg.disabled=false; pg.textContent=old; } };
 
   const go=document.getElementById("schGo");
   if(go) go.onclick=async()=>{

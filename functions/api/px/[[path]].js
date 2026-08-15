@@ -4,6 +4,7 @@
 
 import { json, uid } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
+import { createDepositCheckout } from '../../_lib/stripe.js';
 
 const AVAIL = [
   ['avail_dates', 'Preferred dates'],
@@ -184,6 +185,50 @@ export async function onRequest(context) {
     });
     if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
     return json({ ok: true, sent_to: lead.email, emailed: !!r.ok });
+  }
+
+  // ---------- SEND DEPOSIT REQUEST (Stripe) ----------
+  if (res === 'patients' && sub === 'deposit-link' && method === 'POST') {
+    const leadId = parseInt(id, 10);
+    const lead = await db.prepare('SELECT id, name, email, deposit_total, material_deposit, consult_fee, wire_fee FROM leads WHERE id=?').bind(leadId).first();
+    if (!lead) return json({ error: 'patient not found' }, 404);
+    const total = Number(lead.deposit_total);
+    if (!Number.isFinite(total) || total <= 0) return json({ error: 'No deposit set yet. The doctor needs to confirm pricing first.' }, 400);
+    const origin = new URL(request.url).origin;
+    const chk = await createDepositCheckout(env, {
+      amountCents: Math.round(total * 100),
+      label: `Consultation deposit — ${lead.name || 'patient'}`,
+      successUrl: `${origin}/paid.html`,
+      cancelUrl: `${origin}/paid.html?status=cancel`,
+      metadata: { lead_id: String(leadId), patient: lead.name || '' },
+    });
+    if (chk.skipped) return json({ error: 'Stripe is not configured yet. Add STRIPE_SECRET_KEY to the Pages project, then redeploy.' }, 400);
+    if (!chk.ok) return json({ error: 'Could not create the payment link. ' + (chk.error || '') }, 502);
+    await db.prepare("UPDATE leads SET deposit_link=?, updated_at=datetime('now') WHERE id=?").bind(chk.url, leadId).run();
+
+    let emailed = false;
+    if (lead.email) {
+      const money = (n) => '$' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const first = (lead.name || '').split(' ')[0];
+      const r = await sendEmail(env, {
+        to: lead.email,
+        replyTo: replyToEmail(env),
+        subject: 'Your consultation deposit',
+        html: emailShell('Secure your consultation', `
+          <p style="margin:0 0 6px;font-size:16px">Hi${first ? ' ' + esc(first) : ''},</p>
+          <p style="margin:0 0 14px;color:#3a4353">To reserve your consultation, please pay your deposit of <b>${money(total)}</b>. It's a quick, secure card payment.</p>
+          <table style="font-size:13.5px;margin:0 0 16px;color:#5b6472">
+            ${lead.material_deposit ? `<tr><td style="padding:2px 14px 2px 0">Material deposit</td><td style="font-weight:600;color:#1a2230">${money(lead.material_deposit)}</td></tr>` : ''}
+            ${lead.consult_fee ? `<tr><td style="padding:2px 14px 2px 0">Consultation fee</td><td style="font-weight:600;color:#1a2230">${money(lead.consult_fee)}</td></tr>` : ''}
+            ${lead.wire_fee ? `<tr><td style="padding:2px 14px 2px 0">Bank wire fee</td><td style="font-weight:600;color:#1a2230">${money(lead.wire_fee)}</td></tr>` : ''}
+            <tr><td style="padding:6px 14px 2px 0;font-weight:700;color:#1a2230">Total deposit</td><td style="font-weight:700;color:#2f6fed;font-size:15px">${money(total)}</td></tr>
+          </table>
+          <p style="margin:0 0 18px"><a href="${chk.url}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 26px;border-radius:11px;font-weight:700">Pay your deposit →</a></p>
+          <p style="margin:0;color:#5b6472;font-size:13px">Questions? Just reply to this email and we'll help.</p>`, brandName(env)),
+      });
+      emailed = !!r.ok;
+    }
+    return json({ ok: true, url: chk.url, emailed, sent_to: lead.email || null });
   }
 
   // ---------- SEND TO DOCTOR ----------

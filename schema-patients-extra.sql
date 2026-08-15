@@ -26,6 +26,15 @@ ALTER TABLE leads ADD COLUMN doctor_fee_status TEXT DEFAULT 'pending';  -- pendi
 ALTER TABLE leads ADD COLUMN fee_type TEXT DEFAULT 'flat'; -- flat | percent  (per-patient override of the doctor default)
 ALTER TABLE leads ADD COLUMN fee_rate REAL;                -- commission % when fee_type='percent' (e.g. 20)
 ALTER TABLE leads ADD COLUMN treatment_amount REAL;        -- total treatment cost, the basis for a percent fee
+-- Deposit / pricing the doctor confirms after the consultation (patient pays this deposit via Stripe)
+ALTER TABLE leads ADD COLUMN material_deposit REAL;        -- material deposit portion
+ALTER TABLE leads ADD COLUMN consult_fee REAL;             -- 20% consultation fee portion
+ALTER TABLE leads ADD COLUMN wire_fee REAL DEFAULT 25;     -- $25 bank wire fee (pass-through)
+ALTER TABLE leads ADD COLUMN deposit_total REAL;           -- material_deposit + consult_fee + wire_fee
+ALTER TABLE leads ADD COLUMN doctor_feedback TEXT;         -- doctor's post-consult feedback for our team
+ALTER TABLE leads ADD COLUMN pricing_confirmed_at TEXT;    -- when the doctor confirmed pricing
+ALTER TABLE leads ADD COLUMN deposit_paid INTEGER DEFAULT 0; -- 1 once the deposit is paid
+ALTER TABLE leads ADD COLUMN deposit_link TEXT;            -- Stripe Checkout URL for the deposit
 ALTER TABLE leads ADD COLUMN intake_token TEXT;           -- per-patient secret for the public intake link
 CREATE INDEX IF NOT EXISTS idx_leads_intake_token ON leads(intake_token);
 ALTER TABLE leads ADD COLUMN consult_note TEXT;           -- note the doctor leaves when scheduling the consult

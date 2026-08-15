@@ -1347,6 +1347,11 @@ async function openPatient(id,onSave){
           : `<p class="sub" style="margin:2px 0 8px">Intake not returned yet. Send the patient their link:</p>`}
         <div class="drow" style="gap:8px"><button class="btn ghost" id="pLink" type="button">Get intake link</button>${p.email?`<button class="btn ghost" id="pEmailIntake" type="button">✉️ Email to patient</button>`:""}</div>
         <div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
+        ${(id&&p.deposit_total)?`<div class="field" style="margin-top:14px"><label>Deposit</label>
+          <div class="sub" style="margin-bottom:6px">Total <b style="color:var(--brand,#2f6fed)">$${(Math.round(p.deposit_total*100)/100).toFixed(2)}</b>${p.deposit_paid?` · <span style="color:#12704c;font-weight:700">Paid</span>`:``}</div>
+          ${p.doctor_feedback?`<div class="sub" style="margin-bottom:8px;white-space:pre-wrap"><b>Doctor's feedback:</b> ${esc(p.doctor_feedback)}</div>`:``}
+          <button class="btn" id="pDeposit" type="button">💳 ${p.email?`Send deposit request`:`Create deposit link`}</button>
+          <div id="pDepOut" class="sub" style="margin-top:8px">${p.deposit_link?`<a href="${esc(p.deposit_link)}" target="_blank" rel="noopener">Open current payment link ↗</a>`:``}</div></div>`:``}
         <button class="del" id="pDel">Delete patient</button>`:""}
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
@@ -1394,6 +1399,12 @@ async function openPatient(id,onSave){
     const reviewUrl=p.intake_token?("/review.html?token="+encodeURIComponent(p.intake_token)):null;
     $("#pLink").onclick=async()=>{ try{ const r=await pxapi("/patients/"+id+"/intake-link",{method:"POST"});
       $("#pLinkOut").innerHTML=`<input class="search" style="width:100%" readonly value="${esc(r.url)}" onclick="this.select()"><span class="sub">Send this to the patient — it opens their doctor's intake form.</span>`; }catch(e){ alert(e.message); } };
+    const pdep=$("#pDeposit"); if(pdep) pdep.onclick=async()=>{
+      pdep.disabled=true; pdep.textContent="Creating…";
+      try{ const r=await pxapi("/patients/"+id+"/deposit-link",{method:"POST"});
+        $("#pDepOut").innerHTML=`<a href="${esc(r.url)}" target="_blank" rel="noopener">Open payment link ↗</a>`+(r.emailed?` · <span style="color:#12704c">emailed to ${esc(r.sent_to)}</span>`:``);
+        toast(r.emailed?("Deposit link emailed to "+r.sent_to):"Deposit link created."); pdep.disabled=false; pdep.textContent="💳 Resend deposit request"; }
+      catch(e){ alert(e.message); pdep.disabled=false; pdep.textContent="💳 Send deposit request"; } };
     const pei=$("#pEmailIntake"); if(pei) pei.onclick=async()=>{
       if(!confirm("Email the intake form to "+esc(p.email)+"? They'll get a link to fill it out and pick their availability.")) return;
       pei.disabled=true; pei.textContent="Sending…";
