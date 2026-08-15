@@ -5,44 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Patient Intake — Review</title>
 <style>
-  :root{--ink:#1a2230;--soft:#5b6472;--line:#e3e8ef;--brand:#2f6fed;--wash:#eef3fe;--bg:#f4f6f9}
+  :root{--ink:#1a2230;--soft:#5b6472;--line:#e6ebf2;--brand:#2f6fed;--wash:#eef3fe;--bg:#eef1f6;--ok:#12704c}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  .bar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .bar{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:11px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
   .bar .t{font-weight:700}
-  .btn{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer}
-  .doc{max-width:820px;margin:18px auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:30px 34px}
-  .hd{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:18px}
-  .hd h1{margin:0 0 3px;font-size:22px}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:11px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer;transition:filter .15s,transform .05s;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{filter:brightness(1.06)}.btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.6;cursor:default}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:0 1px 2px rgba(20,30,50,.05)}
+  .btn.small{padding:7px 13px;font-size:13px;border-radius:9px}
+  .wrap{max-width:840px;margin:20px auto;padding:0 14px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(20,30,50,.05);padding:22px 26px;margin:14px 0}
+  .doc{padding:28px 30px}
+  .hd h1{margin:0 0 3px;font-size:22px;letter-spacing:-.01em}
   .hd .org{color:var(--soft);font-size:13px}
-  .meta{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:12px;font-size:13px}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:14px;font-size:13px;border-top:1px solid var(--line);padding-top:14px}
   .meta b{color:var(--soft);font-weight:600}
-  .avail{background:var(--wash);border:1px solid #cfe0ff;border-radius:10px;padding:14px 16px;margin:18px 0}
-  .avail h3{margin:0 0 8px;font-size:14px;color:var(--brand)}
+  .pill{display:inline-block;background:var(--wash);color:var(--brand);border:1px solid #cfe0ff;border-radius:999px;font-size:11px;font-weight:700;padding:3px 10px;letter-spacing:.02em;text-transform:uppercase}
+  .avail{background:var(--wash);border:1px solid #cfe0ff}
+  .avail h3{margin:0 0 10px;font-size:14px;color:var(--brand)}
   .avail .kv{display:flex;gap:10px;font-size:14px;padding:3px 0}.avail .kv b{min-width:170px;color:var(--soft);font-weight:600}
-  section.s{margin:20px 0;break-inside:avoid}
-  section.s h2{font-size:15px;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
-  .qa{display:grid;grid-template-columns:230px 1fr;gap:4px 16px;font-size:14px}
+  section.s{margin:22px 0;break-inside:avoid}
+  section.s:first-child{margin-top:6px}
+  section.s h2{font-size:14px;margin:0 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line);color:var(--soft);text-transform:uppercase;letter-spacing:.03em}
+  .qa{display:grid;grid-template-columns:230px 1fr;gap:6px 16px;font-size:14px}
   .qa .q{color:var(--soft)}.qa .a{font-weight:600}.qa .a.empty{font-weight:400;color:#aab3c0}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chip{background:#eef1f6;border:1px solid var(--line);border-radius:16px;padding:3px 11px;font-size:13px}
-  .msg{max-width:600px;margin:60px auto;text-align:center;color:var(--soft)}
-  .sched{background:#fff;border:1px solid #cfe0ff;border-left:4px solid var(--brand);border-radius:10px;padding:16px 18px;margin:18px 0}
-  .sched h3{margin:0 0 4px;font-size:15px}
-  .sched .note{color:var(--soft);font-size:13px;margin:0 0 12px}
-  .sched .rowf{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
-  .sched label{display:block;font-size:12px;font-weight:700;color:var(--soft);margin-bottom:5px}
-  .sched input,.sched textarea{border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:inherit;background:#fff;color:var(--ink)}
-  .sched textarea{width:100%;min-height:56px;resize:vertical;margin-top:10px}
-  .sched .ok{background:#e9f8f1;border:1px solid #bfe8d6;color:#12704c;border-radius:9px;padding:12px 14px;font-weight:600}
+  .msg{max-width:600px;margin:70px auto;text-align:center;color:var(--soft)}
+  /* Scheduler (doctor action) */
+  .sched{border:1px solid #cfe0ff;background:linear-gradient(180deg,#f7faff,#fff)}
+  .sched .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+  .sched h3{margin:0;font-size:16px}
+  .sched .note{color:var(--soft);font-size:13px;margin:6px 0 14px}
+  .sched .rowf{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .sched label{display:block;font-size:12px;font-weight:700;color:var(--soft);margin-bottom:6px}
+  .sched input,.sched textarea{border:1px solid var(--line);border-radius:11px;padding:11px 13px;font:inherit;background:#fff;color:var(--ink)}
+  .sched input[type=datetime-local]{min-width:210px}
+  .sched input:focus,.sched textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,111,237,.14)}
+  .sched textarea{width:100%;min-height:58px;resize:vertical;margin-top:12px}
+  .ok{background:#e9f8f1;border:1px solid #bfe8d6;color:var(--ok);border-radius:12px;padding:14px 16px;font-weight:700;font-size:15px;display:flex;align-items:center;gap:9px}
+  .cal-btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
   @media print{
     body{background:#fff}.bar,.noprint{display:none}
-    .doc{border:none;border-radius:0;margin:0;max-width:none;padding:0}
+    .wrap{max-width:none;margin:0;padding:0}
+    .card{border:none;border-radius:0;box-shadow:none;margin:0;padding:0}
+    .avail{border:1px solid var(--line)}
   }
 </style>
 </head>
 <body>
-<div class="bar"><span class="t" id="barTitle">Patient intake</span><button class="btn" onclick="window.print()">Save as PDF / Print</button></div>
+<div class="bar"><span class="t" id="barTitle">Patient intake</span><button class="btn ghost small" onclick="window.print()">Save as PDF / Print</button></div>
 <div id="root"><div class="msg">Loading…</div></div>
 <script>
 const TOKEN=new URLSearchParams(location.search).get("token")||"";
@@ -53,6 +67,30 @@ function msg(h){ root.innerHTML=`<div class="msg">${h}</div>`; }
 const AVAIL=[["avail_dates","Preferred dates"],["avail_time","Preferred time of day"],["avail_tz","Time zone"],["avail_phone","Best phone for the consult"]];
 
 function qa(label,val){ const empty=val==null||val===""; return `<div class="q">${esc(label)}</div><div class="a${empty?" empty":""}">${empty?"—":esc(val)}</div>`; }
+
+// Build a "Add to Google Calendar" template link for a local datetime-local value.
+function pad(n){ return String(n).padStart(2,"0"); }
+function fmtLocal(dt){ return ""+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+"T"+pad(dt.getHours())+pad(dt.getMinutes())+"00"; }
+function gcalLink(when,title,details){
+  const start=new Date(when); if(isNaN(start)) return null;
+  const end=new Date(start.getTime()+60*60000); // default 1-hour consult
+  const u=new URL("https://calendar.google.com/calendar/render");
+  u.searchParams.set("action","TEMPLATE");
+  u.searchParams.set("text",title);
+  u.searchParams.set("dates",fmtLocal(start)+"/"+fmtLocal(end));
+  if(details) u.searchParams.set("details",details);
+  return u.toString();
+}
+
+function scheduledHtml(when,note,patient){
+  const pretty=String(when).replace("T"," ");
+  const g=gcalLink(when, "Consultation — "+(patient||"patient"),
+    (note?("Note: "+note+"\n"):"")+"Patient consultation arranged via MXN Cells.");
+  return `<div class="ok"><span>✓</span> Consultation scheduled for ${esc(pretty)}</div>
+    ${note?`<p class="note" style="margin:12px 0 0">Note for the patient: ${esc(note)}</p>`:""}
+    ${g?`<div class="cal-btns"><a class="btn ghost" href="${g}" target="_blank" rel="noopener">📅 Add to Google Calendar</a></div>`:""}
+    <p class="note" style="margin:12px 0 0">We'll confirm the details with the patient and coordinate the rest.</p>`;
+}
 
 function renderSections(form,ans){
   let out="";
@@ -78,33 +116,37 @@ async function boot(){
   const form=d.form||{title:"Patient Intake",sections:[]}, ans=d.answers||{};
   document.getElementById("barTitle").textContent=(d.patient_name||"Patient")+" — intake";
   const availOn=AVAIL.filter(([k])=>ans[k]);
-  const pretty=d.consult_at?String(d.consult_at).replace("T"," "):"";
-  const schedCard = d.consult_at
-    ? `<div class="sched noprint"><div class="ok">✓ Consultation scheduled for ${esc(pretty)}</div>${d.consult_note?`<p class="note" style="margin:10px 0 0">Your note: ${esc(d.consult_note)}</p>`:""}</div>`
-    : `<div class="sched noprint"><h3>Schedule the consultation</h3>
-        <p class="note">Pick a date and time that works — we'll confirm it with the patient and coordinate the rest.</p>
+
+  const schedInner = d.consult_at
+    ? scheduledHtml(d.consult_at, d.consult_note, d.patient_name)
+    : `<div class="top"><h3>Choose a consultation time</h3><span class="pill">Doctor</span></div>
+        <p class="note">Pick a date and time that works with your calendar — we'll confirm it with the patient and coordinate the rest.</p>
         <div class="rowf"><div><label>Date &amp; time</label><input type="datetime-local" id="schWhen"></div>
           <button class="btn" id="schGo" type="button">Confirm consultation time</button></div>
         <textarea id="schNote" placeholder="Optional note for the patient (e.g. fasting, what to bring)…"></textarea>
-        <div class="note" id="schMsg" style="margin-top:8px"></div></div>`;
-  root.innerHTML=`<div class="doc">
-    <div class="hd"><h1>${esc(form.title||"Patient Medical Intake")}</h1><div class="org">${esc(form.org||d.doctor_name||"")}</div>
-      <div class="meta"><span><b>Patient:</b> ${esc(d.patient_name||"—")}</span><span><b>Assigned doctor:</b> ${esc(d.doctor_name||"—")}</span><span><b>Status:</b> ${esc(d.status||"—")}</span></div></div>
-    ${availOn.length?`<div class="avail"><h3>Requested consultation availability</h3>${availOn.map(([k,l])=>`<div class="kv"><b>${esc(l)}</b><span>${esc(ans[k])}</span></div>`).join("")}</div>`:""}
-    ${schedCard}
-    ${renderSections(form,ans)}
+        <div class="note" id="schMsg" style="margin-top:10px"></div>`;
+
+  root.innerHTML=`<div class="wrap">
+    <div class="card doc hd">
+      <h1>${esc(form.title||"Patient Medical Intake")}</h1><div class="org">${esc(form.org||d.doctor_name||"")}</div>
+      <div class="meta"><span><b>Patient:</b> ${esc(d.patient_name||"—")}</span><span><b>Assigned doctor:</b> ${esc(d.doctor_name||"—")}</span><span><b>Status:</b> ${esc(d.status||"—")}</span></div>
+    </div>
+    ${availOn.length?`<div class="card avail"><h3>Patient's requested availability</h3>${availOn.map(([k,l])=>`<div class="kv"><b>${esc(l)}</b><span>${esc(ans[k])}</span></div>`).join("")}</div>`:""}
+    <div class="card sched noprint">${schedInner}</div>
+    <div class="card doc">${renderSections(form,ans)}</div>
   </div>`;
+
   const go=document.getElementById("schGo");
   if(go) go.onclick=async()=>{
     const when=document.getElementById("schWhen").value;
-    const msg=document.getElementById("schMsg");
-    if(!when){ msg.textContent="Please choose a date and time."; return; }
+    const m=document.getElementById("schMsg");
+    if(!when){ m.textContent="Please choose a date and time."; return; }
     go.disabled=true; go.textContent="Confirming…";
     try{ const r=await fetch("/api/intake/schedule?token="+encodeURIComponent(TOKEN),{method:"POST",headers:{"content-type":"application/json"},
         body:JSON.stringify({consult_at:when,note:document.getElementById("schNote").value||""})});
       const j=await r.json(); if(!r.ok) throw new Error(j.error||"Could not schedule.");
-      document.querySelector(".sched").innerHTML=`<div class="ok">✓ Consultation scheduled for ${esc(String(when).replace("T"," "))}</div><p class="note" style="margin:10px 0 0">Thank you — we'll confirm with the patient.</p>`;
-    }catch(e){ msg.textContent=e.message; go.disabled=false; go.textContent="Confirm consultation time"; }
+      document.querySelector(".sched").innerHTML=scheduledHtml(when, document.getElementById("schNote").value||"", d.patient_name);
+    }catch(e){ m.textContent=e.message; go.disabled=false; go.textContent="Confirm consultation time"; }
   };
 }
 boot();
