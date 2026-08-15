@@ -72,6 +72,16 @@ function render(d){
     if(s.rate) h+=s.rate.items.map((x,i)=>gridRow("rate_"+si+"_"+i,x,s.rate.scale)).join("");
     sec.innerHTML=h; app.appendChild(sec);
   });
+  // Always-on scheduling section so we can set up the consultation.
+  const sch=document.createElement("div"); sch.className="sec";
+  sch.innerHTML=`<h2>Your availability for the consultation</h2>
+    <p class="note">So your doctor can schedule a time that works for you.</p>
+    <div class="f"><label>Which dates work best? (e.g. "next week", "Mar 3–7 mornings")</label><input type="text" data-k="avail_dates"></div>
+    <div class="f"><label>Preferred time of day</label><div class="opts" data-radio="avail_time">
+      ${["Morning","Afternoon","Evening","Flexible"].map(o=>`<label class="opt"><input type="radio" name="avail_time" value="${o}"> ${o}</label>`).join("")}</div></div>
+    <div class="f"><label>Your time zone (e.g. PST, EST, CST)</label><input type="text" data-k="avail_tz"></div>
+    <div class="f"><label>Best phone number for the consult</label><input type="tel" data-k="avail_phone"></div>`;
+  app.appendChild(sch);
   bar.classList.add("show"); updateProg();
 }
 function gridRow(k,label,scale){ return `<div class="row"><span class="lab">${esc(label)}</span><div class="scale" data-k="${k}" data-lab="${esc(label)}">${scale.map(o=>`<label><input type="radio" name="${k}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div></div>`; }

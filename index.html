@@ -140,6 +140,25 @@
   .drawer{position:fixed;top:0;right:0;height:100vh;width:min(452px,92vw);background:var(--card);box-shadow:-14px 0 44px rgba(27,22,32,.2);
     transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);overflow-y:auto;z-index:10}
   .drawer.show{transform:translateX(0)}
+  .mscrim{position:fixed;inset:0;background:rgba(27,22,32,.5);opacity:0;pointer-events:none;transition:.16s;z-index:20}
+  .mscrim.show{opacity:1;pointer-events:auto}
+  .modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-48%) scale(.98);opacity:0;pointer-events:none;
+    width:min(680px,94vw);max-height:86vh;background:var(--card);border-radius:16px;box-shadow:0 30px 80px rgba(27,22,32,.34);
+    display:flex;flex-direction:column;overflow:hidden;transition:.18s;z-index:21}
+  .modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+  .modal .mhead{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--pink-tint)}
+  .modal .mhead .mt{font-family:var(--serif);font-size:18px;font-weight:600}
+  .modal .mhead .ms{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  .modal .mbody{padding:18px 20px;overflow-y:auto}
+  .modal .mfoot{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;background:var(--bg)}
+  .iq{margin:0 0 14px}
+  .iq .qh{font-size:13px;font-weight:700;color:var(--ink);margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .iq .row{display:grid;grid-template-columns:minmax(120px,220px) 1fr;gap:4px 14px;font-size:13.5px;padding:3px 0}
+  .iq .row .k{color:var(--ink-soft)}.iq .row .v{font-weight:600}.iq .row .v.em{font-weight:400;color:#b3adba}
+  .iq .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .iq .chip{background:var(--pink-tint);border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:12.5px}
+  .availbox{background:var(--pink-tint);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 16px}
+  .availbox .k{color:var(--ink-soft);font-size:12px}.availbox .v{font-weight:600;font-size:13.5px}
   .dhead{padding:24px 24px 20px;border-bottom:1px solid var(--line);background:var(--pink-tint);position:relative;display:flex;gap:13px;align-items:center}
   .dhead .name{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.01em}
   .dclose{position:absolute;top:16px;right:16px;background:rgba(27,22,32,.06);border:0;width:30px;height:30px;border-radius:9px;font-size:15px;color:var(--ink-soft)}
@@ -367,6 +386,8 @@
 
 <div class="scrim" id="scrim"></div>
 <div class="drawer" id="drawer"></div>
+<div class="mscrim" id="mscrim"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true"></div>
 
 <script>
 const API = "/api";
@@ -625,7 +646,33 @@ function wireRows(){ document.querySelectorAll("tbody tr[data-id]").forEach(tr=>
 
 function closeDrawer(){$("#drawer").classList.remove("show");$("#scrim").classList.remove("show");}
 $("#scrim").onclick=closeDrawer;
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+function closeModal(){$("#modal").classList.remove("show");$("#mscrim").classList.remove("show");}
+function openModal({title,sub,body,foot}){ const m=$("#modal");
+  m.innerHTML=`<div class="mhead"><div><div class="mt">${title||""}</div>${sub?`<div class="ms">${sub}</div>`:""}</div><button class="dclose" style="position:static" onclick="closeModal()">✕</button></div>
+    <div class="mbody">${body||""}</div>${foot?`<div class="mfoot">${foot}</div>`:""}`;
+  $("#mscrim").classList.add("show"); m.classList.add("show"); }
+$("#mscrim").onclick=closeModal;
+document.addEventListener("keydown",e=>{ if(e.key!=="Escape")return; if($("#modal").classList.contains("show"))closeModal(); else closeDrawer(); });
+
+// Render a patient's completed intake answers grouped by the doctor's form schema.
+const PX_AVAIL=[["avail_dates","Preferred dates"],["avail_time","Preferred time of day"],["avail_tz","Time zone"],["avail_phone","Best phone for the consult"]];
+function intakeAnswersHTML(form,ans){
+  ans=ans||{}; form=form||{sections:[]};
+  const availOn=PX_AVAIL.filter(([k])=>ans[k]);
+  let out=availOn.length?`<div class="availbox"><div style="font-weight:700;font-size:12.5px;margin-bottom:6px">Requested availability</div>${availOn.map(([k,l])=>`<div style="display:flex;gap:10px;padding:2px 0"><span class="k" style="min-width:150px">${esc(l)}</span><span class="v">${esc(ans[k])}</span></div>`).join("")}</div>`:"";
+  const row=(k,v)=>{const e=v==null||v==="";return `<div class="row"><span class="k">${esc(k)}</span><span class="v${e?" em":""}">${e?"—":esc(v)}</span></div>`;};
+  (form.sections||[]).forEach((s,si)=>{
+    let rows="",extra="";
+    (s.fields||[]).forEach(f=>rows+=row(f.label,ans[f.k]));
+    if(s.checks){const on=s.checks.map((c,i)=>ans["chk_"+si+"_"+i]).filter(Boolean);
+      extra+=`<div style="margin-top:6px"><div class="k" style="margin-bottom:4px">Selected</div>${on.length?`<div class="chips">${on.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>`:`<span class="v em">— none —</span>`}</div>`;}
+    if(s.family)s.family.forEach((x,i)=>rows+=row(x,ans["fam_"+si+"_"+i]));
+    if(s.grid)s.grid.items.forEach((x,i)=>rows+=row(x,ans["hab_"+si+"_"+i]));
+    if(s.rate)s.rate.items.forEach((x,i)=>rows+=row(x,ans["rate_"+si+"_"+i]));
+    if(rows||extra)out+=`<div class="iq"><div class="qh">${esc(s.title||"Section")}</div>${rows}${extra}</div>`;
+  });
+  return out||`<p class="sub">No answers recorded.</p>`;
+}
 
 async function openLead(id){
   const lead=state.leads.find(l=>l.id===id)||await api("/leads?q="+id).then(a=>a.find(l=>l.id===id));
@@ -1281,9 +1328,13 @@ async function openPatient(id,onSave){
       <div class="drow"><div class="field"><label>Doctor fee ($)</label><input type="number" id="pFee" value="${esc(p.doctor_fee||"")}"></div><div class="field"><label>Fee status</label><select id="pFeeStatus">${["pending","invoiced","paid"].map(s=>`<option ${p.doctor_fee_status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
       <label class="opt" style="margin-bottom:12px"><input type="checkbox" id="pPaid" ${p.paid_upfront?"checked":""}> Patient paid upfront</label>
       <button class="btn" id="pSave">Save patient</button>
-      ${id?`<div class="field" style="margin-top:14px"><label>Intake form</label>
-        ${p.questionnaire?`<div class="result" style="margin-bottom:8px">✓ Intake completed — <a href="#" id="pViewIntake">view answers</a></div>`:`<p class="sub" style="margin:2px 0 8px">Not returned yet.</p>`}
-        <button class="btn ghost" id="pLink">Get intake link</button><div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
+      ${id?`<div class="field" style="margin-top:14px"><label>Intake &amp; consultation</label>
+        ${p.questionnaire
+          ? `<div class="result" style="margin-bottom:8px">✓ Intake completed</div>
+             <div class="drow" style="gap:8px;margin-bottom:8px"><button class="btn ghost" id="pViewIntake" type="button">View answers</button><button class="btn ghost" id="pDoc" type="button">Printable doc</button></div>
+             <button class="btn" id="pSendDoc" type="button" style="margin-bottom:10px">Send to doctor →</button>`
+          : `<p class="sub" style="margin:2px 0 8px">Intake not returned yet. Send the patient their link:</p>`}
+        <button class="btn ghost" id="pLink" type="button">Get intake link</button><div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
         <button class="del" id="pDel">Delete patient</button>`:""}
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
@@ -1297,11 +1348,23 @@ async function openPatient(id,onSave){
       closeDrawer(); toast("Saved."); onSave&&onSave(); }catch(e){ alert(e.message); }
   };
   if(id){
+    const doc=PX_DOCTORS.find(x=>x.id===p.assigned_doctor);
+    let form=null; try{ form=doc&&doc.intake_form?(typeof doc.intake_form==="string"?JSON.parse(doc.intake_form):doc.intake_form):null; }catch{}
+    let ans={}; try{ ans=p.questionnaire?JSON.parse(p.questionnaire):{}; }catch{}
+    const reviewUrl=p.intake_token?("/review.html?token="+encodeURIComponent(p.intake_token)):null;
     $("#pLink").onclick=async()=>{ try{ const r=await pxapi("/patients/"+id+"/intake-link",{method:"POST"});
       $("#pLinkOut").innerHTML=`<input class="search" style="width:100%" readonly value="${esc(r.url)}" onclick="this.select()"><span class="sub">Send this to the patient — it opens their doctor's intake form.</span>`; }catch(e){ alert(e.message); } };
     $("#pDel").onclick=async()=>{ if(!confirm("Delete this patient?"))return; await pxapi("/patients/"+id,{method:"DELETE"}); closeDrawer(); onSave&&onSave(); };
-    const vi=$("#pViewIntake"); if(vi) vi.onclick=(e)=>{ e.preventDefault(); let a={}; try{a=JSON.parse(p.questionnaire);}catch{}
-      alert(Object.entries(a).filter(([k,v])=>v).map(([k,v])=>k+": "+v).join("\n")||"No answers."); };
+    const vi=$("#pViewIntake"); if(vi) vi.onclick=()=>openModal({title:(p.name||"Patient")+" — intake answers",sub:doc?doc.name:"",
+      body:intakeAnswersHTML(form,ans),
+      foot:`<button class="btn ghost" type="button" onclick="closeModal()">Close</button>`+(reviewUrl?`<button class="btn" type="button" onclick="window.open('${reviewUrl}','_blank')">Open printable doc</button>`:"")});
+    const pd=$("#pDoc"); if(pd) pd.onclick=()=>{ if(reviewUrl) window.open(reviewUrl,"_blank"); else alert("Generate the intake link first."); };
+    const sd=$("#pSendDoc"); if(sd) sd.onclick=async()=>{ if(!p.assigned_doctor){ alert("Assign a doctor above and Save first."); return; }
+      if(!confirm("Email this patient's intake to "+(doc?doc.name:"the assigned doctor")+"?")) return;
+      sd.disabled=true; sd.textContent="Sending…";
+      try{ const r=await pxapi("/patients/"+id+"/send-to-doctor",{method:"POST"});
+        toast(r.emailed?("Sent to "+r.sent_to):"Marked sent (email not configured yet)."); closeDrawer(); onSave&&onSave(); }
+      catch(e){ alert(e.message); sd.disabled=false; sd.textContent="Send to doctor →"; } };
   }
 }
 

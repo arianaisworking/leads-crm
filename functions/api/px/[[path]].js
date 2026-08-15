@@ -3,6 +3,14 @@
 // per-patient intake links, and the money dashboard.
 
 import { json, uid } from '../../_lib/tenant.js';
+import { sendEmail, emailShell, teamEmail, esc } from '../../_lib/email.js';
+
+const AVAIL = [
+  ['avail_dates', 'Preferred dates'],
+  ['avail_time', 'Preferred time of day'],
+  ['avail_tz', 'Time zone'],
+  ['avail_phone', 'Best phone for the consult'],
+];
 
 function token() {
   const b = crypto.getRandomValues(new Uint8Array(18));
@@ -148,6 +156,47 @@ export async function onRequest(context) {
     if (!tok) { tok = token(); await db.prepare('UPDATE leads SET intake_token=? WHERE id=?').bind(tok, leadId).run(); }
     const origin = new URL(request.url).origin;
     return json({ ok: true, token: tok, url: `${origin}/intake.html?token=${tok}` });
+  }
+
+  // ---------- SEND TO DOCTOR ----------
+  if (res === 'patients' && sub === 'send-to-doctor' && method === 'POST') {
+    const leadId = parseInt(id, 10);
+    const lead = await db.prepare('SELECT * FROM leads WHERE id=?').bind(leadId).first();
+    if (!lead) return json({ error: 'patient not found' }, 404);
+    if (!lead.questionnaire) return json({ error: 'This patient has not completed their intake yet.' }, 400);
+    if (!lead.assigned_doctor) return json({ error: 'Assign a doctor first.' }, 400);
+    const doc = await db.prepare('SELECT name, contact_email FROM doctors WHERE id=?').bind(lead.assigned_doctor).first();
+    if (!doc || !doc.contact_email) return json({ error: "The assigned doctor has no email on file. Add one on the Doctors tab." }, 400);
+
+    let tok = lead.intake_token;
+    if (!tok) { tok = token(); await db.prepare('UPDATE leads SET intake_token=? WHERE id=?').bind(tok, leadId).run(); }
+    const origin = new URL(request.url).origin;
+    const reviewUrl = `${origin}/review.html?token=${tok}`;
+
+    let ans = {};
+    try { ans = lead.questionnaire ? JSON.parse(lead.questionnaire) : {}; } catch { ans = {}; }
+    const availRows = AVAIL.filter(([k]) => ans[k]).map(([k, lbl]) =>
+      `<tr><td style="padding:4px 10px 4px 0;color:#5b6472">${esc(lbl)}</td><td style="padding:4px 0;font-weight:600">${esc(ans[k])}</td></tr>`).join('');
+
+    const inner = `
+      <p style="margin:0 0 6px;font-size:16px">Dr. ${esc(doc.name || '')}, a new patient is ready for your review.</p>
+      <p style="margin:0 0 16px;color:#5b6472">Patient: <b>${esc(lead.name || '')}</b>${lead.phone ? ' · ' + esc(lead.phone) : ''}${lead.email ? ' · ' + esc(lead.email) : ''}</p>
+      ${availRows ? `<div style="background:#eef3fe;border:1px solid #cfe0ff;border-radius:10px;padding:12px 14px;margin:0 0 16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#2f6fed">Requested consultation availability</div>
+        <table style="font-size:14px">${availRows}</table></div>` : ''}
+      <a href="${reviewUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700">Review the full intake →</a>
+      <p style="margin:16px 0 0;color:#5b6472;font-size:13px">The link opens a printable copy of the patient's completed medical intake. Reply with the consultation time that works and we'll confirm with the patient.</p>`;
+
+    const r = await sendEmail(env, {
+      to: doc.contact_email,
+      replyTo: teamEmail(env),
+      subject: `New patient for review — ${lead.name || ''}`,
+      html: emailShell('Patient ready for review', inner),
+    });
+    if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
+
+    await db.prepare("UPDATE leads SET status='Sent to doctor', updated_at=datetime('now') WHERE id=?").bind(leadId).run();
+    return json({ ok: true, sent_to: doc.contact_email, emailed: !!r.ok, review_url: reviewUrl });
   }
 
   // ---------- MONEY DASHBOARD ----------

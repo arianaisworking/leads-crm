@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Intake — Review</title>
+<style>
+  :root{--ink:#1a2230;--soft:#5b6472;--line:#e3e8ef;--brand:#2f6fed;--wash:#eef3fe;--bg:#f4f6f9}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .bar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .bar .t{font-weight:700}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer}
+  .doc{max-width:820px;margin:18px auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:30px 34px}
+  .hd{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:18px}
+  .hd h1{margin:0 0 3px;font-size:22px}
+  .hd .org{color:var(--soft);font-size:13px}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:12px;font-size:13px}
+  .meta b{color:var(--soft);font-weight:600}
+  .avail{background:var(--wash);border:1px solid #cfe0ff;border-radius:10px;padding:14px 16px;margin:18px 0}
+  .avail h3{margin:0 0 8px;font-size:14px;color:var(--brand)}
+  .avail .kv{display:flex;gap:10px;font-size:14px;padding:3px 0}.avail .kv b{min-width:170px;color:var(--soft);font-weight:600}
+  section.s{margin:20px 0;break-inside:avoid}
+  section.s h2{font-size:15px;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .qa{display:grid;grid-template-columns:230px 1fr;gap:4px 16px;font-size:14px}
+  .qa .q{color:var(--soft)}.qa .a{font-weight:600}.qa .a.empty{font-weight:400;color:#aab3c0}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:#eef1f6;border:1px solid var(--line);border-radius:16px;padding:3px 11px;font-size:13px}
+  .msg{max-width:600px;margin:60px auto;text-align:center;color:var(--soft)}
+  @media print{
+    body{background:#fff}.bar{display:none}
+    .doc{border:none;border-radius:0;margin:0;max-width:none;padding:0}
+  }
+</style>
+</head>
+<body>
+<div class="bar"><span class="t" id="barTitle">Patient intake</span><button class="btn" onclick="window.print()">Save as PDF / Print</button></div>
+<div id="root"><div class="msg">Loading…</div></div>
+<script>
+const TOKEN=new URLSearchParams(location.search).get("token")||"";
+const root=document.getElementById("root");
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function msg(h){ root.innerHTML=`<div class="msg">${h}</div>`; }
+
+const AVAIL=[["avail_dates","Preferred dates"],["avail_time","Preferred time of day"],["avail_tz","Time zone"],["avail_phone","Best phone for the consult"]];
+
+function qa(label,val){ const empty=val==null||val===""; return `<div class="q">${esc(label)}</div><div class="a${empty?" empty":""}">${empty?"—":esc(val)}</div>`; }
+
+function renderSections(form,ans){
+  let out="";
+  (form.sections||[]).forEach((s,si)=>{
+    let rows="";
+    (s.fields||[]).forEach(f=>{ rows+=qa(f.label, ans[f.k]); });
+    let extra="";
+    if(s.checks){ const on=s.checks.map((c,i)=>ans["chk_"+si+"_"+i]).filter(Boolean);
+      extra+=`<div style="margin-top:8px"><div class="q" style="margin-bottom:5px">Selected</div>${on.length?`<div class="chips">${on.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>`:`<div class="a empty">— none —</div>`}</div>`; }
+    if(s.family){ s.family.forEach((x,i)=>{ rows+=qa(x, ans["fam_"+si+"_"+i]); }); }
+    if(s.grid){ s.grid.items.forEach((x,i)=>{ rows+=qa(x, ans["hab_"+si+"_"+i]); }); }
+    if(s.rate){ s.rate.items.forEach((x,i)=>{ rows+=qa(x, ans["rate_"+si+"_"+i]); }); }
+    if(rows||extra) out+=`<section class="s"><h2>${esc(s.title||"Section")}</h2>${rows?`<div class="qa">${rows}</div>`:""}${extra}</section>`;
+  });
+  return out;
+}
+
+async function boot(){
+  if(!TOKEN) return msg("Missing link code.");
+  let d; try{ const r=await fetch("/api/intake/review?token="+encodeURIComponent(TOKEN)); d=await r.json(); if(!r.ok) return msg(esc(d.error||"Invalid link.")); }
+  catch(e){ return msg("Connection issue — please try again."); }
+  if(!d.submitted) return msg("This patient hasn't completed their intake yet.");
+  const form=d.form||{title:"Patient Intake",sections:[]}, ans=d.answers||{};
+  document.getElementById("barTitle").textContent=(d.patient_name||"Patient")+" — intake";
+  const availOn=AVAIL.filter(([k])=>ans[k]);
+  root.innerHTML=`<div class="doc">
+    <div class="hd"><h1>${esc(form.title||"Patient Medical Intake")}</h1><div class="org">${esc(form.org||d.doctor_name||"")}</div>
+      <div class="meta"><span><b>Patient:</b> ${esc(d.patient_name||"—")}</span><span><b>Assigned doctor:</b> ${esc(d.doctor_name||"—")}</span><span><b>Status:</b> ${esc(d.status||"—")}</span></div></div>
+    ${availOn.length?`<div class="avail"><h3>Requested consultation availability</h3>${availOn.map(([k,l])=>`<div class="kv"><b>${esc(l)}</b><span>${esc(ans[k])}</span></div>`).join("")}</div>`:""}
+    ${renderSections(form,ans)}
+  </div>`;
+}
+boot();
+</script>
+</body>
+</html>
