@@ -6,6 +6,7 @@
 
 import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
+import { DEFAULT_FORM } from '../../_lib/intakedoc.js';
 
 // Availability fields intake.html always appends, surfaced to the team/doctor.
 const AVAIL = [
@@ -31,15 +32,17 @@ export async function onRequest(context) {
     const doc = await db.prepare('SELECT name, intake_form FROM doctors WHERE id=?').bind(lead.assigned_doctor).first();
     if (doc) { doctorName = doc.name; try { doctorForm = doc.intake_form ? JSON.parse(doc.intake_form) : null; } catch { doctorForm = null; } }
   }
+  // Every patient gets a usable form: the doctor's custom one, or the default.
+  const form = doctorForm || DEFAULT_FORM;
 
   if (action === 'form' && request.method === 'GET') {
-    return json({ patient_name: lead.name, doctor_name: doctorName, form: doctorForm, submitted: !!lead.questionnaire });
+    return json({ patient_name: lead.name, doctor_name: doctorName, form, submitted: !!lead.questionnaire });
   }
 
   if (action === 'review' && request.method === 'GET') {
     let answers = {};
     try { answers = lead.questionnaire ? JSON.parse(lead.questionnaire) : {}; } catch { answers = {}; }
-    return json({ patient_name: lead.name, doctor_name: doctorName, form: doctorForm, answers, status: lead.status,
+    return json({ patient_name: lead.name, doctor_name: doctorName, form, answers, status: lead.status,
       submitted: !!lead.questionnaire, consult_at: lead.consult_at || null, consult_note: lead.consult_note || null });
   }
 

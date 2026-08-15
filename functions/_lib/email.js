@@ -36,7 +36,7 @@ export function replyToEmail(env) {
   return env.REPLY_TO || 'hello@mxncells.com';
 }
 
-export async function sendEmail(env, { to, subject, html, text, replyTo, from }) {
+export async function sendEmail(env, { to, subject, html, text, replyTo, from, attachments }) {
   if (!env.RESEND_API_KEY) return { ok: false, skipped: true, reason: 'no RESEND_API_KEY' };
   if (!to || (Array.isArray(to) && !to.length)) return { ok: false, skipped: true, reason: 'no recipient' };
   const payload = {
@@ -47,6 +47,8 @@ export async function sendEmail(env, { to, subject, html, text, replyTo, from })
   if (html) payload.html = html;
   if (text) payload.text = text;
   if (replyTo) payload.reply_to = replyTo;
+  // attachments: [{ filename, content }] where content is base64 (see b64utf8).
+  if (Array.isArray(attachments) && attachments.length) payload.attachments = attachments;
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',

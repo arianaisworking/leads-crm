@@ -4,6 +4,7 @@
 
 import { json, uid } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
+import { DEFAULT_FORM, renderIntakeDoc, b64utf8 } from '../../_lib/intakedoc.js';
 
 const AVAIL = [
   ['avail_dates', 'Preferred dates'],
@@ -166,7 +167,7 @@ export async function onRequest(context) {
     if (!lead) return json({ error: 'patient not found' }, 404);
     if (!lead.questionnaire) return json({ error: 'This patient has not completed their intake yet.' }, 400);
     if (!lead.assigned_doctor) return json({ error: 'Assign a doctor first.' }, 400);
-    const doc = await db.prepare('SELECT name, contact_email FROM doctors WHERE id=?').bind(lead.assigned_doctor).first();
+    const doc = await db.prepare('SELECT name, contact_email, intake_form FROM doctors WHERE id=?').bind(lead.assigned_doctor).first();
     if (!doc || !doc.contact_email) return json({ error: "The assigned doctor has no email on file. Add one on the Doctors tab." }, 400);
 
     let tok = lead.intake_token;
@@ -176,6 +177,15 @@ export async function onRequest(context) {
 
     let ans = {};
     try { ans = lead.questionnaire ? JSON.parse(lead.questionnaire) : {}; } catch { ans = {}; }
+    let docForm = null;
+    try { docForm = doc.intake_form ? JSON.parse(doc.intake_form) : null; } catch { docForm = null; }
+    const intakeForm = docForm || DEFAULT_FORM;
+    // Print-ready copy of the completed intake, attached to the referral email.
+    const safeName = (lead.name || 'patient').replace(/[^\w -]+/g, '').trim().replace(/\s+/g, '-') || 'patient';
+    const attachments = [{
+      filename: `Intake-${safeName}.html`,
+      content: b64utf8(renderIntakeDoc(intakeForm, ans, { patient: lead.name, doctor: doc.name, brand: brandName(env) })),
+    }];
     const availRows = AVAIL.filter(([k]) => ans[k]).map(([k, lbl]) =>
       `<tr><td style="padding:4px 10px 4px 0;color:#5b6472">${esc(lbl)}</td><td style="padding:4px 0;font-weight:600">${esc(ans[k])}</td></tr>`).join('');
 
@@ -186,13 +196,15 @@ export async function onRequest(context) {
         <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#2f6fed">Their availability for the consultation</div>
         <table style="font-size:14px">${availRows}</table></div>` : ''}
       <a href="${reviewUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700">Review intake &amp; pick a time →</a>
-      <p style="margin:16px 0 0;color:#5b6472;font-size:13px">The link opens the patient's full intake (printable) with a quick scheduler — just choose a consultation time that works with your calendar and we'll confirm it with the patient and coordinate any travel, lodging or aftercare. Prefer email? Simply reply with a time and we'll handle it.</p>`;
+      <p style="margin:16px 0 0;color:#5b6472;font-size:13px">The link opens the patient's full intake (printable) with a quick scheduler — just choose a consultation time that works with your calendar and we'll confirm it with the patient and coordinate any travel, lodging or aftercare. Prefer email? Simply reply with a time and we'll handle it.</p>
+      <p style="margin:10px 0 0;color:#8a95a6;font-size:12px">A print-ready copy of the completed intake is attached to this email (open it and use “Save as PDF”).</p>`;
 
     const r = await sendEmail(env, {
       to: doc.contact_email,
       replyTo: replyToEmail(env),
       subject: `Patient referral — ${lead.name || ''}`,
       html: emailShell('New patient referral', inner, brandName(env)),
+      attachments,
     });
     if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
 
