@@ -27,8 +27,16 @@
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chip{background:#eef1f6;border:1px solid var(--line);border-radius:16px;padding:3px 11px;font-size:13px}
   .msg{max-width:600px;margin:60px auto;text-align:center;color:var(--soft)}
+  .sched{background:#fff;border:1px solid #cfe0ff;border-left:4px solid var(--brand);border-radius:10px;padding:16px 18px;margin:18px 0}
+  .sched h3{margin:0 0 4px;font-size:15px}
+  .sched .note{color:var(--soft);font-size:13px;margin:0 0 12px}
+  .sched .rowf{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+  .sched label{display:block;font-size:12px;font-weight:700;color:var(--soft);margin-bottom:5px}
+  .sched input,.sched textarea{border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:inherit;background:#fff;color:var(--ink)}
+  .sched textarea{width:100%;min-height:56px;resize:vertical;margin-top:10px}
+  .sched .ok{background:#e9f8f1;border:1px solid #bfe8d6;color:#12704c;border-radius:9px;padding:12px 14px;font-weight:600}
   @media print{
-    body{background:#fff}.bar{display:none}
+    body{background:#fff}.bar,.noprint{display:none}
     .doc{border:none;border-radius:0;margin:0;max-width:none;padding:0}
   }
 </style>
@@ -70,12 +78,34 @@ async function boot(){
   const form=d.form||{title:"Patient Intake",sections:[]}, ans=d.answers||{};
   document.getElementById("barTitle").textContent=(d.patient_name||"Patient")+" — intake";
   const availOn=AVAIL.filter(([k])=>ans[k]);
+  const pretty=d.consult_at?String(d.consult_at).replace("T"," "):"";
+  const schedCard = d.consult_at
+    ? `<div class="sched noprint"><div class="ok">✓ Consultation scheduled for ${esc(pretty)}</div>${d.consult_note?`<p class="note" style="margin:10px 0 0">Your note: ${esc(d.consult_note)}</p>`:""}</div>`
+    : `<div class="sched noprint"><h3>Schedule the consultation</h3>
+        <p class="note">Pick a date and time that works — we'll confirm it with the patient and coordinate the rest.</p>
+        <div class="rowf"><div><label>Date &amp; time</label><input type="datetime-local" id="schWhen"></div>
+          <button class="btn" id="schGo" type="button">Confirm consultation time</button></div>
+        <textarea id="schNote" placeholder="Optional note for the patient (e.g. fasting, what to bring)…"></textarea>
+        <div class="note" id="schMsg" style="margin-top:8px"></div></div>`;
   root.innerHTML=`<div class="doc">
     <div class="hd"><h1>${esc(form.title||"Patient Medical Intake")}</h1><div class="org">${esc(form.org||d.doctor_name||"")}</div>
       <div class="meta"><span><b>Patient:</b> ${esc(d.patient_name||"—")}</span><span><b>Assigned doctor:</b> ${esc(d.doctor_name||"—")}</span><span><b>Status:</b> ${esc(d.status||"—")}</span></div></div>
     ${availOn.length?`<div class="avail"><h3>Requested consultation availability</h3>${availOn.map(([k,l])=>`<div class="kv"><b>${esc(l)}</b><span>${esc(ans[k])}</span></div>`).join("")}</div>`:""}
+    ${schedCard}
     ${renderSections(form,ans)}
   </div>`;
+  const go=document.getElementById("schGo");
+  if(go) go.onclick=async()=>{
+    const when=document.getElementById("schWhen").value;
+    const msg=document.getElementById("schMsg");
+    if(!when){ msg.textContent="Please choose a date and time."; return; }
+    go.disabled=true; go.textContent="Confirming…";
+    try{ const r=await fetch("/api/intake/schedule?token="+encodeURIComponent(TOKEN),{method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({consult_at:when,note:document.getElementById("schNote").value||""})});
+      const j=await r.json(); if(!r.ok) throw new Error(j.error||"Could not schedule.");
+      document.querySelector(".sched").innerHTML=`<div class="ok">✓ Consultation scheduled for ${esc(String(when).replace("T"," "))}</div><p class="note" style="margin:10px 0 0">Thank you — we'll confirm with the patient.</p>`;
+    }catch(e){ msg.textContent=e.message; go.disabled=false; go.textContent="Confirm consultation time"; }
+  };
 }
 boot();
 </script>

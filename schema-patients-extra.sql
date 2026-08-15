@@ -25,6 +25,7 @@ ALTER TABLE leads ADD COLUMN doctor_fee REAL;              -- what the doctor pa
 ALTER TABLE leads ADD COLUMN doctor_fee_status TEXT DEFAULT 'pending';  -- pending | invoiced | paid
 ALTER TABLE leads ADD COLUMN intake_token TEXT;           -- per-patient secret for the public intake link
 CREATE INDEX IF NOT EXISTS idx_leads_intake_token ON leads(intake_token);
+ALTER TABLE leads ADD COLUMN consult_note TEXT;           -- note the doctor leaves when scheduling the consult
 
 CREATE TABLE IF NOT EXISTS doctors (
   id            TEXT PRIMARY KEY,

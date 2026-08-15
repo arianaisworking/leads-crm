@@ -23,7 +23,7 @@ export async function onRequest(context) {
   const tok = url.searchParams.get('token') || '';
   if (!tok) return json({ error: 'missing token' }, 400);
 
-  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email FROM leads WHERE intake_token=?').bind(tok).first();
+  const lead = await db.prepare('SELECT id, name, assigned_doctor, questionnaire, status, phone, email, consult_at, consult_note FROM leads WHERE intake_token=?').bind(tok).first();
   if (!lead) return json({ error: 'This link is invalid or has expired.' }, 404);
 
   let doctorName = null, doctorForm = null;
@@ -39,7 +39,47 @@ export async function onRequest(context) {
   if (action === 'review' && request.method === 'GET') {
     let answers = {};
     try { answers = lead.questionnaire ? JSON.parse(lead.questionnaire) : {}; } catch { answers = {}; }
-    return json({ patient_name: lead.name, doctor_name: doctorName, form: doctorForm, answers, status: lead.status, submitted: !!lead.questionnaire });
+    return json({ patient_name: lead.name, doctor_name: doctorName, form: doctorForm, answers, status: lead.status,
+      submitted: !!lead.questionnaire, consult_at: lead.consult_at || null, consult_note: lead.consult_note || null });
+  }
+
+  // Doctor confirms a consultation time from the review page. Sets the consult,
+  // advances the stage, and notifies the team (+ the patient if we have an email).
+  if (action === 'schedule' && request.method === 'POST') {
+    if (!lead.questionnaire) return json({ error: 'Intake not completed yet.' }, 400);
+    const b = await request.json().catch(() => ({}));
+    const when = (b.consult_at || '').toString().trim();
+    if (!when) return json({ error: 'Please choose a date and time.' }, 400);
+    const note = (b.note || '').toString().trim().slice(0, 1000) || null;
+    await db.prepare("UPDATE leads SET consult_at=?, consult_note=?, status='Consult scheduled', updated_at=datetime('now') WHERE id=?")
+      .bind(when, note, lead.id).run();
+
+    const pretty = when.replace('T', ' ');
+    const noteHtml = note ? `<p style="margin:0 0 16px;color:#5b6472">Note from the doctor: ${esc(note)}</p>` : '';
+    // Team: always (patients may be seniors without email — team confirms by phone).
+    context.waitUntil(sendEmail(env, {
+      to: teamEmail(env),
+      subject: `Consult scheduled — ${lead.name || 'patient'}`,
+      html: emailShell('Consultation scheduled', `
+        <p style="margin:0 0 6px;font-size:16px"><b>${esc(doctorName || 'The doctor')}</b> confirmed a consultation with <b>${esc(lead.name || 'the patient')}</b>.</p>
+        <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:#2f6fed">${esc(pretty)}</p>
+        ${noteHtml}
+        <p style="margin:0;color:#5b6472">Reach out to the patient${lead.phone ? ' at ' + esc(lead.phone) : ''} to confirm and arrange any travel, lodging or aftercare.</p>`, brandName(env)),
+    }));
+    // Patient: only if we have an email on file.
+    if (lead.email) {
+      context.waitUntil(sendEmail(env, {
+        to: lead.email,
+        replyTo: teamEmail(env),
+        subject: `Your consultation is scheduled`,
+        html: emailShell('Your consultation is scheduled', `
+          <p style="margin:0 0 6px;font-size:16px">Good news${lead.name ? ', ' + esc(lead.name.split(' ')[0]) : ''} — your consultation with ${esc(doctorName || 'your doctor')} is set for:</p>
+          <p style="margin:0 0 14px;font-size:18px;font-weight:700;color:#2f6fed">${esc(pretty)}</p>
+          ${noteHtml}
+          <p style="margin:0;color:#5b6472">We'll be in touch to confirm the details and help arrange anything you need for your visit.</p>`, brandName(env)),
+      }));
+    }
+    return json({ ok: true, consult_at: when });
   }
 
   if (action === 'submit' && request.method === 'POST') {
