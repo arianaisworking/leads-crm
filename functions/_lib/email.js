@@ -14,8 +14,14 @@ export function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+export function brandName(env) {
+  return env.BRAND_NAME || 'MXN Cells';
+}
+
 export function fromEmail(env) {
-  return env.FROM_EMAIL || 'AIW Patients <patients@arianaisworking.com>';
+  // Sends as the MXN Cells concierge brand (a referral/coordination partner),
+  // never as a clinic. Requires the domain to be verified in Resend.
+  return env.FROM_EMAIL || 'MXN Cells <hello@mxncells.com>';
 }
 
 export function teamEmail(env) {
@@ -46,11 +52,13 @@ export async function sendEmail(env, { to, subject, html, text, replyTo, from })
   }
 }
 
-// Simple, email-client-safe layout wrapper (inline styles only).
-export function emailShell(title, innerHtml) {
+// Simple, email-client-safe layout wrapper (inline styles only). The footer
+// frames the sender as a referral & concierge coordinator, not a medical office.
+export function emailShell(title, innerHtml, brand = 'MXN Cells') {
   return `<!doctype html><html><body style="margin:0;background:#f4f6f9;padding:24px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2733">
     <div style="max-width:600px;margin:0 auto;background:#fff;border:1px solid #e3e8ef;border-radius:14px;overflow:hidden">
-      <div style="background:#111c31;color:#fff;padding:16px 22px;font-weight:700;font-size:15px">${esc(title)}</div>
+      <div style="background:#0f1b2d;color:#fff;padding:16px 22px;font-weight:700;font-size:15px">${esc(brand)}</div>
       <div style="padding:22px">${innerHtml}</div>
+      <div style="padding:14px 22px;border-top:1px solid #e3e8ef;color:#8a95a6;font-size:12px">${esc(brand)} · Patient referral &amp; concierge coordination<br>We help arrange consultations, travel, lodging and aftercare on the patient's behalf.</div>
     </div></body></html>`;
 }

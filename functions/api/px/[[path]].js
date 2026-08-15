@@ -3,7 +3,7 @@
 // per-patient intake links, and the money dashboard.
 
 import { json, uid } from '../../_lib/tenant.js';
-import { sendEmail, emailShell, teamEmail, esc } from '../../_lib/email.js';
+import { sendEmail, emailShell, teamEmail, brandName, esc } from '../../_lib/email.js';
 
 const AVAIL = [
   ['avail_dates', 'Preferred dates'],
@@ -179,19 +179,19 @@ export async function onRequest(context) {
       `<tr><td style="padding:4px 10px 4px 0;color:#5b6472">${esc(lbl)}</td><td style="padding:4px 0;font-weight:600">${esc(ans[k])}</td></tr>`).join('');
 
     const inner = `
-      <p style="margin:0 0 6px;font-size:16px">Dr. ${esc(doc.name || '')}, a new patient is ready for your review.</p>
+      <p style="margin:0 0 6px;font-size:16px">Hello Dr. ${esc(doc.name || '')}, we'd like to refer a patient to you for a consultation.</p>
       <p style="margin:0 0 16px;color:#5b6472">Patient: <b>${esc(lead.name || '')}</b>${lead.phone ? ' · ' + esc(lead.phone) : ''}${lead.email ? ' · ' + esc(lead.email) : ''}</p>
       ${availRows ? `<div style="background:#eef3fe;border:1px solid #cfe0ff;border-radius:10px;padding:12px 14px;margin:0 0 16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#2f6fed">Requested consultation availability</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#2f6fed">Their availability for the consultation</div>
         <table style="font-size:14px">${availRows}</table></div>` : ''}
-      <a href="${reviewUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700">Review the full intake →</a>
-      <p style="margin:16px 0 0;color:#5b6472;font-size:13px">The link opens a printable copy of the patient's completed medical intake. Reply with the consultation time that works and we'll confirm with the patient.</p>`;
+      <a href="${reviewUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700">Open their completed intake →</a>
+      <p style="margin:16px 0 0;color:#5b6472;font-size:13px">The link opens a printable copy of the patient's intake form. Just reply with a consultation time that works for you and we'll coordinate it with the patient — along with any travel, lodging or aftercare they'd like help arranging.</p>`;
 
     const r = await sendEmail(env, {
       to: doc.contact_email,
       replyTo: teamEmail(env),
-      subject: `New patient for review — ${lead.name || ''}`,
-      html: emailShell('Patient ready for review', inner),
+      subject: `Patient referral — ${lead.name || ''}`,
+      html: emailShell('New patient referral', inner, brandName(env)),
     });
     if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
 

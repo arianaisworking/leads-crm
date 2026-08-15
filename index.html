@@ -137,9 +137,9 @@
   /* Drawer */
   .scrim{position:fixed;inset:0;background:rgba(27,22,32,.4);opacity:0;pointer-events:none;transition:.18s;z-index:9}
   .scrim.show{opacity:1;pointer-events:auto}
-  .drawer{position:fixed;top:0;right:0;height:100vh;width:min(452px,92vw);background:var(--card);box-shadow:-14px 0 44px rgba(27,22,32,.2);
-    transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);overflow-y:auto;z-index:10}
-  .drawer.show{transform:translateX(0)}
+  .drawer{position:fixed;top:50%;left:50%;width:min(560px,94vw);max-height:90vh;background:var(--card);border-radius:18px;box-shadow:0 30px 80px rgba(27,22,32,.34);
+    opacity:0;pointer-events:none;transform:translate(-50%,-48%) scale(.98);transition:.2s cubic-bezier(.4,0,.2,1);overflow-y:auto;z-index:10}
+  .drawer.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
   .mscrim{position:fixed;inset:0;background:rgba(27,22,32,.5);opacity:0;pointer-events:none;transition:.16s;z-index:20}
   .mscrim.show{opacity:1;pointer-events:auto}
   .modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-48%) scale(.98);opacity:0;pointer-events:none;

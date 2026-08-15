@@ -5,7 +5,7 @@
 //   GET  /api/intake/review?token=...   -> { form, answers, patient_name, doctor_name, status } (doctor reads)
 
 import { json } from '../../_lib/tenant.js';
-import { sendEmail, emailShell, teamEmail, esc } from '../../_lib/email.js';
+import { sendEmail, emailShell, teamEmail, brandName, esc } from '../../_lib/email.js';
 
 // Availability fields intake.html always appends, surfaced to the team/doctor.
 const AVAIL = [
@@ -64,7 +64,7 @@ export async function onRequest(context) {
     context.waitUntil(sendEmail(env, {
       to: teamEmail(env),
       subject: `Intake completed — ${lead.name || 'patient'}`,
-      html: emailShell('New intake completed', inner),
+      html: emailShell('New intake completed', inner, brandName(env)),
     }));
 
     return json({ ok: true });
