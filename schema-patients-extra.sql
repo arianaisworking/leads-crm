@@ -21,8 +21,11 @@ ALTER TABLE leads ADD COLUMN assigned_doctor TEXT;         -- doctors.id
 ALTER TABLE leads ADD COLUMN acquisition_date TEXT;        -- when we got them
 ALTER TABLE leads ADD COLUMN consult_at TEXT;              -- scheduled consult date/time
 ALTER TABLE leads ADD COLUMN paid_upfront INTEGER DEFAULT 0; -- patient has paid for services/consult
-ALTER TABLE leads ADD COLUMN doctor_fee REAL;              -- what the doctor pays us for this patient
+ALTER TABLE leads ADD COLUMN doctor_fee REAL;              -- resolved $ the doctor pays us (flat amount, or treatment_amount * fee_rate/100)
 ALTER TABLE leads ADD COLUMN doctor_fee_status TEXT DEFAULT 'pending';  -- pending | invoiced | paid
+ALTER TABLE leads ADD COLUMN fee_type TEXT DEFAULT 'flat'; -- flat | percent  (per-patient override of the doctor default)
+ALTER TABLE leads ADD COLUMN fee_rate REAL;                -- commission % when fee_type='percent' (e.g. 20)
+ALTER TABLE leads ADD COLUMN treatment_amount REAL;        -- total treatment cost, the basis for a percent fee
 ALTER TABLE leads ADD COLUMN intake_token TEXT;           -- per-patient secret for the public intake link
 CREATE INDEX IF NOT EXISTS idx_leads_intake_token ON leads(intake_token);
 ALTER TABLE leads ADD COLUMN consult_note TEXT;           -- note the doctor leaves when scheduling the consult

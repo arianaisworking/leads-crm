@@ -128,15 +128,16 @@ export async function onRequest(context) {
     if (method === 'POST' && !id) {
       const b = await request.json();
       if (!b.name) return json({ error: 'name required' }, 400);
-      const r = await db.prepare(`INSERT INTO leads (name, phone, email, status, client_id, interest, assigned_doctor, acquisition_date, doctor_fee, doctor_fee_status)
-        VALUES (?,?,?,?, 'house', ?,?,?,?,?)`).bind(
+      const r = await db.prepare(`INSERT INTO leads (name, phone, email, status, client_id, interest, assigned_doctor, acquisition_date, doctor_fee, doctor_fee_status, fee_type, fee_rate, treatment_amount)
+        VALUES (?,?,?,?, 'house', ?,?,?,?,?,?,?,?)`).bind(
         b.name, b.phone || null, b.email || null, b.status || 'New', b.interest || null,
-        b.assigned_doctor || null, b.acquisition_date || null, b.doctor_fee ?? null, b.doctor_fee_status || 'pending').run();
+        b.assigned_doctor || null, b.acquisition_date || null, b.doctor_fee ?? null, b.doctor_fee_status || 'pending',
+        b.fee_type || 'flat', b.fee_rate ?? null, b.treatment_amount ?? null).run();
       return json({ ok: true, id: r.meta.last_row_id });
     }
     if (method === 'PATCH' && id) {
       const b = await request.json();
-      const cols = ['name', 'phone', 'email', 'status', 'interest', 'assigned_doctor', 'acquisition_date', 'consult_at', 'paid_upfront', 'doctor_fee', 'doctor_fee_status'];
+      const cols = ['name', 'phone', 'email', 'status', 'interest', 'assigned_doctor', 'acquisition_date', 'consult_at', 'paid_upfront', 'doctor_fee', 'doctor_fee_status', 'fee_type', 'fee_rate', 'treatment_amount'];
       const sets = [], vals = [];
       for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
       if (!sets.length) return json({ error: 'nothing to update' }, 400);

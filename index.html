@@ -1318,6 +1318,11 @@ async function openPatient(id,onSave){
   let p={};
   if(id){ try{ const r=await pxapi("/patients/"+id); p=r.patient||{}; }catch(e){} }
   const d=$("#drawer");
+  const fdoc=PX_DOCTORS.find(x=>x.id===p.assigned_doctor);
+  const feeType=p.fee_type||(fdoc&&fdoc.fee_type)||"flat";
+  const feeFlat=(p.fee_type!=="percent"&&p.doctor_fee!=null)?p.doctor_fee:"";
+  const feeTreat=p.treatment_amount!=null?p.treatment_amount:"";
+  const feeRate=p.fee_rate!=null?p.fee_rate:((feeType==="percent"&&fdoc&&fdoc.fee_type==="percent")?fdoc.fee_amount:"");
   d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
     <div class="dhead">${avatar({name:p.name||"New"})}<div><div class="name">${esc(p.name||"New patient")}</div><div class="sub">${esc(p.interest||"")}</div></div></div>
     <div class="dbody">
@@ -1327,23 +1332,55 @@ async function openPatient(id,onSave){
       <div class="drow"><div class="field"><label>Assigned doctor</label><select id="pDoc"><option value="">—</option>${PX_DOCTORS.map(x=>`<option value="${x.id}" ${p.assigned_doctor===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
         <div class="field"><label>Stage</label><select id="pStatus">${PX_STAGES.map(s=>`<option ${p.status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
       <div class="drow"><div class="field"><label>Acquisition date</label><input type="date" id="pAcq" value="${esc(p.acquisition_date||"")}"></div><div class="field"><label>Consult date/time</label><input type="datetime-local" id="pConsult" value="${esc(p.consult_at||"")}"></div></div>
-      <div class="drow"><div class="field"><label>Doctor fee ($)</label><input type="number" id="pFee" value="${esc(p.doctor_fee||"")}"></div><div class="field"><label>Fee status</label><select id="pFeeStatus">${["pending","invoiced","paid"].map(s=>`<option ${p.doctor_fee_status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
+      <div class="drow"><div class="field"><label>Fee type</label><select id="pFeeType"><option value="flat" ${feeType!=="percent"?"selected":""}>Flat $ / patient</option><option value="percent" ${feeType==="percent"?"selected":""}>Percent of treatment</option></select></div>
+        <div class="field"><label>Fee status</label><select id="pFeeStatus">${["pending","invoiced","paid"].map(s=>`<option ${p.doctor_fee_status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
+      <div class="field" id="pFlatRow" style="${feeType==="percent"?"display:none":""}"><label>Doctor fee ($)</label><input type="number" id="pFee" value="${esc(feeFlat)}"></div>
+      <div class="drow" id="pPctRow" style="${feeType==="percent"?"":"display:none"}"><div class="field"><label>Treatment amount ($)</label><input type="number" id="pTreat" value="${esc(feeTreat)}"></div><div class="field"><label>Our rate (%)</label><input type="number" id="pRate" value="${esc(feeRate)}"></div></div>
+      <div class="sub" id="pFeeCalc" style="margin:-4px 0 12px;font-weight:600;color:var(--brand,#2f6fed)"></div>
       <label class="opt" style="margin-bottom:12px"><input type="checkbox" id="pPaid" ${p.paid_upfront?"checked":""}> Patient paid upfront</label>
       <button class="btn" id="pSave">Save patient</button>
       ${id?`<div class="field" style="margin-top:14px"><label>Intake &amp; consultation</label>
         ${p.questionnaire
           ? `<div class="result" style="margin-bottom:8px">✓ Intake completed</div>
-             <div class="drow" style="gap:8px;margin-bottom:8px"><button class="btn ghost" id="pViewIntake" type="button">View answers</button><button class="btn ghost" id="pDoc" type="button">Printable doc</button></div>
+             <div class="drow" style="gap:8px;margin-bottom:8px"><button class="btn ghost" id="pViewIntake" type="button">View answers</button><button class="btn ghost" id="pPrintDoc" type="button">Printable doc</button></div>
              <button class="btn" id="pSendDoc" type="button" style="margin-bottom:10px">Send to doctor →</button>`
           : `<p class="sub" style="margin:2px 0 8px">Intake not returned yet. Send the patient their link:</p>`}
         <button class="btn ghost" id="pLink" type="button">Get intake link</button><div id="pLinkOut" class="sub" style="margin-top:8px"></div></div>
         <button class="del" id="pDel">Delete patient</button>`:""}
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
+  const money=n=>"$"+(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  function updFee(){
+    const t=$("#pFeeType").value;
+    $("#pFlatRow").style.display=t==="percent"?"none":"";
+    $("#pPctRow").style.display=t==="percent"?"":"none";
+    const out=$("#pFeeCalc");
+    if(t==="percent"){
+      const a=parseFloat($("#pTreat").value||0),r=parseFloat($("#pRate").value||0);
+      out.textContent=(a&&r)?`→ Doctor owes us ${money(a*r/100)}  (${r}% of ${money(a)})`:"Enter treatment amount and rate to see what's owed.";
+    } else { const f=parseFloat($("#pFee").value||0); out.textContent=f?`→ Doctor owes us ${money(f)}`:""; }
+  }
+  ["pFeeType","pTreat","pRate","pFee"].forEach(i=>{const el=$("#"+i); if(el) el.oninput=updFee;});
+  const selDoc=$("#pDoc");
+  if(selDoc) selDoc.addEventListener("change",()=>{
+    const dd=PX_DOCTORS.find(x=>x.id===selDoc.value); if(!dd) return;
+    $("#pFeeType").value=dd.fee_type||"flat";
+    if((dd.fee_type||"flat")==="percent"){ if(!$("#pRate").value&&dd.fee_amount!=null) $("#pRate").value=dd.fee_amount; }
+    else if(!$("#pFee").value&&dd.fee_amount!=null){ $("#pFee").value=dd.fee_amount; }
+    updFee();
+  });
+  updFee();
   $("#pSave").onclick=async()=>{
+    const ft=$("#pFeeType").value;
+    let doctorFee=null,fRate=null,treat=null;
+    if(ft==="percent"){
+      treat=$("#pTreat").value?parseFloat($("#pTreat").value):null;
+      fRate=$("#pRate").value?parseFloat($("#pRate").value):null;
+      doctorFee=(treat!=null&&fRate!=null)?parseFloat((treat*fRate/100).toFixed(2)):null;
+    } else { doctorFee=$("#pFee").value?parseFloat($("#pFee").value):null; }
     const body={name:$("#pName").value,phone:$("#pPhone").value||null,email:$("#pEmail").value||null,interest:$("#pInterest").value||null,
       assigned_doctor:$("#pDoc").value||null,status:$("#pStatus").value,acquisition_date:$("#pAcq").value||null,consult_at:$("#pConsult").value||null,
-      doctor_fee:$("#pFee").value?parseFloat($("#pFee").value):null,doctor_fee_status:$("#pFeeStatus").value,paid_upfront:$("#pPaid").checked?1:0};
+      fee_type:ft,fee_rate:fRate,treatment_amount:treat,doctor_fee:doctorFee,doctor_fee_status:$("#pFeeStatus").value,paid_upfront:$("#pPaid").checked?1:0};
     if(!body.name){alert("Name required");return;}
     try{ if(id) await pxapi("/patients/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
       else await pxapi("/patients",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
@@ -1360,7 +1397,7 @@ async function openPatient(id,onSave){
     const vi=$("#pViewIntake"); if(vi) vi.onclick=()=>openModal({title:(p.name||"Patient")+" — intake answers",sub:doc?doc.name:"",
       body:intakeAnswersHTML(form,ans),
       foot:`<button class="btn ghost" type="button" onclick="closeModal()">Close</button>`+(reviewUrl?`<button class="btn" type="button" onclick="window.open('${reviewUrl}','_blank')">Open printable doc</button>`:"")});
-    const pd=$("#pDoc"); if(pd) pd.onclick=()=>{ if(reviewUrl) window.open(reviewUrl,"_blank"); else alert("Generate the intake link first."); };
+    const pd=$("#pPrintDoc"); if(pd) pd.onclick=()=>{ if(reviewUrl) window.open(reviewUrl,"_blank"); else alert("Generate the intake link first."); };
     const sd=$("#pSendDoc"); if(sd) sd.onclick=async()=>{ if(!p.assigned_doctor){ alert("Assign a doctor above and Save first."); return; }
       if(!confirm("Email this patient's intake to "+(doc?doc.name:"the assigned doctor")+"?")) return;
       sd.disabled=true; sd.textContent="Sending…";
