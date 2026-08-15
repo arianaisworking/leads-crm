@@ -28,6 +28,14 @@ export function teamEmail(env) {
   return env.TEAM_EMAIL || 'arianaisworking@gmail.com';
 }
 
+// Where replies to our outbound mail should land. We want doctors/patients to
+// reply to the branded MXN Cells address (not a personal Gmail), so the whole
+// thread stays under mxncells.com. Cloudflare Email Routing then forwards
+// hello@mxncells.com -> the team inbox. Override with REPLY_TO if needed.
+export function replyToEmail(env) {
+  return env.REPLY_TO || 'hello@mxncells.com';
+}
+
 export async function sendEmail(env, { to, subject, html, text, replyTo, from }) {
   if (!env.RESEND_API_KEY) return { ok: false, skipped: true, reason: 'no RESEND_API_KEY' };
   if (!to || (Array.isArray(to) && !to.length)) return { ok: false, skipped: true, reason: 'no recipient' };

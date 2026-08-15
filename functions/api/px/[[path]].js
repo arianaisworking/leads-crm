@@ -3,7 +3,7 @@
 // per-patient intake links, and the money dashboard.
 
 import { json, uid } from '../../_lib/tenant.js';
-import { sendEmail, emailShell, teamEmail, brandName, esc } from '../../_lib/email.js';
+import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 
 const AVAIL = [
   ['avail_dates', 'Preferred dates'],
@@ -189,7 +189,7 @@ export async function onRequest(context) {
 
     const r = await sendEmail(env, {
       to: doc.contact_email,
-      replyTo: teamEmail(env),
+      replyTo: replyToEmail(env),
       subject: `Patient referral — ${lead.name || ''}`,
       html: emailShell('New patient referral', inner, brandName(env)),
     });
