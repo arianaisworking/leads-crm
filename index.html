@@ -954,7 +954,14 @@ async function renderConversations(m){
         <div class="cv-kv"><span>Human review</span><b class="ok">On</b></div>
         <div class="cv-kv"><span>AI on this thread</span><b>${c.ai_paused?"Paused":"Active"}</b></div>
       </div>
-      ${c.appointment_at?`<div class="cv-card"><h4>Appointment</h4><p style="margin:0">${esc(c.appointment_at)}</p></div>`:""}`;
+      ${c.appointment_at?`<div class="cv-card"><h4>Appointment</h4><p style="margin:0">${esc(c.appointment_at)}</p></div>`:""}
+      <div class="cv-card" style="border-color:#f2c8d6"><h4>Manage</h4>
+        <p class="muted" style="margin:0 0 8px;font-size:12px">Enrolled by mistake? Remove them from the automations log so they can be re-added.</p>
+        <button class="del" id="cvRemove" style="width:100%">Remove from automations</button></div>`;
+    const rm=$("#cvRemove"); if(rm) rm.onclick=async()=>{
+      if(!confirm("Remove this contact from the automations log? This deletes the conversation and its messages so they can be re-added."))return;
+      try{ await api("/tenant/"+state.convClient+"/conversation/"+encodeURIComponent(c.id),{method:"DELETE"}); toast("Removed from automations."); renderEmptyThread(); await loadInbox(); }
+      catch(e){ alert(e.message); } };
   }
   function renderEmptyThread(){ $("#cvThread").innerHTML=`<div class="cv-empty big">Select a conversation to see the thread.</div>`; $("#cvSide").innerHTML=""; }
 
@@ -1161,7 +1168,35 @@ async function renderClientSetup(m, clientId){
       <p class="muted" style="margin:10px 0 0;font-size:12px">⚠ Only import leads the client has consent to contact (TCPA/DNC). Duplicates and numbers already opted out are skipped automatically.</p>
     </div>
 
+    <div class="cs-card" style="border-color:#f2c8d6">
+      <h3>Danger zone</h3>
+      <p class="muted" style="margin:0 0 10px">Set this client up by mistake, or need to restart? Move them back to your leads database, or delete the client and all of its automations, conversations and messages.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost" id="cs_toLead">↩ Move back to leads</button>
+        <button class="del" id="cs_del">Delete client &amp; all automations</button>
+      </div>
+      <div id="cs_dangerMsg" class="muted" style="margin-top:8px"></div>
+    </div>
+
     <div class="cs-actions"><button class="btn" id="cs_save">Save client setup</button><span id="cs_msg" class="muted"></span></div>`;
+
+  $("#cs_del").onclick=async()=>{
+    if(!confirm("Delete “"+(c.name||clientId)+"” and ALL its automations, conversations and messages? This can't be undone."))return;
+    $("#cs_dangerMsg").textContent="Deleting…";
+    try{ await api("/tenant/clients/"+encodeURIComponent(clientId),{method:"DELETE"});
+      state.convClients=[]; state.convClient=null; toast("Client deleted."); renderAutomations(m); }
+    catch(e){ $("#cs_dangerMsg").textContent=e.message; }
+  };
+  $("#cs_toLead").onclick=async()=>{
+    if(!confirm("Move “"+(c.name||clientId)+"” back to your leads database and delete the client? Their automation data will be removed."))return;
+    $("#cs_dangerMsg").textContent="Moving…";
+    try{
+      await api("/leads",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
+        name:c.name||clientId, phone:c.hot_lead_phone||null, email:c.notify_email||null, website:c.website||null, address:c.address||null, status:"Contacted" })});
+      await api("/tenant/clients/"+encodeURIComponent(clientId),{method:"DELETE"});
+      state.convClients=[]; state.convClient=null; toast("Moved back to leads."); setView("database");
+    }catch(e){ $("#cs_dangerMsg").textContent=e.message; }
+  };
 
   function drawServices(){
     $("#cs_services").innerHTML=services.length?services.map((s,i)=>`

@@ -49,6 +49,18 @@ export async function onRequest(context) {
       ).run();
       return json({ ok: true, id: b.id });
     }
+    // DELETE /api/tenant/clients/:id — remove a client and ALL its automation data.
+    if (method === 'DELETE' && seg[1]) {
+      const cid = seg[1];
+      await db.prepare('DELETE FROM messages WHERE client_id=?').bind(cid).run();
+      await db.prepare('DELETE FROM conversations WHERE client_id=?').bind(cid).run();
+      await db.prepare('DELETE FROM opt_outs WHERE client_id=?').bind(cid).run();
+      await db.prepare('DELETE FROM send_ledger WHERE client_id=?').bind(cid).run();
+      await db.prepare('DELETE FROM events WHERE client_id=?').bind(cid).run();
+      await db.prepare('DELETE FROM users WHERE client_id=?').bind(cid).run();
+      await db.prepare('DELETE FROM clients WHERE id=?').bind(cid).run();
+      return json({ ok: true });
+    }
   }
 
   // ---- tenant level ----
@@ -56,6 +68,15 @@ export async function onRequest(context) {
   const action = seg[1];
   const ref = seg[2];
   if (!clientId) return json({ error: 'not found' }, 404);
+
+  // DELETE /api/tenant/:clientId/conversation/:convId — remove one contact from
+  // the automations log (frees the client_id+phone slot so they can be re-added).
+  if (action === 'conversation' && method === 'DELETE') {
+    if (!ref) return json({ error: 'conversation id required' }, 400);
+    await db.prepare('DELETE FROM messages WHERE client_id=? AND conversation_id=?').bind(clientId, ref).run();
+    const r = await db.prepare('DELETE FROM conversations WHERE client_id=? AND id=?').bind(clientId, ref).run();
+    return json({ ok: true, removed: r.meta.changes || 0 });
+  }
 
   const client = await getClientById(db, clientId);
   if (!client) return json({ error: 'unknown client' }, 404);
