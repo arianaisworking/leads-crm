@@ -473,7 +473,7 @@ const BRAIN_TEMPLATES=[
 ];
 const vLabel=k=>{const v=VERTICALS.find(x=>x.key===k);return v?v.label:(k||"—");};
 const SIGNAL_LABEL={financing:"💳 Financing",free_consult:"🎁 Free consult",multi_location:"📍 Multi-location"};
-function signalBadges(s){return (s||"").split(",").filter(Boolean).map(x=>`<span class="sig">${SIGNAL_LABEL[x]||x}</span>`).join("");}
+function signalBadges(s){return (s||"").split(",").map(x=>x.trim()).filter(x=>SIGNAL_LABEL[x]).map(x=>`<span class="sig">${SIGNAL_LABEL[x]}</span>`).join("");}
 const TRADE_COLOR={roofing:"#f5943b",plumbing:"#8288ea",electrical:"#ed1a78",hvac:"#2bb5c4"};
 const POOL=["#ed1a78","#8288ea","#f5943b","#35c08a","#9b6be0","#2bb5c4"];
 const STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
@@ -1340,8 +1340,8 @@ async function renderPatients(m){
     draw(); }
   function draw(){
     const q=($("#pxq").value||"").toLowerCase(),fd=$("#pxfDoc").value,fs=$("#pxfStatus").value;
-    let r=rows.filter(x=>(!q||((x.name||"")+(x.phone||"")+(x.interest||"")).toLowerCase().includes(q))&&(!fd||x.assigned_doctor===fd)&&(!fs||x.status===fs));
-    $("#pxTbl").innerHTML=r.length?`<div class="card"><table><thead><tr><th>Patient</th><th>Program</th><th>Doctor</th><th>Stage</th><th>Fee</th></tr></thead><tbody>${r.map(x=>`<tr data-id="${x.id}"><td><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.phone||x.email||"")}</div></td><td>${esc(x.interest||"—")}</td><td>${esc(x.doctor_name||"—")}</td><td><span class="pill ${x.status==="Paid"||x.status==="Active"?"Client":x.status==="Lost"?"Dead":"Contacted"}">${esc(x.status||"New")}</span></td><td class="sub">${x.doctor_fee?("$"+x.doctor_fee+" · "+esc(x.doctor_fee_status||"pending")):"—"}</td></tr>`).join("")}</tbody></table></div>`:`<div class="card"><div class="empty"><div class="mark">✦</div><h3>No patients yet</h3><p>Add one, or import a CSV from your ad platform.</p></div></div>`;
+    let r=rows.filter(x=>(!q||((x.name||"")+(x.phone||"")+(x.interest||"")+(x.preferred_location||"")+(x.message||"")).toLowerCase().includes(q))&&(!fd||x.assigned_doctor===fd)&&(!fs||x.status===fs));
+    $("#pxTbl").innerHTML=r.length?`<div class="card"><table><thead><tr><th>Patient</th><th>Program</th><th>Doctor</th><th>Stage</th><th>Fee</th></tr></thead><tbody>${r.map(x=>`<tr data-id="${x.id}"><td><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.phone||x.email||"")}</div></td><td>${esc(x.interest||"—")}${x.preferred_location?`<div class="sub">${esc(x.preferred_location)}</div>`:""}</td><td>${esc(x.doctor_name||"—")}</td><td><span class="pill ${x.status==="Paid"||x.status==="Active"?"Client":x.status==="Lost"?"Dead":"Contacted"}">${esc(x.status||"New")}</span></td><td class="sub">${x.doctor_fee?("$"+x.doctor_fee+" · "+esc(x.doctor_fee_status||"pending")):"—"}</td></tr>`).join("")}</tbody></table></div>`:`<div class="card"><div class="empty"><div class="mark">✦</div><h3>No patients yet</h3><p>Add one, or import a CSV from your ad platform.</p></div></div>`;
     $("#pxTbl").querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>openPatient(parseInt(tr.dataset.id,10),load));
   }
   $("#pxq").oninput=draw; $("#pxfDoc").onchange=draw; $("#pxfStatus").onchange=draw;
@@ -1447,7 +1447,9 @@ async function openPatient(id,onSave){
     <div class="dbody">
       <div class="field"><label>Name</label><input id="pName" value="${esc(p.name||"")}"></div>
       <div class="drow"><div class="field"><label>Phone</label><input id="pPhone" value="${esc(p.phone||"")}"></div><div class="field"><label>Email</label><input id="pEmail" value="${esc(p.email||"")}"></div></div>
-      <div class="field"><label>Program / interest (from the ad)</label><input id="pInterest" value="${esc(p.interest||"")}" placeholder="e.g. Stem cell therapy"></div>
+      <div class="drow"><div class="field"><label>Program / interest</label><input id="pInterest" value="${esc(p.interest||"")}" placeholder="e.g. Stem cell therapy"></div>
+        <div class="field"><label>Preferred location</label><input id="pLocation" value="${esc(p.preferred_location||"")}" placeholder="e.g. Guadalajara"></div></div>
+      <div class="field"><label>What they told us${p.source?` <span class="sub" style="font-weight:400">· via ${esc(p.source)}</span>`:""}</label><textarea id="pMessage" rows="3" placeholder="Their note from the website form">${esc(p.message||"")}</textarea></div>
       <div class="drow"><div class="field"><label>Assigned doctor</label><select id="pDoc"><option value="">—</option>${PX_DOCTORS.map(x=>`<option value="${x.id}" ${p.assigned_doctor===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
         <div class="field"><label>Stage</label><select id="pStatus">${PX_STAGES.map(s=>`<option ${p.status===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
       <div class="drow"><div class="field"><label>Acquisition date</label><input type="date" id="pAcq" value="${esc(p.acquisition_date||"")}"></div><div class="field"><label>Consult date/time</label><input type="datetime-local" id="pConsult" value="${esc(p.consult_at||"")}"></div></div>
@@ -1494,6 +1496,7 @@ async function openPatient(id,onSave){
       doctorFee=(treat!=null&&fRate!=null)?parseFloat((treat*fRate/100).toFixed(2)):null;
     } else { doctorFee=$("#pFee").value?parseFloat($("#pFee").value):null; }
     const body={name:$("#pName").value,phone:$("#pPhone").value||null,email:$("#pEmail").value||null,interest:$("#pInterest").value||null,
+      preferred_location:$("#pLocation").value||null,message:$("#pMessage").value||null,
       assigned_doctor:$("#pDoc").value||null,status:$("#pStatus").value,acquisition_date:$("#pAcq").value||null,consult_at:$("#pConsult").value||null,
       fee_type:ft,fee_rate:fRate,treatment_amount:treat,doctor_fee:doctorFee,doctor_fee_status:$("#pFeeStatus").value,paid_upfront:$("#pPaid").checked?1:0};
     if(!body.name){alert("Name required");return;}

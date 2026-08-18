@@ -3,7 +3,11 @@
 // forms POST here to drop a new lead straight into the CRM for THIS deployment's
 // database (e.g. mxncells.com -> aiw-patients, thenetworkboss.com -> aiw-crm).
 //
-//   POST /api/capture/lead   { name, phone, email, interest, message, source, _hp }
+//   POST /api/capture/lead   { name, phone, email, interest, location, message, source, _hp }
+//
+// `location` and `message` need migration-003 columns. On a database where that
+// migration has not run, the insert falls back to the old column layout instead
+// of failing, so no lead is ever lost mid-rollout.
 //
 // CORS is open so the form can live on a separate site/origin. Spam is filtered
 // with a honeypot field (_hp): if it's filled we return ok but store nothing.
@@ -42,17 +46,37 @@ export async function onRequest(context) {
   const interest = (b.interest || '').toString().trim().slice(0, 300) || null;
   const message = (b.message || '').toString().trim().slice(0, 2000) || null;
   const source = (b.source || 'website').toString().trim().slice(0, 120);
+  // Destination / office the visitor asked for. Accepts either key so a form can
+  // send whichever reads better in its own markup.
+  const location = (b.location || b.preferred_location || '').toString().trim().slice(0, 160) || null;
 
   if (!name) return reply({ error: 'Please enter your name.' }, 400);
   if (!phone && !email) return reply({ error: 'Please enter a phone number or email.' }, 400);
 
   try {
     const r = await env.DB.prepare(
-      `INSERT INTO leads (name, phone, email, interest, signals, source, status, client_id, acquisition_date, created_at, updated_at)
-       VALUES (?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
-    ).bind(name, phone, email, interest, message, source).run();
+      `INSERT INTO leads (name, phone, email, interest, preferred_location, message, source, status, client_id, acquisition_date, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
+    ).bind(name, phone, email, interest, location, message, source).run();
     return reply({ ok: true, id: r.meta.last_row_id });
   } catch (e) {
-    return reply({ error: 'Could not save. Please try again.' }, 500);
+    // This same code is deployed against several databases (one per tenant), and
+    // migration-003 may not have run on all of them yet. Rather than drop the
+    // lead, fall back to the pre-003 column set: message goes back into
+    // `signals`, and the location is appended to `interest` so it still lands
+    // somewhere a human will read. Any other failure is a real error.
+    if (!/no such column/i.test(String(e && e.message))) {
+      return reply({ error: 'Could not save. Please try again.' }, 500);
+    }
+    try {
+      const legacyInterest = [interest, location].filter(Boolean).join(' \u00b7 ') || null;
+      const r = await env.DB.prepare(
+        `INSERT INTO leads (name, phone, email, interest, signals, source, status, client_id, acquisition_date, created_at, updated_at)
+         VALUES (?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
+      ).bind(name, phone, email, legacyInterest, message, source).run();
+      return reply({ ok: true, id: r.meta.last_row_id, degraded: true });
+    } catch (e2) {
+      return reply({ error: 'Could not save. Please try again.' }, 500);
+    }
   }
 }

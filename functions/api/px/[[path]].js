@@ -138,7 +138,7 @@ export async function onRequest(context) {
     }
     if (method === 'PATCH' && id) {
       const b = await request.json();
-      const cols = ['name', 'phone', 'email', 'status', 'interest', 'assigned_doctor', 'acquisition_date', 'consult_at', 'paid_upfront', 'doctor_fee', 'doctor_fee_status', 'fee_type', 'fee_rate', 'treatment_amount'];
+      const cols = ['name', 'phone', 'email', 'status', 'interest', 'preferred_location', 'message', 'assigned_doctor', 'acquisition_date', 'consult_at', 'paid_upfront', 'doctor_fee', 'doctor_fee_status', 'fee_type', 'fee_rate', 'treatment_amount'];
       const sets = [], vals = [];
       for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
       if (!sets.length) return json({ error: 'nothing to update' }, 400);
