@@ -3,7 +3,7 @@
 // forms POST here to drop a new lead straight into the CRM for THIS deployment's
 // database (e.g. mxncells.com -> aiw-patients, thenetworkboss.com -> aiw-crm).
 //
-//   POST /api/capture/lead   { name, phone, email, interest, message, source, _hp }
+//   POST /api/capture/lead   { name, phone, email, interest, location, message, source, _hp }
 //
 // CORS is open so the form can live on a separate site/origin. Spam is filtered
 // with a honeypot field (_hp): if it's filled we return ok but store nothing.
@@ -42,15 +42,18 @@ export async function onRequest(context) {
   const interest = (b.interest || '').toString().trim().slice(0, 300) || null;
   const message = (b.message || '').toString().trim().slice(0, 2000) || null;
   const source = (b.source || 'website').toString().trim().slice(0, 120);
+  // Destination / office the visitor asked for. Accepts either key so a form can
+  // send whichever reads better in its own markup.
+  const location = (b.location || b.preferred_location || '').toString().trim().slice(0, 160) || null;
 
   if (!name) return reply({ error: 'Please enter your name.' }, 400);
   if (!phone && !email) return reply({ error: 'Please enter a phone number or email.' }, 400);
 
   try {
     const r = await env.DB.prepare(
-      `INSERT INTO leads (name, phone, email, interest, signals, source, status, client_id, acquisition_date, created_at, updated_at)
-       VALUES (?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
-    ).bind(name, phone, email, interest, message, source).run();
+      `INSERT INTO leads (name, phone, email, interest, preferred_location, message, source, status, client_id, acquisition_date, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
+    ).bind(name, phone, email, interest, location, message, source).run();
     return reply({ ok: true, id: r.meta.last_row_id });
   } catch (e) {
     return reply({ error: 'Could not save. Please try again.' }, 500);
