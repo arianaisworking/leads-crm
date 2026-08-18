@@ -1,7 +1,12 @@
 -- ============================================================
 -- migration 003 - real columns for website-captured intake fields
 --   npx wrangler d1 execute aiw-patients --remote --file=migration-003-capture-fields.sql
---   npx wrangler d1 execute aiw-crm      --remote --file=migration-003-capture-fields.sql
+--
+-- Required for the PATIENTS deployment (aiw-patients), which is where
+-- mxncells.com sends its intake. Other tenant databases (aiw-crm, ...) can be
+-- migrated whenever convenient: /api/capture/lead detects the missing columns
+-- and falls back to the old layout, so no lead is lost in the meantime. Run it
+-- on them eventually so their messages stop landing in `signals`.
 --
 -- Run ONCE per database. SQLite has no "ADD COLUMN IF NOT EXISTS", so re-running
 -- errors with "duplicate column name" — that error is harmless and means the

@@ -5,6 +5,10 @@
 //
 //   POST /api/capture/lead   { name, phone, email, interest, location, message, source, _hp }
 //
+// `location` and `message` need migration-003 columns. On a database where that
+// migration has not run, the insert falls back to the old column layout instead
+// of failing, so no lead is ever lost mid-rollout.
+//
 // CORS is open so the form can live on a separate site/origin. Spam is filtered
 // with a honeypot field (_hp): if it's filled we return ok but store nothing.
 
@@ -56,6 +60,23 @@ export async function onRequest(context) {
     ).bind(name, phone, email, interest, location, message, source).run();
     return reply({ ok: true, id: r.meta.last_row_id });
   } catch (e) {
-    return reply({ error: 'Could not save. Please try again.' }, 500);
+    // This same code is deployed against several databases (one per tenant), and
+    // migration-003 may not have run on all of them yet. Rather than drop the
+    // lead, fall back to the pre-003 column set: message goes back into
+    // `signals`, and the location is appended to `interest` so it still lands
+    // somewhere a human will read. Any other failure is a real error.
+    if (!/no such column/i.test(String(e && e.message))) {
+      return reply({ error: 'Could not save. Please try again.' }, 500);
+    }
+    try {
+      const legacyInterest = [interest, location].filter(Boolean).join(' \u00b7 ') || null;
+      const r = await env.DB.prepare(
+        `INSERT INTO leads (name, phone, email, interest, signals, source, status, client_id, acquisition_date, created_at, updated_at)
+         VALUES (?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
+      ).bind(name, phone, email, legacyInterest, message, source).run();
+      return reply({ ok: true, id: r.meta.last_row_id, degraded: true });
+    } catch (e2) {
+      return reply({ error: 'Could not save. Please try again.' }, 500);
+    }
   }
 }
