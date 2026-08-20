@@ -1347,6 +1347,10 @@ async function renderPatients(m){
   $("#pxq").oninput=draw; $("#pxfDoc").onchange=draw; $("#pxfStatus").onchange=draw;
   $("#pxAdd").onclick=()=>openPatient(null,load);
   await load();
+  // New-lead notification emails link straight to the person, as #patient=42.
+  // The hash is cleared once used so a refresh does not reopen the drawer.
+  const deep=/^#patient=(\d+)$/.exec(location.hash||"");
+  if(deep){ history.replaceState(null,"",location.pathname+location.search); openPatient(parseInt(deep[1],10),load); }
 }
 
 async function openPatient(id,onSave){

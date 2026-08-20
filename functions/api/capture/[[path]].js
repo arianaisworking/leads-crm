@@ -96,7 +96,10 @@ function notify(context, lead) {
   const { env } = context;
   const brand = brandName(env);
   const reach = [lead.email, lead.phone].filter(Boolean).join(' · ') || 'no contact given';
-  const crmUrl = env.CRM_URL || 'https://aiw-patients.pages.dev';
+  const base = (env.CRM_URL || 'https://aiw-patients.pages.dev').replace(/\/+$/, '');
+  // Deep link: the CRM opens this patient's record straight from the hash, so
+  // the mail lands on the person rather than on a list to search through.
+  const crmUrl = lead.id ? `${base}/#patient=${lead.id}` : base;
   const rows = [
     ['Name', lead.name],
     ['Reach them at', reach],
@@ -113,12 +116,12 @@ function notify(context, lead) {
     <table style="width:100%;border-collapse:collapse">${rows}</table>
     <p style="margin:22px 0 0">
       <a href="${crmUrl}" style="background:#0f1b2d;color:#fff;text-decoration:none;
-         padding:11px 18px;border-radius:8px;font-size:14px;display:inline-block">Open the CRM</a></p>`, brand);
+         padding:11px 18px;border-radius:8px;font-size:14px;display:inline-block">Open their record</a></p>`, brand);
 
   const text = `New enquiry from the website\n\n`
     + `Name: ${lead.name}\nReach them at: ${reach}\n`
     + `Preferred location: ${lead.location || 'Not specified'}\nCame from: ${lead.source}\n\n`
-    + `Their area of interest and anything they wrote is on the record in the CRM: ${crmUrl}`;
+    + `Their area of interest and anything they wrote is on their record: ${crmUrl}`;
 
   const send = sendEmail(env, {
     to: teamEmail(env),
