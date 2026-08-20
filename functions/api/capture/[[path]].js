@@ -11,8 +11,15 @@
 //
 // CORS is open so the form can live on a separate site/origin. Spam is filtered
 // with a honeypot field (_hp): if it's filled we return ok but store nothing.
+//
+// A saved lead also sends the team a heads-up email. The mail deliberately
+// carries who got in touch and how to reach them, not what they said about
+// their health: the free text and the area of interest stay in the CRM, behind
+// a login, rather than being copied into an inbox. The send is fire-and-forget
+// via waitUntil so a mail outage can never cost us the lead.
 
 import { json } from '../../_lib/tenant.js';
+import { sendEmail, emailShell, teamEmail, brandName, esc } from '../../_lib/email.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +65,7 @@ export async function onRequest(context) {
       `INSERT INTO leads (name, phone, email, interest, preferred_location, message, source, status, client_id, acquisition_date, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
     ).bind(name, phone, email, interest, location, message, source).run();
+    notify(context, { id: r.meta.last_row_id, name, phone, email, location, source });
     return reply({ ok: true, id: r.meta.last_row_id });
   } catch (e) {
     // This same code is deployed against several databases (one per tenant), and
@@ -74,9 +82,49 @@ export async function onRequest(context) {
         `INSERT INTO leads (name, phone, email, interest, signals, source, status, client_id, acquisition_date, created_at, updated_at)
          VALUES (?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
       ).bind(name, phone, email, legacyInterest, message, source).run();
+      notify(context, { id: r.meta.last_row_id, name, phone, email, location, source });
       return reply({ ok: true, id: r.meta.last_row_id, degraded: true });
     } catch (e2) {
       return reply({ error: 'Could not save. Please try again.' }, 500);
     }
   }
+}
+
+// Team heads-up. Never awaited by the request: a lead that is safely in the
+// database must not fail because a mail provider is having a bad morning.
+function notify(context, lead) {
+  const { env } = context;
+  const brand = brandName(env);
+  const reach = [lead.email, lead.phone].filter(Boolean).join(' · ') || 'no contact given';
+  const crmUrl = env.CRM_URL || 'https://aiw-patients.pages.dev';
+  const rows = [
+    ['Name', lead.name],
+    ['Reach them at', reach],
+    ['Preferred location', lead.location || 'Not specified'],
+    ['Came from', lead.source],
+  ].map(([k, v]) =>
+    `<tr><td style="padding:6px 0;color:#8a95a6;font-size:13px;width:150px">${esc(k)}</td>
+         <td style="padding:6px 0;font-size:14px;font-weight:600">${esc(v)}</td></tr>`).join('');
+
+  const html = emailShell(`New enquiry: ${lead.name}`, `
+    <h2 style="margin:0 0 4px;font-size:18px">New enquiry from the website</h2>
+    <p style="margin:0 0 18px;color:#5b6873;font-size:14px">
+      Their area of interest and anything they wrote is on the record in the CRM.</p>
+    <table style="width:100%;border-collapse:collapse">${rows}</table>
+    <p style="margin:22px 0 0">
+      <a href="${crmUrl}" style="background:#0f1b2d;color:#fff;text-decoration:none;
+         padding:11px 18px;border-radius:8px;font-size:14px;display:inline-block">Open the CRM</a></p>`, brand);
+
+  const text = `New enquiry from the website\n\n`
+    + `Name: ${lead.name}\nReach them at: ${reach}\n`
+    + `Preferred location: ${lead.location || 'Not specified'}\nCame from: ${lead.source}\n\n`
+    + `Their area of interest and anything they wrote is on the record in the CRM: ${crmUrl}`;
+
+  const send = sendEmail(env, {
+    to: teamEmail(env),
+    subject: `New enquiry: ${lead.name}`,
+    html,
+    text,
+  }).catch(() => {});
+  if (context.waitUntil) context.waitUntil(send);
 }
