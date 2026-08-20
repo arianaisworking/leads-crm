@@ -131,6 +131,9 @@ function notify(context, lead) {
     subject: `New enquiry: ${lead.name}`,
     html,
     text,
+    // Hitting reply on the notification writes to the person who enquired,
+    // not back to our own sending address.
+    replyTo: lead.email || undefined,
   }).catch(() => {});
   if (context.waitUntil) context.waitUntil(send);
 }
