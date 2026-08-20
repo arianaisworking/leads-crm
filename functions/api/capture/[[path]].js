@@ -93,12 +93,15 @@ export async function onRequest(context) {
 // Team heads-up. Never awaited by the request: a lead that is safely in the
 // database must not fail because a mail provider is having a bad morning.
 function notify(context, lead) {
-  const { env } = context;
+  const { env, request } = context;
   const brand = brandName(env);
   const reach = [lead.email, lead.phone].filter(Boolean).join(' · ') || 'no contact given';
-  const base = (env.CRM_URL || 'https://aiw-patients.pages.dev').replace(/\/+$/, '');
-  // Deep link: the CRM opens this patient's record straight from the hash, so
-  // the mail lands on the person rather than on a list to search through.
+  // Default to this deployment's own origin, never a hard-coded one. The same
+  // code serves several brands from separate Pages projects, and a fixed URL
+  // here would send one brand's team into another brand's CRM.
+  const base = (env.CRM_URL || new URL(request.url).origin).replace(/\/+$/, '');
+  // The patients app opens the record straight from this hash. The other CRMs
+  // have no hash routing, so they ignore it and land on the dashboard.
   const crmUrl = lead.id ? `${base}/#patient=${lead.id}` : base;
   const rows = [
     ['Name', lead.name],
@@ -116,12 +119,12 @@ function notify(context, lead) {
     <table style="width:100%;border-collapse:collapse">${rows}</table>
     <p style="margin:22px 0 0">
       <a href="${crmUrl}" style="background:#0f1b2d;color:#fff;text-decoration:none;
-         padding:11px 18px;border-radius:8px;font-size:14px;display:inline-block">Open their record</a></p>`, brand);
+         padding:11px 18px;border-radius:8px;font-size:14px;display:inline-block">Open in the CRM</a></p>`, brand);
 
   const text = `New enquiry from the website\n\n`
     + `Name: ${lead.name}\nReach them at: ${reach}\n`
     + `Preferred location: ${lead.location || 'Not specified'}\nCame from: ${lead.source}\n\n`
-    + `Their area of interest and anything they wrote is on their record: ${crmUrl}`;
+    + `Their area of interest and anything they wrote is in the CRM: ${crmUrl}`;
 
   const send = sendEmail(env, {
     to: teamEmail(env),
