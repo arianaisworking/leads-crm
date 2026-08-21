@@ -4,6 +4,7 @@
 //
 // Exemptions:
 //   /api/auth/*  -> login/bootstrap/logout/me
+//   /api/apply/* -> public driver application (token- or carrier-scoped)
 //   /api/sms/*   -> Twilio inbound webhook + cron tick (self-authenticated:
 //                   Twilio signature / x-cron-key)
 //
@@ -17,7 +18,7 @@ export async function onRequest(context) {
   const path = new URL(request.url).pathname;
 
   if (!path.startsWith('/api/')) return next();
-  if (path.startsWith('/api/auth/') || path.startsWith('/api/sms/') || path.startsWith('/api/intake/') || path.startsWith('/api/capture/')) return next();
+  if (path.startsWith('/api/auth/') || path.startsWith('/api/sms/') || path.startsWith('/api/intake/') || path.startsWith('/api/capture/') || path.startsWith('/api/apply/')) return next();
 
   const sess = await readSession(context);
   if (!sess) return json({ error: 'unauthorized' }, 401);

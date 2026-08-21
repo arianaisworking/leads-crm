@@ -405,7 +405,7 @@ const ACCOUNTS=[
   {label:"Doctor Patients",   host:"aiw-patients.pages.dev"},
 ];
 // Which business this deployment is. Patients env swaps in its own modules.
-const PROFILE = ({"aiw-patients.pages.dev":"patients"})[location.hostname] || "reactivation";
+const PROFILE = ({"aiw-patients.pages.dev":"patients","aiw-recruiting.pages.dev":"recruiting"})[location.hostname] || "reactivation";
 const PX_STAGES=["New","Assigned","Intake sent","Intake returned","Sent to doctor","Consult scheduled","Paid","Active","Lost"];
 const pxapi=(p,o)=>api("/px"+p,o);
 const VERTICALS=[
@@ -540,6 +540,12 @@ function renderHero(){
 function setView(v){ state.view=v; document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v)); render(); }
 async function render(){
   const m=$("#view");
+  if(PROFILE==="recruiting"){
+    if(state.view==="carriers") return renderCarriers(m);
+    if(state.view==="drmoney") return renderDrMoney(m);
+    if(state.view==="drpipeline") return renderDrPipeline(m);
+    return renderDrivers(m);
+  }
   if(PROFILE==="patients"){
     if(state.view==="doctors") return renderDoctors(m);
     if(state.view==="partners") return renderPartners(m);
@@ -1362,6 +1368,496 @@ async function renderClientSetup(m, clientId){
   };
 }
 
+// ============ RECRUITING APP (aiw-recruiting environment) ============
+// Owner-operator driver recruiting. Drivers live in `leads`; carriers are the
+// payers. Screening verdicts come from the carrier's own qualification rubric
+// (functions/_lib/screening.js) so we never submit a driver who was always
+// going to bounce.
+const DR_STAGES=["New","Screening","Pre-qualified","Application submitted","Clearinghouse","Experience verify","Pre-approved","Drug test","Documents","Lease sent","Lease signed","Orientation","Rolling","Not qualified"];
+const drapi=(p,o)=>api("/dr"+p,o);
+let DR_CARRIERS=[], DR_CHART=[];
+const drMoney=n=>"$"+(Math.round((n||0)*100)/100).toLocaleString("en-US",{maximumFractionDigits:0});
+const carrierName=id=>{const c=DR_CARRIERS.find(x=>x.id===id);return c?c.name:"—";};
+
+function applyRecruitingProfile(){
+  const nav=document.getElementById("nav"); if(!nav)return;
+  const items=[["drivers","Drivers"],["drpipeline","Pipeline"],["carriers","Carriers"],["drmoney","Money"]];
+  nav.innerHTML=items.map(([v,l],i)=>`<button data-view="${v}" class="${i===0?"on":""}"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 16V7h11v9M14 10h3.5l2.5 3.2V16"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg></span> ${l}</button>`).join("");
+  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+  const foot=document.querySelector(".side .foot");
+  if(foot) foot.innerHTML="Drivers are screened against each carrier's published qualification criteria before submission.";
+  state.view="drivers";
+}
+
+function screenPill(r,pts){
+  if(!r) return `<span class="pill" style="background:#efeaf3;color:#7c7288">Not screened</span>`;
+  const m={qualified:["#e4f6ee","#137a52","Pre-qualified"],review:["#fdf1dc","#8a5a00","Safety review"],disqualified:["#fbe3e3","#9b2c2c","Not qualified"]}[r];
+  return `<span class="pill" style="background:${m[0]};color:${m[1]}">${m[2]}${pts!=null?` · ${pts}pt`:""}</span>`;
+}
+
+async function loadCarriers(){ try{ const r=await drapi("/carriers"); DR_CARRIERS=r.carriers||[]; }catch(e){ DR_CARRIERS=[]; } }
+async function loadChart(){ if(DR_CHART.length)return; try{ const r=await drapi("/violations"); DR_CHART=r.violations||[]; }catch(e){ DR_CHART=[]; } }
+
+async function renderDrivers(m){
+  m.innerHTML=head("The book","Drivers",`<button class="btn ghost" id="drAdd">+ Add driver</button>`)
+    +`<div id="drStats" class="stats"></div><div id="drAlerts"></div>
+      <div class="bar">
+        <input class="search" id="drq" placeholder="Search name, phone, city…">
+        <select id="drfCarrier"></select>
+        <select id="drfStage"><option value="">All stages</option>${DR_STAGES.map(s=>`<option>${s}</option>`).join("")}</select>
+        <select id="drfScreen"><option value="">Any screening</option><option value="qualified">Pre-qualified</option><option value="review">Safety review</option><option value="disqualified">Not qualified</option></select>
+      </div><div id="drTbl"></div>`;
+  await loadCarriers();
+  $("#drfCarrier").innerHTML=`<option value="">All carriers</option>`+DR_CARRIERS.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  let rows=[];
+  async function load(){
+    try{ const r=await drapi("/drivers"); rows=r.drivers||[]; }catch(e){ rows=[]; }
+    let st={}; try{ st=await drapi("/stats"); }catch(e){ st={}; }
+    $("#drStats").innerHTML=`
+      <div class="stat"><div class="n">${st.total||0}</div><div class="l">Drivers</div></div>
+      <div class="stat"><div class="n">${st.qualified||0}</div><div class="l">Pre-qualified</div></div>
+      <div class="stat"><div class="n">${st.review||0}</div><div class="l">Safety review</div></div>
+      <div class="stat"><div class="n">${st.applied||0}</div><div class="l">Applied</div></div>
+      <div class="stat"><div class="n">${st.rolling||0}</div><div class="l">Rolling</div></div>`;
+    const al=st.alerts||[];
+    $("#drAlerts").innerHTML=al.length?`<div class="card" style="margin-bottom:14px;padding:12px 16px;border-left:3px solid #e0a800">
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px">⏱ Clocks running out</div>
+      ${al.map(a=>{const bits=[];
+        if(a.drug_test_due)bits.push(`drug test due ${a.drug_test_due}`);
+        if(a.inspection_date)bits.push(`inspection dated ${a.inspection_date}`);
+        if(a.dot_medical_expires)bits.push(`med card expires ${a.dot_medical_expires}`);
+        return `<div class="sub" style="padding:2px 0"><a href="#" data-alert="${a.id}" style="font-weight:600">${esc(a.name)}</a> — ${esc(bits.join(" · "))}</div>`;}).join("")}
+    </div>`:"";
+    $("#drAlerts").querySelectorAll("[data-alert]").forEach(a=>a.onclick=(e)=>{e.preventDefault();openDriver(parseInt(a.dataset.alert,10),load);});
+    draw();
+  }
+  function draw(){
+    const q=($("#drq").value||"").toLowerCase(), fc=$("#drfCarrier").value, fs=$("#drfStage").value, fr=$("#drfScreen").value;
+    const r=rows.filter(x=>(!q||((x.name||"")+(x.phone||"")+(x.city||"")+(x.email||"")).toLowerCase().includes(q))
+      &&(!fc||x.carrier_id===fc)&&(!fs||x.status===fs)&&(!fr||x.screen_result===fr));
+    $("#drTbl").innerHTML=r.length?`<div class="card"><table><thead><tr>
+        <th>Driver</th><th>CDL / experience</th><th>Truck</th><th>Carrier</th><th>Screening</th><th>Stage</th>
+      </tr></thead><tbody>${r.map(x=>`<tr data-id="${x.id}">
+        <td><div class="biz">${avatar(x)}<div><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.phone||x.email||"")}${x.city?" · "+esc(x.city):""}${x.state?", "+esc(x.state):""}</div></div></div></td>
+        <td class="sub">${x.cdl_class?`Class ${esc(x.cdl_class)}${x.cdl_state?" · "+esc(x.cdl_state):""}`:"—"}${x.exp_months_5yr?`<div>${x.exp_months_5yr} mo / 5 yr</div>`:""}</td>
+        <td class="sub">${[x.truck_year,x.truck_make].filter(Boolean).join(" ")||(x.owns_truck===0?"No truck":"—")}</td>
+        <td class="sub">${esc(x.carrier_name||"—")}</td>
+        <td>${screenPill(x.screen_result,x.screen_points)}</td>
+        <td><span class="pill">${esc(x.status||"New")}</span>${x.docs_needed?`<div class="sub">${x.docs_needed} docs needed</div>`:""}</td>
+      </tr>`).join("")}</tbody></table></div>`
+      :`<div class="card"><div class="empty"><div class="mark">🚚</div><h3>No drivers yet</h3>
+        <p>Add one by hand, or share your application link and let them come to you.</p>
+        <button class="btn" onclick="setView('carriers')">Get the application link</button></div></div>`;
+    $("#drTbl").querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>openDriver(parseInt(tr.dataset.id,10),load));
+  }
+  $("#drq").oninput=draw; $("#drfCarrier").onchange=draw; $("#drfStage").onchange=draw; $("#drfScreen").onchange=draw;
+  $("#drAdd").onclick=()=>openDriver(null,load);
+  await load();
+}
+
+async function renderDrPipeline(m){
+  m.innerHTML=head("The board","Pipeline")+`<p class="muted" style="margin:-8px 0 16px">Drag a driver between stages, or click to open their file.</p><div class="kanban" id="drkb"></div>`;
+  await loadCarriers();
+  let rows=[]; try{ const r=await drapi("/drivers"); rows=r.drivers||[]; }catch(e){}
+  const kb=$("#drkb");
+  const shown=DR_STAGES.filter(s=>s!=="Not qualified"||rows.some(r=>r.status==="Not qualified"));
+  kb.innerHTML=shown.map(s=>{
+    const list=rows.filter(r=>(r.status||"New")===s);
+    return `<div class="col" data-status="${s}"><h3>${s} <span class="c">${list.length}</span></h3>
+      ${list.map(r=>`<div class="kcard" draggable="true" data-id="${r.id}">${avatar(r,true)}
+        <div><div class="name">${esc(r.name)}</div><div class="sub">${esc(r.carrier_name||"")}${r.screen_result?" · "+r.screen_points+"pt":""}</div></div></div>`).join("")}</div>`;
+  }).join("");
+  let dragId=null;
+  kb.querySelectorAll(".kcard").forEach(c=>{
+    c.addEventListener("dragstart",()=>{dragId=c.dataset.id;});
+    c.addEventListener("click",()=>openDriver(parseInt(c.dataset.id,10),()=>renderDrPipeline(m)));
+  });
+  kb.querySelectorAll(".col").forEach(col=>{
+    col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("over");});
+    col.addEventListener("dragleave",()=>col.classList.remove("over"));
+    col.addEventListener("drop",async e=>{
+      e.preventDefault(); col.classList.remove("over");
+      if(!dragId)return;
+      try{ await drapi("/drivers/"+dragId,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:col.dataset.status})}); toast("Moved to "+col.dataset.status); }
+      catch(err){ toast(err.message); }
+      dragId=null; renderDrPipeline(m);
+    });
+  });
+}
+
+async function renderCarriers(m){
+  m.innerHTML=head("Who pays us","Carriers",`<button class="btn ghost" id="carAdd">+ Add carrier</button>`)+`<div id="carList"></div>`;
+  async function load(){
+    await loadCarriers();
+    $("#carList").innerHTML=DR_CARRIERS.length?DR_CARRIERS.map(c=>{
+      const applyUrl=location.origin+"/apply.html?carrier="+encodeURIComponent(c.id);
+      const fee=c.fee_amount!=null?(c.fee_type==="percent"?c.fee_amount+"%":drMoney(c.fee_amount)):"not set";
+      return `<div class="card" style="margin-bottom:14px;padding:18px 20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div><div style="font-weight:800;font-size:16px">${esc(c.name)}</div>
+            <div class="sub">${esc(c.terminal||"")}</div>
+            <div class="sub" style="margin-top:4px">${[c.mc_number?"MC# "+esc(c.mc_number):"",c.dot_number?"DOT# "+esc(c.dot_number):"",c.scac?"SCAC "+esc(c.scac):""].filter(Boolean).join(" · ")}</div>
+            <div class="sub" style="margin-top:4px">${esc(c.contact_name||"")}${c.contact_email?" · "+esc(c.contact_email):""}${c.contact_phone?" · "+esc(c.contact_phone):""}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="sub">Drivers</div><div style="font-weight:800;font-size:19px">${c.driver_count||0}</div>
+            <div class="sub" style="margin-top:6px">Fee: <b>${fee}</b> on ${esc(c.fee_trigger||"seated")}</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+          <div class="sub" style="margin-bottom:6px"><b>Public application link</b> — share this in ads, on Facebook, anywhere.</div>
+          <div class="drow" style="gap:8px;align-items:center">
+            <input readonly value="${esc(applyUrl)}" style="font-size:12px" onclick="this.select()">
+            <button class="btn ghost" data-copy="${esc(applyUrl)}" type="button">Copy</button>
+            <a class="btn ghost" href="${esc(applyUrl)}" target="_blank" rel="noopener">Preview ↗</a>
+          </div>
+          ${c.orientation_info?`<div class="sub" style="margin-top:10px"><b>Orientation:</b> ${esc(c.orientation_info)}</div>`:""}
+          <div style="margin-top:10px"><button class="btn ghost sm" data-edit="${c.id}" type="button">Edit carrier &amp; fee</button></div>
+        </div></div>`;
+    }).join(""):`<div class="card"><div class="empty"><div class="mark">🏢</div><h3>No carriers yet</h3><p>Add the carrier you're recruiting for — their qualification rules drive every driver's screening.</p></div></div>`;
+    $("#carList").querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{navigator.clipboard.writeText(b.dataset.copy);toast("Application link copied.");});
+    $("#carList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openCarrier(b.dataset.edit,load));
+  }
+  $("#carAdd").onclick=()=>openCarrier(null,load);
+  await load();
+}
+
+async function openCarrier(id,onSave){
+  let c={};
+  if(id){ try{ const r=await drapi("/carriers/"+id); c=r.carrier||{}; }catch(e){} }
+  const d=$("#drawer");
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead">${avatar({name:c.name||"New carrier"})}<div><div class="name">${esc(c.name||"New carrier")}</div><div class="sub">${esc(c.terminal||"")}</div></div></div>
+    <div class="dbody">
+      <div class="field"><label>Carrier name</label><input id="cName" value="${esc(c.name||"")}"></div>
+      <div class="field"><label>Terminal / office</label><input id="cTerm" value="${esc(c.terminal||"")}" placeholder="Dallas, TX Terminal (DAL)"></div>
+      <div class="drow"><div class="field"><label>MC #</label><input id="cMc" value="${esc(c.mc_number||"")}"></div>
+        <div class="field"><label>DOT #</label><input id="cDot" value="${esc(c.dot_number||"")}"></div>
+        <div class="field"><label>SCAC</label><input id="cScac" value="${esc(c.scac||"")}"></div></div>
+      <div class="field"><label>Contact name</label><input id="cCName" value="${esc(c.contact_name||"")}"></div>
+      <div class="drow"><div class="field"><label>Contact email</label><input id="cCEmail" value="${esc(c.contact_email||"")}"></div>
+        <div class="field"><label>Contact phone</label><input id="cCPhone" value="${esc(c.contact_phone||"")}"></div></div>
+      <div class="drow"><div class="field"><label>Haul type</label><input id="cHaul" value="${esc(c.haul_type||"")}" placeholder="intermodal"></div>
+        <div class="field"><label>Driver type</label><select id="cDType">${["owner_operator","company","lease_purchase"].map(x=>`<option value="${x}" ${c.driver_type===x?"selected":""}>${x.replace(/_/g," ")}</option>`).join("")}</select></div></div>
+      <div class="field"><label>Orientation details</label><input id="cOrient" value="${esc(c.orientation_info||"")}"></div>
+      <div class="field" style="margin-top:6px"><label>What we earn</label>
+        <div class="drow">
+          <select id="cFeeType"><option value="flat" ${c.fee_type!=="percent"?"selected":""}>Flat $ per driver</option><option value="percent" ${c.fee_type==="percent"?"selected":""}>Percent</option></select>
+          <input id="cFeeAmt" type="number" step="0.01" value="${c.fee_amount!=null?c.fee_amount:""}" placeholder="e.g. 500">
+          <select id="cFeeTrig">${[["submitted","when submitted"],["seated","when seated"],["days_30","after 30 days"]].map(([v,l])=>`<option value="${v}" ${c.fee_trigger===v?"selected":""}>${l}</option>`).join("")}</select>
+        </div>
+        <p class="sub" style="margin:6px 0 0">Leave the amount blank until the deal's agreed — everything else still works.</p></div>
+      <div class="field"><label>Notes</label><textarea id="cNotes" rows="3">${esc(c.notes||"")}</textarea></div>
+      <div class="dfoot"><button class="btn" id="cSave">Save carrier</button>
+        ${id?`<button class="btn ghost" id="cDel">Delete</button>`:""}
+        <span class="sub" id="cMsg"></span></div>
+    </div>`;
+  d.classList.add("show"); $("#scrim").classList.add("show"); $("#scrim").onclick=closeDrawer;
+  $("#cSave").onclick=async()=>{
+    const p={name:$("#cName").value.trim(),terminal:$("#cTerm").value.trim()||null,mc_number:$("#cMc").value.trim()||null,
+      dot_number:$("#cDot").value.trim()||null,scac:$("#cScac").value.trim()||null,contact_name:$("#cCName").value.trim()||null,
+      contact_email:$("#cCEmail").value.trim()||null,contact_phone:$("#cCPhone").value.trim()||null,
+      haul_type:$("#cHaul").value.trim()||null,driver_type:$("#cDType").value,orientation_info:$("#cOrient").value.trim()||null,
+      fee_type:$("#cFeeType").value,fee_amount:$("#cFeeAmt").value?parseFloat($("#cFeeAmt").value):null,
+      fee_trigger:$("#cFeeTrig").value,notes:$("#cNotes").value.trim()||null};
+    if(!p.name){ $("#cMsg").textContent="Name is required."; return; }
+    try{
+      if(id) await drapi("/carriers/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(p)});
+      else await drapi("/carriers",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(p)});
+      toast("Carrier saved."); closeDrawer(); onSave&&onSave();
+    }catch(e){ $("#cMsg").textContent=e.message; }
+  };
+  if(id) $("#cDel").onclick=async()=>{ if(!confirm("Delete this carrier? Drivers stay, but lose their link to it."))return;
+    await drapi("/carriers/"+id,{method:"DELETE"}); toast("Carrier deleted."); closeDrawer(); onSave&&onSave(); };
+}
+
+async function renderDrMoney(m){
+  m.innerHTML=head("The money","Placements")+`<div id="mStats" class="stats"></div><div id="mBody"></div>`;
+  let d={},pl=[];
+  try{ d=await drapi("/money"); }catch(e){}
+  try{ const r=await drapi("/placements"); pl=r.placements||[]; }catch(e){}
+  const t=d.totals||{};
+  $("#mStats").innerHTML=`
+    <div class="stat"><div class="n">${t.placements||0}</div><div class="l">Placements</div></div>
+    <div class="stat"><div class="n">${drMoney(t.pending)}</div><div class="l">Pending</div></div>
+    <div class="stat"><div class="n">${drMoney(t.invoiced)}</div><div class="l">Invoiced</div></div>
+    <div class="stat due"><div class="n">${drMoney(t.paid)}</div><div class="l">Paid</div></div>`;
+  const byC=d.by_carrier||[];
+  $("#mBody").innerHTML=`
+    ${byC.length?`<div class="card" style="margin-bottom:14px"><table><thead><tr><th>Carrier</th><th>Placements</th><th>Booked</th><th>Paid</th></tr></thead>
+      <tbody>${byC.map(r=>`<tr><td>${esc(r.carrier||"—")}</td><td>${r.n}</td><td>${drMoney(r.total)}</td><td>${drMoney(r.paid)}</td></tr>`).join("")}</tbody></table></div>`:""}
+    ${pl.length?`<div class="card"><table><thead><tr><th>Driver</th><th>Carrier</th><th>Fee</th><th>Trigger</th><th>Status</th></tr></thead>
+      <tbody>${pl.map(p=>`<tr><td>${esc(p.driver_name||"—")}</td><td>${esc(p.carrier_name||"—")}</td>
+        <td>${p.fee_amount!=null?drMoney(p.fee_amount):"—"}</td><td class="sub">${esc(p.trigger_met||"")}</td>
+        <td><select data-pl="${p.id}" class="plst">${["pending","invoiced","paid","clawed_back"].map(s=>`<option value="${s}" ${p.status===s?"selected":""}>${s.replace("_"," ")}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div>`
+      :`<div class="card"><div class="empty"><div class="mark">💵</div><h3>No placements yet</h3><p>A placement is created when a driver is submitted or seated, depending on the carrier's fee trigger.</p></div></div>`}`;
+  $("#mBody").querySelectorAll(".plst").forEach(sel=>sel.onchange=async()=>{
+    try{ await drapi("/placements/"+sel.dataset.pl,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:sel.value})}); toast("Updated."); renderDrMoney(m); }
+    catch(e){ toast(e.message); }
+  });
+}
+
+async function openDriver(id,onSave){
+  let p={},docs=[],sc=null;
+  await loadCarriers(); await loadChart();
+  if(id){ try{ const r=await drapi("/drivers/"+id); p=r.driver||{}; docs=r.docs||[]; }catch(e){} }
+  try{ sc=p.screen_detail?JSON.parse(p.screen_detail):null; }catch(e){ sc=null; }
+  let viols=[]; try{ viols=p.violations?JSON.parse(p.violations):[]; }catch(e){ viols=[]; }
+  const d=$("#drawer");
+  const carrier=DR_CARRIERS.find(x=>x.id===p.carrier_id);
+
+  // --- screening panel
+  let screenBlock="";
+  if(id){
+    const bullets=(arr,color,label)=>arr&&arr.length?`<div style="margin-top:8px"><div class="sub" style="font-weight:700;color:${color}">${label}</div>
+      <ul style="margin:3px 0 0;padding-left:17px;font-size:12.5px;line-height:1.55">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:"";
+    screenBlock=`<div class="field"><label>Screening${carrier?` <span class="sub" style="font-weight:400">· against ${esc(carrier.name)}'s criteria</span>`:""}</label>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          ${screenPill(p.screen_result,p.screen_points)}
+          <button class="btn ghost sm" id="dRescreen" type="button">Re-screen</button>
+        </div>
+        ${sc?`${bullets(sc.blockers,"#9b2c2c","Blocks submission")}
+             ${bullets(sc.reviews,"#8a5a00","Needs Safety approval")}
+             ${bullets(sc.warnings,"#5b6472","Worth knowing")}
+             ${sc.scored&&sc.scored.length?`<div style="margin-top:8px"><div class="sub" style="font-weight:700">Points</div>
+               <table style="width:100%;font-size:12.5px;margin-top:2px">${sc.scored.map(s=>`<tr><td style="padding:2px 0;color:var(--ink-soft)">${esc(s.label)}${s.date?` <span style="opacity:.7">${esc(s.date)}</span>`:""}</td><td style="text-align:right;font-weight:700">${s.points}</td></tr>`).join("")}
+               <tr><td style="padding-top:5px;font-weight:700;border-top:1px solid var(--line-2)">Total</td><td style="text-align:right;font-weight:800;border-top:1px solid var(--line-2)">${p.screen_points||0}</td></tr></table></div>`:""}
+             ${!sc.blockers.length&&!sc.reviews.length?`<p class="sub" style="margin:8px 0 0">Meets every published requirement. Clear to submit.</p>`:""}`
+          :`<p class="sub" style="margin:8px 0 0">Fill in date of birth, CDL, experience and driving record, then re-screen.</p>`}
+      </div></div>`;
+  }
+
+  // --- onboarding milestones
+  let flowBlock="";
+  if(id){
+    const st=[
+      {label:"Application in", done:!!p.applied_at},
+      {label:"Submitted to carrier", done:!!p.submitted_at},
+      {label:"Confirmation number", done:!!p.confirmation_no},
+      {label:"Clearinghouse query accepted", done:!!p.clearinghouse_ok},
+      {label:"Experience verified", done:!!p.experience_verified},
+      {label:"Pre-approved", done:!!p.preapproved_at},
+      {label:"Drug test complete", done:!!p.drug_test_done_at},
+      {label:"Documents in", done:!!docs.length&&docs.every(x=>x.status==="received")},
+      {label:"Lease signed", done:!!p.lease_signed_at},
+      {label:"Orientation", done:!!p.orientation_at},
+      {label:"Rolling", done:!!p.started_at},
+    ];
+    let cur=st.findIndex(s=>!s.done); if(cur<0)cur=st.length;
+    const steps=st.map((s,i)=>`<div style="display:flex;align-items:center;gap:9px;padding:3px 0">
+      <span style="width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:${s.done?'#35c08a':(i===cur?'var(--pink)':'#e9e4ee')};color:${(s.done||i===cur)?'#fff':'#a79ba2'}">${s.done?"✓":i+1}</span>
+      <span style="font-size:13px;font-weight:${i===cur?700:500};color:${i===cur?'var(--ink)':(s.done?'var(--ink-soft)':'#a79ba2')}">${s.label}</span></div>`).join("");
+    // The drug-test clock is the one that quietly kills applications.
+    let clock="";
+    if(p.drug_test_due&&!p.drug_test_done_at){
+      const left=Math.ceil((new Date(p.drug_test_due+"T00:00:00Z")-new Date())/86400000);
+      clock=`<div class="sub" style="margin-top:8px;padding:8px 10px;border-radius:9px;background:${left<=2?'#fbe3e3':'#fdf6e3'};color:${left<=2?'#9b2c2c':'#8a5a00'};font-weight:600">
+        ⏱ Drug test due ${esc(p.drug_test_due)}${left>=0?` — ${left} day${left===1?"":"s"} left`:" — overdue"}</div>`;
+    }
+    let action="";
+    if(!p.applied_at){
+      action=`<div class="drow" style="gap:8px"><button class="btn" id="dLink" type="button">Get application link</button>
+        ${p.email?`<button class="btn ghost" id="dEmailApply" type="button">✉️ Email to driver</button>`:""}</div>
+        <div id="dLinkOut" class="sub" style="margin-top:8px"></div>`;
+    } else if(!p.submitted_at){
+      const blocked=p.screen_result==="disqualified";
+      action=`<button class="btn" id="dSubmit" type="button"${blocked?' style="opacity:.55"':''}>Submit to carrier →</button>
+        <p class="sub" style="margin:8px 0 0">${blocked?"This driver doesn't meet the carrier's standards — submitting anyway needs a confirm.":carrier?`Emails ${esc(carrier.contact_name||carrier.name)} their full file with the screening result.`:"Assign a carrier first."}</p>`;
+    } else {
+      action=`<p class="sub" style="margin:0">Submitted ${esc((p.submitted_at||"").slice(0,10))}. Work the checklist below as the carrier moves them along.</p>`;
+    }
+    flowBlock=`<div class="field"><label>Onboarding</label>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">${steps}${clock}
+        <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--line-2)">${action}</div></div></div>`;
+  }
+
+  // --- documents
+  let docBlock="";
+  if(id){
+    docBlock=`<div class="field"><label>Documents${carrier?` <span class="sub" style="font-weight:400">· ${esc(carrier.name)}'s list</span>`:""}</label>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">
+        ${docs.length?docs.map(x=>{
+          const stale=x.kind==="inspection"&&x.doc_date&&((Date.now()-new Date(x.doc_date+"T00:00:00Z"))/86400000>30);
+          return `<div style="display:grid;grid-template-columns:1fr 118px 92px;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--line-2)">
+            <div style="font-size:13px">${esc(x.label||x.kind)}${stale?`<div class="sub" style="color:#9b2c2c;font-weight:600">Older than 30 days — needs a fresh one</div>`:""}</div>
+            <input type="date" data-dd="${x.id}" data-f="doc_date" value="${esc(x.doc_date||"")}" style="font-size:12px;padding:6px">
+            <select data-dd="${x.id}" data-f="status" style="font-size:12px;padding:6px">${["needed","received","rejected"].map(s=>`<option value="${s}" ${x.status===s?"selected":""}>${s}</option>`).join("")}</select>
+          </div>`;}).join("")
+        :`<p class="sub" style="margin:0">No checklist yet.</p>`}
+        <div style="margin-top:10px"><button class="btn ghost sm" id="dSeedDocs" type="button">${docs.length?"Refresh from carrier":"Build checklist from carrier"}</button></div>
+        <p class="sub" style="margin:8px 0 0;font-size:11.5px">The date field matters on the federal inspection — it must be under 30 days old when the file goes in.</p>
+      </div></div>`;
+  }
+
+  // --- violations editor
+  const vopts=(sel)=>`<option value="">Choose…</option>`+DR_CHART.map(c=>`<option value="${c.code}" ${sel===c.code?"selected":""}>${esc(c.label)}${c.points?` (${c.points}pt)`:c.prohibit_years?` (${c.prohibit_years}yr bar)`:""}</option>`).join("");
+  const vrows=()=>viols.map((v,i)=>`<div class="drow" data-vi="${i}" style="gap:6px;margin-bottom:6px">
+      <select data-vf="code" style="font-size:12.5px">${vopts(v.code)}</select>
+      <input type="date" data-vf="date" value="${esc(v.date||"")}" style="font-size:12.5px;max-width:140px">
+      <button class="btn ghost sm" data-vdel="${i}" type="button">×</button></div>`).join("");
+
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead">${avatar({name:p.name||"New driver"})}<div><div class="name">${esc(p.name||"New driver")}</div>
+      <div class="sub">${id?screenPill(p.screen_result,p.screen_points):"Owner-operator"}</div></div></div>
+    <div class="dbody">
+      ${screenBlock}
+      <div class="field"><label>Name</label><input id="dName" value="${esc(p.name||"")}"></div>
+      <div class="drow"><div class="field"><label>Phone</label><input id="dPhone" value="${esc(p.phone||"")}"></div>
+        <div class="field"><label>Email</label><input id="dEmail" value="${esc(p.email||"")}"></div></div>
+      <div class="drow"><div class="field"><label>City</label><input id="dCity" value="${esc(p.city||"")}"></div>
+        <div class="field"><label>State</label><input id="dState" value="${esc(p.state||"")}" maxlength="2" placeholder="TX"></div>
+        <div class="field"><label>Date of birth</label><input id="dDob" type="date" value="${esc(p.dob||"")}"></div></div>
+      <div class="drow"><div class="field"><label>Carrier</label><select id="dCarrier"><option value="">—</option>${DR_CARRIERS.map(c=>`<option value="${c.id}" ${p.carrier_id===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Stage</label><select id="dStatus">${DR_STAGES.map(s=>`<option ${(p.status||"New")===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
+      <div class="field"><label>Legally authorized to work in the US</label>
+        <select id="dWork"><option value="">—</option><option value="1" ${p.work_authorized===1?"selected":""}>Yes</option><option value="0" ${p.work_authorized===0?"selected":""}>No</option></select></div>
+
+      <div class="field" style="margin-top:14px"><label>CDL &amp; medical</label>
+        <div class="drow"><select id="dCdlClass"><option value="">Class —</option>${["A","B","C"].map(x=>`<option ${p.cdl_class===x?"selected":""}>${x}</option>`).join("")}</select>
+          <input id="dCdlState" value="${esc(p.cdl_state||"")}" maxlength="2" placeholder="State">
+          <input id="dCdlExp" type="date" value="${esc(p.cdl_expires||"")}"></div>
+        <div class="drow" style="margin-top:8px"><input id="dEndorse" value="${esc(p.endorsements||"")}" placeholder="twic,hazmat">
+          <input id="dMed" type="date" value="${esc(p.dot_medical_expires||"")}" placeholder="Med card expiry"></div>
+        <p class="sub" style="margin:6px 0 0">CDL state should match the state of residence · med card expiry drives the alert.</p></div>
+
+      <div class="field"><label>Class A experience</label>
+        <div class="drow"><input id="dExp5" type="number" value="${p.exp_months_5yr!=null?p.exp_months_5yr:""}" placeholder="Months / 5 yr">
+          <input id="dExp3" type="number" value="${p.exp_months_3yr!=null?p.exp_months_3yr:""}" placeholder="Months / 3 yr">
+          <input id="dFlat" type="number" value="${p.flatbed_months_1yr!=null?p.flatbed_months_1yr:""}" placeholder="Flatbed / 1 yr"></div></div>
+
+      <div class="field"><label>Truck</label>
+        <div class="drow"><input id="dTruckYear" type="number" value="${p.truck_year||""}" placeholder="Year">
+          <input id="dTruckMake" value="${esc(p.truck_make||"")}" placeholder="Make">
+          <input id="dTruckVin" value="${esc(p.truck_vin||"")}" placeholder="VIN"></div>
+        <div class="drow" style="margin-top:8px">
+          <select id="dOwns"><option value="">Owns truck —</option><option value="1" ${p.owns_truck===1?"selected":""}>Owns a truck</option><option value="0" ${p.owns_truck===0?"selected":""}>No truck</option></select>
+          <input id="dInsp" type="date" value="${esc(p.inspection_date||"")}" placeholder="Inspection date"></div>
+        <div class="drow" style="margin-top:8px">
+          <select id="dPlates"><option value="">Plates —</option><option value="1" ${p.wants_carrier_plates===1?"selected":""}>Carrier plates</option><option value="0" ${p.wants_carrier_plates===0?"selected":""}>Own plates</option></select>
+          <select id="dIfta"><option value="">IFTA —</option><option value="1" ${p.wants_ifta===1?"selected":""}>Carrier IFTA</option><option value="0" ${p.wants_ifta===0?"selected":""}>Own IFTA</option></select>
+          <select id="dBiz"><option value="">Entity —</option><option value="1" ${p.has_business===1?"selected":""}>Has LLC/EIN</option><option value="0" ${p.has_business===0?"selected":""}>Individual</option></select></div></div>
+
+      <div class="field"><label>Driving record <span class="sub" style="font-weight:400">· 3-year moving violations, 5-year accidents</span></label>
+        <div id="dViols">${vrows()}</div>
+        <button class="btn ghost sm" id="dAddViol" type="button">+ Add violation</button></div>
+
+      <div class="field"><label>Background</label>
+        <div class="drow"><select id="dMisd"><option value="">Misdemeanor —</option><option value="1" ${p.misdemeanor===1?"selected":""}>Yes</option><option value="0" ${p.misdemeanor===0?"selected":""}>No</option></select>
+          <select id="dFel"><option value="">Felony —</option><option value="1" ${p.felony===1?"selected":""}>Yes</option><option value="0" ${p.felony===0?"selected":""}>No</option></select></div>
+        <div class="drow" style="margin-top:8px"><input id="dPos" type="date" value="${esc(p.positive_test_at||"")}" placeholder="Positive test">
+          <input id="dSap" type="date" value="${esc(p.sap_completed_at||"")}" placeholder="SAP completed"></div>
+        <textarea id="dBgNote" rows="2" style="margin-top:8px" placeholder="Context for Safety review">${esc(p.background_note||"")}</textarea></div>
+
+      ${flowBlock}
+      ${id?`<div class="field"><label>Carrier milestones</label>
+        <div class="drow"><input id="dConf" value="${esc(p.confirmation_no||"")}" placeholder="Confirmation #">
+          <input id="dDrugSched" type="date" value="${esc(p.drug_test_scheduled_at||"")}" placeholder="Drug test scheduled">
+          <input id="dDrugDone" type="date" value="${esc(p.drug_test_done_at||"")}" placeholder="Drug test done"></div>
+        <div class="drow" style="margin-top:8px">
+          <select id="dClear"><option value="">Clearinghouse —</option><option value="1" ${p.clearinghouse_ok===1?"selected":""}>Accepted</option><option value="0" ${p.clearinghouse_ok===0?"selected":""}>Not yet</option></select>
+          <select id="dExpVer"><option value="">Experience —</option><option value="1" ${p.experience_verified===1?"selected":""}>Verified</option><option value="0" ${p.experience_verified===0?"selected":""}>Not yet</option></select></div>
+        <div class="drow" style="margin-top:8px"><input id="dLeaseSent" type="date" value="${esc(p.lease_sent_at||"")}" placeholder="Lease sent">
+          <input id="dLeaseSigned" type="date" value="${esc(p.lease_signed_at||"")}" placeholder="Lease signed">
+          <input id="dOrient" type="date" value="${esc(p.orientation_at||"")}" placeholder="Orientation"></div>
+        <div class="drow" style="margin-top:8px"><input id="dStarted" type="date" value="${esc(p.started_at||"")}" placeholder="First day rolling"></div>
+        <p class="sub" style="margin:6px 0 0">Setting the drug-test date starts the carrier's 7-business-day clock.</p></div>`:""}
+      ${docBlock}
+      <div class="dfoot"><button class="btn" id="dSave">Save driver</button>
+        ${id?`<button class="btn ghost" id="dDel">Delete</button>`:""}
+        <span class="sub" id="dMsg"></span></div>
+    </div>`;
+  d.classList.add("show"); $("#scrim").classList.add("show"); $("#scrim").onclick=closeDrawer;
+
+  const val=x=>{const e=$(x);return e?e.value.trim():"";};
+  const tri=x=>{const v=val(x);return v===""?null:parseInt(v,10);};
+  const numv=x=>{const v=val(x);return v===""?null:parseInt(v,10);};
+  function collect(){
+    const b={name:val("#dName"),phone:val("#dPhone")||null,email:val("#dEmail")||null,city:val("#dCity")||null,
+      state:val("#dState").toUpperCase()||null,dob:val("#dDob")||null,carrier_id:val("#dCarrier")||null,status:val("#dStatus"),
+      work_authorized:tri("#dWork"),cdl_class:val("#dCdlClass")||null,cdl_state:val("#dCdlState").toUpperCase()||null,
+      cdl_expires:val("#dCdlExp")||null,endorsements:val("#dEndorse")||null,dot_medical_expires:val("#dMed")||null,
+      exp_months_5yr:numv("#dExp5"),exp_months_3yr:numv("#dExp3"),flatbed_months_1yr:numv("#dFlat"),
+      truck_year:numv("#dTruckYear"),truck_make:val("#dTruckMake")||null,truck_vin:val("#dTruckVin")||null,
+      owns_truck:tri("#dOwns"),inspection_date:val("#dInsp")||null,wants_carrier_plates:tri("#dPlates"),
+      wants_ifta:tri("#dIfta"),has_business:tri("#dBiz"),misdemeanor:tri("#dMisd"),felony:tri("#dFel"),
+      positive_test_at:val("#dPos")||null,sap_completed_at:val("#dSap")||null,background_note:val("#dBgNote")||null,
+      violations:viols.filter(v=>v.code)};
+    if(id){ Object.assign(b,{confirmation_no:val("#dConf")||null,drug_test_scheduled_at:val("#dDrugSched")||null,
+      drug_test_done_at:val("#dDrugDone")||null,clearinghouse_ok:tri("#dClear"),experience_verified:tri("#dExpVer"),
+      lease_sent_at:val("#dLeaseSent")||null,lease_signed_at:val("#dLeaseSigned")||null,orientation_at:val("#dOrient")||null,
+      started_at:val("#dStarted")||null}); }
+    return b;
+  }
+  function wireViols(){
+    const box=$("#dViols");
+    box.querySelectorAll("[data-vf]").forEach(el=>el.onchange=()=>{
+      const i=+el.closest("[data-vi]").dataset.vi; viols[i][el.dataset.vf]=el.value; });
+    box.querySelectorAll("[data-vdel]").forEach(b=>b.onclick=()=>{ viols.splice(+b.dataset.vdel,1); box.innerHTML=vrows(); wireViols(); });
+  }
+  wireViols();
+  $("#dAddViol").onclick=()=>{ viols.push({code:"",date:""}); $("#dViols").innerHTML=vrows(); wireViols(); };
+
+  $("#dSave").onclick=async()=>{
+    const b=collect();
+    if(!b.name){ $("#dMsg").textContent="Name is required."; return; }
+    const btn=$("#dSave"); btn.disabled=true; $("#dMsg").textContent="Saving…";
+    try{
+      if(id) await drapi("/drivers/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(b)});
+      else{ const r=await drapi("/drivers",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)}); id=r.id; }
+      toast("Driver saved."); closeDrawer(); onSave&&onSave();
+    }catch(e){ $("#dMsg").textContent=e.message; btn.disabled=false; }
+  };
+  if(id){
+    $("#dDel").onclick=async()=>{ if(!confirm("Delete this driver and their documents?"))return;
+      await drapi("/drivers/"+id,{method:"DELETE"}); toast("Driver deleted."); closeDrawer(); onSave&&onSave(); };
+    $("#dRescreen").onclick=async()=>{
+      try{ await drapi("/drivers/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(collect())});
+        toast("Re-screened."); closeDrawer(); openDriver(id,onSave); }catch(e){ toast(e.message); }
+    };
+    const linkBtn=$("#dLink");
+    if(linkBtn) linkBtn.onclick=async()=>{
+      try{ const r=await drapi("/drivers/"+id+"/apply-link",{method:"POST"});
+        $("#dLinkOut").innerHTML=`<input readonly value="${esc(r.url)}" onclick="this.select()" style="font-size:12px">`;
+        navigator.clipboard&&navigator.clipboard.writeText(r.url); toast("Application link copied.");
+      }catch(e){ toast(e.message); }
+    };
+    const emailBtn=$("#dEmailApply");
+    if(emailBtn) emailBtn.onclick=async()=>{
+      emailBtn.disabled=true;
+      try{ const r=await drapi("/drivers/"+id+"/email-apply",{method:"POST"}); toast(r.emailed?("Application emailed to "+r.sent_to):"Link ready (email not configured)."); }
+      catch(e){ toast(e.message); } finally{ emailBtn.disabled=false; }
+    };
+    const subBtn=$("#dSubmit");
+    if(subBtn) subBtn.onclick=async()=>{
+      if(!val("#dCarrier")){ toast("Assign a carrier first."); return; }
+      subBtn.disabled=true;
+      try{
+        await drapi("/drivers/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(collect())});
+        let r;
+        try{ r=await drapi("/drivers/"+id+"/submit",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}); }
+        catch(err){
+          if(!/does not meet/i.test(err.message)) throw err;
+          if(!confirm(err.message+"\n\nSubmit anyway?")) { subBtn.disabled=false; return; }
+          r=await drapi("/drivers/"+id+"/submit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({force:true})});
+        }
+        toast(r.emailed?("Submitted to "+r.sent_to):"Marked submitted (email not configured).");
+        closeDrawer(); onSave&&onSave();
+      }catch(e){ toast(e.message); subBtn.disabled=false; }
+    };
+    const seed=$("#dSeedDocs");
+    if(seed) seed.onclick=async()=>{
+      try{ await drapi("/drivers/"+id+"/docs",{method:"POST"}); toast("Checklist updated."); closeDrawer(); openDriver(id,onSave); }
+      catch(e){ toast(e.message); }
+    };
+    d.querySelectorAll("[data-dd]").forEach(el=>el.onchange=async()=>{
+      const body={}; body[el.dataset.f]=el.value;
+      try{ await drapi("/docs/"+el.dataset.dd,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)}); toast("Document updated."); }
+      catch(e){ toast(e.message); }
+    });
+  }
+}
+
 // ============ PATIENTS APP (aiw-patients environment) ============
 function applyPatientsProfile(){
   const nav=document.getElementById("nav"); if(!nav)return;
@@ -1946,6 +2442,7 @@ async function boot(){
   window.ME=me.user; installLogout();
   if(me.user.role==="client"){ document.body.classList.add("portal"); return renderClientPortal(); }
   if(PROFILE==="patients") applyPatientsProfile();
+  if(PROFILE==="recruiting") applyRecruitingProfile();
   installAccountSwitch(); renderHero(); render();
 }
 boot();

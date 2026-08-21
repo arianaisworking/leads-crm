@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Application</title>
+<style>
+  :root{--bg:#f4f6f9;--panel:#fff;--ink:#1f2733;--soft:#5b6472;--line:#e3e8ef;--brand:#2f6fed;--brand-wash:#eef3fe;--ok:#1f9d6b;--warn:#b7791f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:18px 14px 130px}
+  .top,.sec{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
+  .top h1{margin:0 0 6px;font-size:23px;line-height:1.25}
+  .top .sub{color:var(--soft);font-size:14px}
+  .badge{display:inline-block;background:var(--brand-wash);color:var(--brand);font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;margin-bottom:11px;letter-spacing:.04em;text-transform:uppercase}
+  .sec h2{margin:0 0 4px;font-size:17px}
+  .sec .note{color:var(--soft);font-size:13.5px;margin:0 0 16px}
+  .f{margin-bottom:15px}
+  .f>label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+  .f .hint{font-weight:400;color:var(--soft);font-size:12.5px;display:block;margin-top:2px}
+  .f input,.f textarea,.f select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font:inherit;background:#fff;color:var(--ink)}
+  .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,111,237,.12)}
+  .f textarea{min-height:80px;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .yn{display:flex;gap:9px}
+  .yn button{flex:1;padding:12px;border:1px solid var(--line);background:#fff;border-radius:11px;font:inherit;font-weight:600;cursor:pointer;color:var(--soft)}
+  .yn button.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand)}
+  .yn button.sel.no{border-color:#d99;background:#fdecec;color:#9b2c2c}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:14px;cursor:pointer;background:#fff;user-select:none}
+  .chip.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand);font-weight:600}
+  .vrow{display:grid;grid-template-columns:1fr 145px 38px;gap:8px;margin-bottom:9px;align-items:center}
+  .vrow select,.vrow input{padding:10px;font-size:14px}
+  .vrow .x{border:1px solid var(--line);background:#fff;border-radius:9px;height:42px;cursor:pointer;color:var(--soft);font-size:17px}
+  .addv{border:1px dashed var(--line);background:#fbfcfe;color:var(--brand);border-radius:11px;padding:11px;width:100%;font:inherit;font-weight:600;cursor:pointer}
+  .consent{background:#fbfcfe;border:1px solid var(--line);border-radius:11px;padding:13px;font-size:13px;color:var(--soft);line-height:1.55;margin-bottom:13px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px 14px;display:flex;justify-content:center;box-shadow:0 -2px 12px rgba(20,22,40,.06)}
+  .bar .inner{max-width:720px;width:100%;display:flex;align-items:center;gap:12px;justify-content:space-between}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:12px;padding:14px 26px;font:inherit;font-weight:700;cursor:pointer}
+  .btn:disabled{opacity:.55}
+  .prog{font-size:13px;color:var(--soft)}
+  .msg{text-align:center;padding:52px 22px}
+  .check{width:60px;height:60px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px}
+  .err{background:#fdecec;border:1px solid #f5c2c2;color:#9b2c2c;border-radius:11px;padding:11px 13px;font-size:14px;margin-bottom:12px;display:none}
+  .req{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--soft);margin-bottom:7px}
+  .req b{color:var(--ink);font-weight:600}
+  .tick{color:var(--ok);font-weight:700}
+  @media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr}.vrow{grid-template-columns:1fr 120px 38px}}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap"><div class="top"><div class="sub">Loading your application…</div></div></div>
+<div class="bar" id="bar" style="display:none"><div class="inner">
+  <span class="prog" id="prog"></span>
+  <button class="btn" id="submitBtn">Submit application</button>
+</div></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const qs=new URLSearchParams(location.search);
+const TOKEN=qs.get("token")||"", CARRIER=qs.get("carrier")||"";
+const Q=TOKEN?("token="+encodeURIComponent(TOKEN)):("carrier="+encodeURIComponent(CARRIER));
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const STATES=["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+const ENDORSE=[["twic","TWIC"],["hazmat","Hazmat"],["tanker","Tanker"],["doubles","Doubles/Triples"]];
+const A={violations:[]};   // the answers we build up
+let CHART=[];
+
+function ynField(key,label,hint,invertNo){
+  return `<div class="f"><label>${label}${hint?`<span class="hint">${hint}</span>`:""}</label>
+    <div class="yn" data-yn="${key}">
+      <button type="button" data-v="1">Yes</button>
+      <button type="button" data-v="0"${invertNo?' class="no-style"':''}>No</button>
+    </div></div>`;
+}
+function wireYN(root){
+  root.querySelectorAll("[data-yn]").forEach(g=>{
+    const key=g.dataset.yn;
+    g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      A[key]=b.dataset.v==="1"?1:0;
+      g.querySelectorAll("button").forEach(x=>x.classList.remove("sel","no"));
+      b.classList.add("sel"); if(b.dataset.v==="0") b.classList.add("no");
+      onChange();
+    });
+    if(A[key]!=null){ const b=g.querySelector(`[data-v="${A[key]}"]`); if(b){b.classList.add("sel"); if(A[key]===0)b.classList.add("no");} }
+  });
+}
+function stateOpts(sel){ return `<option value="">—</option>`+STATES.map(s=>`<option${s===sel?" selected":""}>${s}</option>`).join(""); }
+
+function violationRow(i){
+  const v=A.violations[i]||{};
+  const minor=CHART.filter(c=>c.group==="minor"), serious=CHART.filter(c=>c.group==="serious");
+  return `<div class="vrow" data-i="${i}">
+    <select data-vf="code">
+      <option value="">Choose…</option>
+      <optgroup label="Tickets & incidents">${minor.map(c=>`<option value="${c.code}"${v.code===c.code?" selected":""}>${esc(c.label)}</option>`).join("")}</optgroup>
+      <optgroup label="Major violations">${serious.map(c=>`<option value="${c.code}"${v.code===c.code?" selected":""}>${esc(c.label)}</option>`).join("")}</optgroup>
+    </select>
+    <input type="date" data-vf="date" value="${esc(v.date||"")}">
+    <button type="button" class="x" data-del="${i}">×</button>
+  </div>`;
+}
+function drawViolations(){
+  const box=$("#vlist"); if(!box)return;
+  box.innerHTML=A.violations.map((_,i)=>violationRow(i)).join("")||`<p class="note" style="margin:0 0 10px">No tickets or accidents in the last 5 years — that's the best answer there is.</p>`;
+  box.querySelectorAll("[data-vf]").forEach(el=>el.onchange=()=>{
+    const i=+el.closest(".vrow").dataset.i;
+    A.violations[i][el.dataset.vf]=el.value; onChange();
+  });
+  box.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ A.violations.splice(+b.dataset.del,1); drawViolations(); onChange(); });
+}
+
+function onChange(){
+  const need=[["name","your name"],["phone","a phone number"]];
+  const missing=need.filter(([k])=>!A[k]);
+  const p=$("#prog");
+  if(p) p.textContent = missing.length ? "Still needed: "+missing.map(m=>m[1]).join(", ") : "Ready to submit";
+}
+
+function render(d){
+  const c=d.carrier||{};
+  const pf=d.prefill||{};
+  Object.assign(A,{name:pf.name||"",phone:pf.phone||"",email:pf.email||"",city:pf.city||"",state:pf.state||""});
+  const where=[c.city,c.state].filter(Boolean).join(", ");
+  $("#wrap").innerHTML=`
+  <div class="top">
+    <div class="badge">Driver application</div>
+    <h1>Drive with ${esc(c.name||"us")}</h1>
+    <div class="sub">${c.driver_type==="owner_operator"?"Owner-operator lease-on":"Driver position"}${c.haul_type?" · "+esc(c.haul_type):""}${where?" · "+esc(where):""}</div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      ${c.needs_own_truck?`<div class="req"><span class="tick">✓</span><div><b>You bring the truck.</b> ${c.needs_own_trailer?"You'll need a trailer too.":"No trailer needed — that's on the carrier."}</div></div>`:""}
+      <div class="req"><span class="tick">✓</span><div><b>You don't have to be a U.S. citizen</b> — you just have to be legally able to work here.</div></div>
+      <div class="req"><span class="tick">✓</span><div><b>Misdemeanors are looked at case by case</b>, not an automatic no.</div></div>
+      ${c.orientation_info?`<div class="req"><span class="tick">✓</span><div><b>Orientation:</b> ${esc(c.orientation_info)}</div></div>`:""}
+    </div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="sec">
+    <h2>About you</h2>
+    <p class="note">The basics, so we can get back to you.</p>
+    <div class="f"><label>Full name</label><input id="f_name" value="${esc(A.name)}" autocomplete="name"></div>
+    <div class="grid2">
+      <div class="f"><label>Cell phone</label><input id="f_phone" type="tel" value="${esc(A.phone)}" autocomplete="tel"></div>
+      <div class="f"><label>Email</label><input id="f_email" type="email" value="${esc(A.email)}" autocomplete="email"></div>
+    </div>
+    <div class="grid2">
+      <div class="f"><label>City</label><input id="f_city" value="${esc(A.city)}"></div>
+      <div class="f"><label>State</label><select id="f_state">${stateOpts(A.state)}</select></div>
+    </div>
+    <div class="f"><label>Date of birth<span class="hint">You must be 22 or older to qualify.</span></label><input id="f_dob" type="date"></div>
+    ${ynField("work_authorized","Are you legally authorized to work in the United States?","Citizenship isn't required — work authorization is.")}
+  </div>
+
+  <div class="sec">
+    <h2>Your CDL</h2>
+    <p class="note">A valid Class A from your state of residence is required.</p>
+    <div class="grid3">
+      <div class="f"><label>Class</label><select id="f_cdl_class"><option value="">—</option><option>A</option><option>B</option><option>C</option></select></div>
+      <div class="f"><label>Issuing state</label><select id="f_cdl_state">${stateOpts("")}</select></div>
+      <div class="f"><label>Expires</label><input id="f_cdl_expires" type="date"></div>
+    </div>
+    <div class="f"><label>Endorsements<span class="hint">Tap any you hold.</span></label>
+      <div class="chips" id="endorse">${ENDORSE.map(([k,l])=>`<div class="chip" data-e="${k}">${l}</div>`).join("")}</div>
+    </div>
+    <div class="f"><label>DOT medical card expires<span class="hint">Your DOT physical must be current.</span></label><input id="f_dot_medical_expires" type="date"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Your experience</h2>
+    <p class="note">Class A driving only. Be accurate — the carrier verifies this with your previous employers.</p>
+    <div class="grid2">
+      <div class="f"><label>Months driving Class A in the last 5 years<span class="hint">At least 12 months required.</span></label><input id="f_exp_months_5yr" type="number" min="0" max="60" inputmode="numeric"></div>
+      <div class="f"><label>…of those, how many in the last 3 years?<span class="hint">At least 8 months required.</span></label><input id="f_exp_months_3yr" type="number" min="0" max="36" inputmode="numeric"></div>
+    </div>
+    <div class="f"><label>Months pulling flatbed in the last year<span class="hint">Only matters if you want flatbed work.</span></label><input id="f_flatbed_months_1yr" type="number" min="0" max="12" inputmode="numeric"></div>
+    ${ynField("can_verify_employers","Can your previous employers be reached to verify your experience?","If not, the carrier can accept 3 years of 1099s instead.")}
+    ${ynField("has_1099s","Do you have 3 years of 1099s available?","")}
+  </div>
+
+  <div class="sec">
+    <h2>Your truck</h2>
+    <p class="note">This is an owner-operator lease-on — you bring the tractor.${c.needs_own_trailer?"":" The trailer is the carrier's."}</p>
+    ${ynField("owns_truck","Do you own (or are you buying) your truck?","")}
+    <div class="grid3">
+      <div class="f"><label>Year</label><input id="f_truck_year" type="number" inputmode="numeric" placeholder="2019"></div>
+      <div class="f"><label>Make</label><input id="f_truck_make" placeholder="Freightliner"></div>
+      <div class="f"><label>Color</label><input id="f_truck_color"></div>
+    </div>
+    <div class="grid2">
+      <div class="f"><label>VIN</label><input id="f_truck_vin"></div>
+      <div class="f"><label>Lienholder <span class="hint">Leave blank if paid off.</span></label><input id="f_lienholder"></div>
+    </div>
+    <div class="grid2">
+      <div class="f"><label>Plate #</label><input id="f_truck_plate"></div>
+      <div class="f"><label>Plate state</label><select id="f_truck_plate_state">${stateOpts("")}</select></div>
+    </div>
+    <div class="f"><label>Date of your last federal inspection<span class="hint">It has to be dated within 30 days when your file goes in — if yours is older, you'll need a fresh one.</span></label><input id="f_inspection_date" type="date"></div>
+    ${ynField("wants_carrier_plates","Do you want the carrier to provide your plates?","Their plate program runs $50/week and needs your title (front & back) plus a current 2290.")}
+    ${ynField("wants_ifta","Do you want the carrier to provide IFTA?","$10/week.")}
+  </div>
+
+  <div class="sec">
+    <h2>Business setup</h2>
+    <p class="note">Only if you run under an LLC or company.</p>
+    ${ynField("has_business","Do you have an LLC or business you'll lease under?","If yes, the lease is made in the business's name and there's one extra page to fill in later.")}
+    <div class="f"><label>Business name <span class="hint">Optional.</span></label><input id="f_business_name"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Your driving record</h2>
+    <p class="note">Last 5 years — tickets, warnings that stuck, and any accidents. Tell us everything: this gets pulled on your MVR anyway, and a surprise later is what actually costs people the seat.</p>
+    <div id="vlist"></div>
+    <button type="button" class="addv" id="addv">+ Add a ticket or accident</button>
+  </div>
+
+  <div class="sec">
+    <h2>Background</h2>
+    <p class="note">Honest answers here help — most of this is reviewed case by case, not an automatic no.</p>
+    ${ynField("misdemeanor","Any misdemeanors on your record?","Allowed — reviewed case by case.")}
+    ${ynField("felony","Any felony convictions?","Non-commercial felonies are reviewed case by case.")}
+    <div class="f"><label>Date of any positive or refused drug/alcohol test<span class="hint">Leave blank if this has never happened.</span></label><input id="f_positive_test_at" type="date"></div>
+    <div class="f"><label>Date you completed a Substance Abuse Program (SAP)<span class="hint">Leave blank if not applicable.</span></label><input id="f_sap_completed_at" type="date"></div>
+    <div class="f"><label>Anything you'd like to explain?<span class="hint">Context helps when Safety reviews your file.</span></label><textarea id="f_background_note"></textarea></div>
+  </div>
+
+  <div class="sec">
+    <div class="consent">
+      By submitting, you confirm the information above is true and complete to the best of your knowledge, and you authorize us to share it with ${esc(c.name||"the carrier")} for the purpose of considering you for a driving position. We'll never ask for your Social Security number or bank details on this form — you'll provide those directly to the carrier on their own paperwork.
+    </div>
+  </div>`;
+
+  // Wire plain text/date/number/select fields.
+  ["name","phone","email","city","state","dob","cdl_class","cdl_state","cdl_expires","dot_medical_expires",
+   "exp_months_5yr","exp_months_3yr","flatbed_months_1yr","truck_year","truck_make","truck_color","truck_vin",
+   "lienholder","truck_plate","truck_plate_state","inspection_date","business_name","positive_test_at",
+   "sap_completed_at","background_note"].forEach(k=>{
+    const el=$("#f_"+k); if(!el)return;
+    const set=()=>{A[k]=el.value;onChange();};
+    el.oninput=set; el.onchange=set;
+  });
+  wireYN($("#wrap"));
+  $("#endorse").querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{
+    ch.classList.toggle("sel");
+    A.endorsements=[...$("#endorse").querySelectorAll(".chip.sel")].map(x=>x.dataset.e).join(",");
+  });
+  $("#addv").onclick=()=>{ A.violations.push({code:"",date:""}); drawViolations(); };
+  drawViolations(); onChange();
+  $("#bar").style.display="flex";
+}
+
+function done(){
+  $("#wrap").innerHTML=`<div class="top msg">
+    <div class="check">✓</div>
+    <h1 style="margin:0 0 8px;font-size:22px">Application received</h1>
+    <p style="color:var(--soft);margin:0 0 6px">Thanks for taking the time. We're reviewing it now and we'll be in touch shortly.</p>
+    <p style="color:var(--soft);margin:0;font-size:14px">If it's a fit, next comes the carrier's Clearinghouse query, a drug test, and a short list of truck documents — we'll walk you through all of it.</p>
+  </div>`;
+  $("#bar").style.display="none";
+  window.scrollTo(0,0);
+}
+
+async function submit(){
+  const err=$("#err");
+  if(!A.name || !(A.phone||A.email)){
+    err.textContent="Please give us your name and a phone number or email so we can reach you.";
+    err.style.display="block"; window.scrollTo(0,0); return;
+  }
+  A.violations=A.violations.filter(v=>v.code);
+  const btn=$("#submitBtn"); btn.disabled=true; btn.textContent="Sending…";
+  try{
+    const r=await fetch("/api/apply/submit?"+Q,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(A)});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||"Something went wrong. Please try again.");
+    done();
+  }catch(e){
+    err.textContent=e.message; err.style.display="block"; window.scrollTo(0,0);
+    btn.disabled=false; btn.textContent="Submit application";
+  }
+}
+
+(async function(){
+  try{
+    const r=await fetch("/api/apply/form?"+Q);
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||"This link isn't working.");
+    CHART=d.chart||[];
+    if(d.submitted){ done(); return; }
+    render(d);
+    $("#submitBtn").onclick=submit;
+  }catch(e){
+    $("#wrap").innerHTML=`<div class="top msg"><h1 style="font-size:20px;margin:0 0 8px">We couldn't open this application</h1><p style="color:var(--soft);margin:0">${esc(e.message)}</p></div>`;
+  }
+})();
+</script>
+</body>
+</html>
