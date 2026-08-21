@@ -1573,34 +1573,97 @@ async function openCarrier(id,onSave){
 
 async function renderDrMoney(m){
   m.innerHTML=head("The money","Placements")+`<div id="mStats" class="stats"></div><div id="mBody"></div>`;
-  let d={},pl=[];
+  let d={},pl=[],sp=[];
   try{ d=await drapi("/money"); }catch(e){}
   try{ const r=await drapi("/placements"); pl=r.placements||[]; }catch(e){}
+  try{ const r=await drapi("/splits"); sp=r.splits||[]; }catch(e){}
   const t=d.totals||{};
   $("#mStats").innerHTML=`
     <div class="stat"><div class="n">${t.placements||0}</div><div class="l">Placements</div></div>
     <div class="stat"><div class="n">${drMoney(t.pending)}</div><div class="l">Pending</div></div>
     <div class="stat"><div class="n">${drMoney(t.invoiced)}</div><div class="l">Invoiced</div></div>
     <div class="stat due"><div class="n">${drMoney(t.paid)}</div><div class="l">Paid</div></div>`;
-  const byC=d.by_carrier||[];
+  const byC=d.by_carrier||[], byR=d.by_recruiter||[];
   $("#mBody").innerHTML=`
+    ${byR.length?`<div class="card" style="margin-bottom:14px;padding:18px 20px">
+      <div style="font-weight:800;font-size:15px;margin-bottom:3px">The split</div>
+      <p class="sub" style="margin:0 0 12px">Each placement is split when it opens, so changing the fee later never rewrites what's already earned.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+        ${byR.map(r=>`<div style="border:1px solid var(--line);border-radius:12px;padding:13px 15px">
+          <div style="font-weight:700;font-size:14.5px">${esc(r.name)}</div>
+          <div class="sub" style="margin-bottom:8px">${r.share_pct!=null?r.share_pct+"% of each placement":""}</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span class="sub">Owed</span><b>${drMoney(r.owed)}</b></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span class="sub">Paid out</span><b>${drMoney(r.paid)}</b></div>
+        </div>`).join("")}
+      </div>
+      <div style="margin-top:12px"><button class="btn ghost sm" id="mEditSplit" type="button">Edit shares</button></div>
+    </div>`:""}
     ${byC.length?`<div class="card" style="margin-bottom:14px"><table><thead><tr><th>Carrier</th><th>Placements</th><th>Booked</th><th>Paid</th></tr></thead>
       <tbody>${byC.map(r=>`<tr><td>${esc(r.carrier||"—")}</td><td>${r.n}</td><td>${drMoney(r.total)}</td><td>${drMoney(r.paid)}</td></tr>`).join("")}</tbody></table></div>`:""}
-    ${pl.length?`<div class="card"><table><thead><tr><th>Driver</th><th>Carrier</th><th>Fee</th><th>Trigger</th><th>Status</th></tr></thead>
+    ${pl.length?`<div class="card" style="margin-bottom:14px"><table><thead><tr><th>Driver</th><th>Carrier</th><th>Fee</th><th>Trigger</th><th>Status</th></tr></thead>
       <tbody>${pl.map(p=>`<tr><td>${esc(p.driver_name||"—")}</td><td>${esc(p.carrier_name||"—")}</td>
         <td>${p.fee_amount!=null?drMoney(p.fee_amount):"—"}</td><td class="sub">${esc(p.trigger_met||"")}</td>
         <td><select data-pl="${p.id}" class="plst">${["pending","invoiced","paid","clawed_back"].map(s=>`<option value="${s}" ${p.status===s?"selected":""}>${s.replace("_"," ")}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div>`
-      :`<div class="card"><div class="empty"><div class="mark">💵</div><h3>No placements yet</h3><p>A placement is created when a driver is submitted or seated, depending on the carrier's fee trigger.</p></div></div>`}`;
+      :`<div class="card"><div class="empty"><div class="mark">💵</div><h3>No placements yet</h3><p>A placement opens when a driver is submitted or seated, depending on the carrier's fee trigger.</p></div></div>`}
+    ${sp.length?`<div class="card"><div style="padding:14px 16px 0;font-weight:800;font-size:14px">Who's owed what</div>
+      <table><thead><tr><th>Person</th><th>Driver</th><th>Share</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>${sp.map(s=>`<tr><td>${esc(s.recruiter_name||"—")}</td><td class="sub">${esc(s.driver_name||"—")}</td>
+        <td class="sub">${s.share_pct!=null?s.share_pct+"%":"—"}</td><td>${s.amount!=null?drMoney(s.amount):"—"}</td>
+        <td><select data-sp="${s.id}" class="spst">${["pending","paid"].map(x=>`<option value="${x}" ${s.status===x?"selected":""}>${x}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div>`:""}`;
   $("#mBody").querySelectorAll(".plst").forEach(sel=>sel.onchange=async()=>{
     try{ await drapi("/placements/"+sel.dataset.pl,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:sel.value})}); toast("Updated."); renderDrMoney(m); }
     catch(e){ toast(e.message); }
   });
+  $("#mBody").querySelectorAll(".spst").forEach(sel=>sel.onchange=async()=>{
+    try{ await drapi("/splits/"+sel.dataset.sp,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:sel.value})}); toast("Updated."); renderDrMoney(m); }
+    catch(e){ toast(e.message); }
+  });
+  const es=$("#mEditSplit"); if(es) es.onclick=()=>openRecruiters(()=>renderDrMoney(m));
+}
+
+async function openRecruiters(onSave){
+  let rs=[];
+  try{ const r=await drapi("/recruiters"); rs=r.recruiters||[]; }catch(e){}
+  const d=$("#drawer");
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead">${avatar({name:"Split"})}<div><div class="name">The split</div><div class="sub">Who shares each placement fee</div></div></div>
+    <div class="dbody">
+      <p class="sub" style="margin:0 0 14px">Shares apply to placements opened from now on. Anything already earned keeps the split it was created with.</p>
+      <div id="rcList">${rs.map(r=>`<div class="drow" data-rc="${r.id}" style="gap:8px;margin-bottom:8px;align-items:center">
+        <input data-rf="name" value="${esc(r.name)}">
+        <input data-rf="email" value="${esc(r.email||"")}" placeholder="email">
+        <input data-rf="share_pct" type="number" step="1" value="${r.share_pct!=null?r.share_pct:""}" style="max-width:80px" title="% share">
+      </div>`).join("")}</div>
+      <button class="btn ghost sm" id="rcAdd" type="button">+ Add person</button>
+      <div class="dfoot"><button class="btn" id="rcSave">Save shares</button><span class="sub" id="rcMsg"></span></div>
+    </div>`;
+  d.classList.add("show"); $("#scrim").classList.add("show"); $("#scrim").onclick=closeDrawer;
+  $("#rcAdd").onclick=()=>{
+    $("#rcList").insertAdjacentHTML("beforeend",`<div class="drow" data-rc="" style="gap:8px;margin-bottom:8px;align-items:center">
+      <input data-rf="name" placeholder="Name"><input data-rf="email" placeholder="email">
+      <input data-rf="share_pct" type="number" step="1" value="50" style="max-width:80px"></div>`);
+  };
+  $("#rcSave").onclick=async()=>{
+    const rows=[...$("#rcList").querySelectorAll("[data-rc]")];
+    $("#rcMsg").textContent="Saving…";
+    try{
+      for(const row of rows){
+        const g=f=>{const e=row.querySelector(`[data-rf="${f}"]`);return e?e.value.trim():"";};
+        const body={name:g("name"),email:g("email")||null,share_pct:g("share_pct")?parseFloat(g("share_pct")):50};
+        if(!body.name) continue;
+        if(row.dataset.rc) await drapi("/recruiters/"+row.dataset.rc,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+        else await drapi("/recruiters",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+      }
+      toast("Split saved."); closeDrawer(); onSave&&onSave();
+    }catch(e){ $("#rcMsg").textContent=e.message; }
+  };
 }
 
 async function openDriver(id,onSave){
-  let p={},docs=[],sc=null;
+  let p={},docs=[],sc=null,lease=null;
   await loadCarriers(); await loadChart();
-  if(id){ try{ const r=await drapi("/drivers/"+id); p=r.driver||{}; docs=r.docs||[]; }catch(e){} }
+  if(id){ try{ const r=await drapi("/drivers/"+id); p=r.driver||{}; docs=r.docs||[]; }catch(e){}
+          try{ lease=await drapi("/drivers/"+id+"/lease"); }catch(e){} }
   try{ sc=p.screen_detail?JSON.parse(p.screen_detail):null; }catch(e){ sc=null; }
   let viols=[]; try{ viols=p.violations?JSON.parse(p.violations):[]; }catch(e){ viols=[]; }
   const d=$("#drawer");
@@ -1631,15 +1694,16 @@ async function openDriver(id,onSave){
   // --- onboarding milestones
   let flowBlock="";
   if(id){
+    const docsIn=!!docs.length&&docs.every(x=>x.status==="received"||x.kind==="lease_form");
     const st=[
       {label:"Application in", done:!!p.applied_at},
+      {label:"Lease form & documents sent", done:!!p.onboarding_sent_at},
+      {label:"Lease form returned", done:!!p.lease_info_at},
+      {label:"Documents in", done:docsIn},
       {label:"Submitted to carrier", done:!!p.submitted_at},
-      {label:"Confirmation number", done:!!p.confirmation_no},
+      {label:"Packet sent to carrier", done:!!p.packet_sent_at},
       {label:"Clearinghouse query accepted", done:!!p.clearinghouse_ok},
-      {label:"Experience verified", done:!!p.experience_verified},
-      {label:"Pre-approved", done:!!p.preapproved_at},
       {label:"Drug test complete", done:!!p.drug_test_done_at},
-      {label:"Documents in", done:!!docs.length&&docs.every(x=>x.status==="received")},
       {label:"Lease signed", done:!!p.lease_signed_at},
       {label:"Orientation", done:!!p.orientation_at},
       {label:"Rolling", done:!!p.started_at},
@@ -1655,17 +1719,38 @@ async function openDriver(id,onSave){
       clock=`<div class="sub" style="margin-top:8px;padding:8px 10px;border-radius:9px;background:${left<=2?'#fbe3e3':'#fdf6e3'};color:${left<=2?'#9b2c2c':'#8a5a00'};font-weight:600">
         ⏱ Drug test due ${esc(p.drug_test_due)}${left>=0?` — ${left} day${left===1?"":"s"} left`:" — overdue"}</div>`;
     }
+    const missing=docs.filter(x=>x.status!=="received"&&x.kind!=="lease_form");
     let action="";
     if(!p.applied_at){
       action=`<div class="drow" style="gap:8px"><button class="btn" id="dLink" type="button">Get application link</button>
         ${p.email?`<button class="btn ghost" id="dEmailApply" type="button">✉️ Email to driver</button>`:""}</div>
         <div id="dLinkOut" class="sub" style="margin-top:8px"></div>`;
+    } else if(p.screen_result==="disqualified"){
+      action=`<p class="sub" style="margin:0 0 8px">This driver doesn't meet the carrier's standards. Nothing has been sent on.</p>
+        <button class="btn ghost sm" id="dSubmit" type="button">Submit anyway…</button>`;
+    } else if(!p.lease_info_at){
+      action=`<p class="sub" style="margin:0 0 8px">${p.onboarding_sent_at
+        ? `Lease form &amp; document list went out ${esc((p.onboarding_sent_at||"").slice(0,10))} — waiting on the driver.`
+        : "Send the driver their lease form and document list."}</p>
+        <div class="drow" style="gap:8px">
+          <button class="btn" id="dSendLease" type="button">${p.onboarding_sent_at?"Resend to driver":"Send lease & documents →"}</button>
+          <button class="btn ghost" id="dLeaseLink" type="button">Get link</button></div>
+        <div id="dLeaseOut" class="sub" style="margin-top:8px"></div>`;
+    } else if(missing.length){
+      action=`<p class="sub" style="margin:0 0 8px">Lease form returned. Still waiting on <b>${missing.map(x=>esc(x.label||x.kind)).join(", ")}</b>.</p>
+        <div class="drow" style="gap:8px">
+          <button class="btn ghost" id="dSendLease" type="button">Nudge the driver</button>
+          <button class="btn ghost" id="dLeaseLink" type="button">Get link</button></div>
+        <div id="dLeaseOut" class="sub" style="margin-top:8px"></div>`;
     } else if(!p.submitted_at){
-      const blocked=p.screen_result==="disqualified";
-      action=`<button class="btn" id="dSubmit" type="button"${blocked?' style="opacity:.55"':''}>Submit to carrier →</button>
-        <p class="sub" style="margin:8px 0 0">${blocked?"This driver doesn't meet the carrier's standards — submitting anyway needs a confirm.":carrier?`Emails ${esc(carrier.contact_name||carrier.name)} their full file with the screening result.`:"Assign a carrier first."}</p>`;
+      action=`<button class="btn" id="dSubmit" type="button">Submit to carrier →</button>
+        <p class="sub" style="margin:8px 0 0">${carrier?`Emails ${esc(carrier.contact_name||carrier.name)} their file with the screening result.`:"Assign a carrier first."}</p>`;
+    } else if(!p.packet_sent_at){
+      action=`<p class="sub" style="margin:0 0 8px">Everything's in. Send the completed lease form and all documents to ${carrier?esc(carrier.contact_name||carrier.name):"the carrier"}.</p>
+        <button class="btn" id="dPacket" type="button">Send lease packet →</button>`;
     } else {
-      action=`<p class="sub" style="margin:0">Submitted ${esc((p.submitted_at||"").slice(0,10))}. Work the checklist below as the carrier moves them along.</p>`;
+      action=`<p class="sub" style="margin:0">Packet sent ${esc((p.packet_sent_at||"").slice(0,10))}. Track the carrier's steps below.</p>
+        <button class="btn ghost sm" id="dPacket" type="button" style="margin-top:8px">Resend packet</button>`;
     }
     flowBlock=`<div class="field"><label>Onboarding</label>
       <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">${steps}${clock}
@@ -1750,6 +1835,21 @@ async function openDriver(id,onSave){
         <textarea id="dBgNote" rows="2" style="margin-top:8px" placeholder="Context for Safety review">${esc(p.background_note||"")}</textarea></div>
 
       ${flowBlock}
+      ${id&&lease&&lease.done?`<div class="field"><label>Lease form <span class="sub" style="font-weight:400">· returned ${esc((p.lease_info_at||"").slice(0,10))}</span></label>
+        <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px">
+          ${lease.purged?`<p class="sub" style="margin:0">🔒 Secure fields were destroyed after the lease was signed.</p>`
+            :lease.secure&&(lease.secure.has_ssn||lease.secure.has_bank)?`
+            <p class="sub" style="margin:0 0 8px">Encrypted — shown as last four only. The full values go to the carrier in the packet and nowhere else.</p>
+            <table style="width:100%;font-size:12.5px">
+              ${lease.secure.ssn?`<tr><td style="color:var(--ink-soft);padding:2px 0">SSN</td><td style="text-align:right;font-weight:600">${esc(lease.secure.ssn)}</td></tr>`:``}
+              ${lease.secure.dl_number?`<tr><td style="color:var(--ink-soft);padding:2px 0">Licence #</td><td style="text-align:right;font-weight:600">${esc(lease.secure.dl_number)}</td></tr>`:``}
+              ${lease.secure.bank_name?`<tr><td style="color:var(--ink-soft);padding:2px 0">Bank</td><td style="text-align:right;font-weight:600">${esc(lease.secure.bank_name)}</td></tr>`:``}
+              ${lease.secure.routing?`<tr><td style="color:var(--ink-soft);padding:2px 0">Routing</td><td style="text-align:right;font-weight:600">${esc(lease.secure.routing)}</td></tr>`:``}
+              ${lease.secure.account?`<tr><td style="color:var(--ink-soft);padding:2px 0">Account</td><td style="text-align:right;font-weight:600">${esc(lease.secure.account)}</td></tr>`:``}
+            </table>
+            ${p.lease_signed_at?`<div style="margin-top:10px"><button class="btn ghost sm" id="dPurge" type="button">Destroy secure fields</button></div>`:``}`
+            :`<p class="sub" style="margin:0">Lease details returned. No secure fields were collected.</p>`}
+        </div></div>`:""}
       ${id?`<div class="field"><label>Carrier milestones</label>
         <div class="drow"><input id="dConf" value="${esc(p.confirmation_no||"")}" placeholder="Confirmation #">
           <input id="dDrugSched" type="date" value="${esc(p.drug_test_scheduled_at||"")}" placeholder="Drug test scheduled">
@@ -1848,6 +1948,42 @@ async function openDriver(id,onSave){
     const seed=$("#dSeedDocs");
     if(seed) seed.onclick=async()=>{
       try{ await drapi("/drivers/"+id+"/docs",{method:"POST"}); toast("Checklist updated."); closeDrawer(); openDriver(id,onSave); }
+      catch(e){ toast(e.message); }
+    };
+    const sendLease=$("#dSendLease");
+    if(sendLease) sendLease.onclick=async()=>{
+      sendLease.disabled=true;
+      try{ const r=await drapi("/drivers/"+id+"/send-lease",{method:"POST"});
+        toast(r.emailed?("Lease form sent to "+r.sent_to):"Link ready (email not configured).");
+        closeDrawer(); openDriver(id,onSave);
+      }catch(e){ toast(e.message); sendLease.disabled=false; }
+    };
+    const leaseLink=$("#dLeaseLink");
+    if(leaseLink) leaseLink.onclick=async()=>{
+      try{ const r=await drapi("/drivers/"+id+"/lease-link",{method:"POST"});
+        $("#dLeaseOut").innerHTML=`<input readonly value="${esc(r.url)}" onclick="this.select()" style="font-size:12px">`;
+        navigator.clipboard&&navigator.clipboard.writeText(r.url); toast("Lease link copied.");
+      }catch(e){ toast(e.message); }
+    };
+    const packet=$("#dPacket");
+    if(packet) packet.onclick=async()=>{
+      packet.disabled=true;
+      try{
+        let r;
+        try{ r=await drapi("/drivers/"+id+"/packet",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}); }
+        catch(err){
+          if(!/Still missing/i.test(err.message)) throw err;
+          if(!confirm(err.message+"\n\nSend the packet anyway?")){ packet.disabled=false; return; }
+          r=await drapi("/drivers/"+id+"/packet",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({force:true})});
+        }
+        toast(r.emailed?("Packet sent to "+r.sent_to):"Marked sent (email not configured).");
+        closeDrawer(); onSave&&onSave();
+      }catch(e){ toast(e.message); packet.disabled=false; }
+    };
+    const purge=$("#dPurge");
+    if(purge) purge.onclick=async()=>{
+      if(!confirm("Destroy this driver's encrypted SSN and bank details? The carrier has them; we won't be able to recover them."))return;
+      try{ await drapi("/drivers/"+id+"/purge-secure",{method:"POST"}); toast("Secure fields destroyed."); closeDrawer(); openDriver(id,onSave); }
       catch(e){ toast(e.message); }
     };
     d.querySelectorAll("[data-dd]").forEach(el=>el.onchange=async()=>{

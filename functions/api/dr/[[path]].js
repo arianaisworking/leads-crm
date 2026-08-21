@@ -6,6 +6,8 @@
 import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '../../_lib/screening.js';
+import { seedDocs, ensurePlacement, leasePacketHtml, openSecure, secret as mkSecret } from '../../_lib/recruiting.js';
+import { redact } from '../../_lib/vault.js';
 
 function token() {
   const b = crypto.getRandomValues(new Uint8Array(18));
@@ -26,6 +28,10 @@ const DRIVER_COLS = [
   'confirmation_no', 'clearinghouse_ok', 'experience_verified', 'preapproved_at',
   'drug_test_scheduled_at', 'drug_test_done_at', 'lease_sent_at', 'lease_signed_at',
   'startup_packet_at', 'orientation_at', 'started_at', 'lost_reason', 'next_touch',
+  'recruiter_id', 'gender', 'address', 'home_phone', 'truck_unit_no', 'truck_value',
+  'lienholder_address', 'lienholder_phone', 'lienholder_email', 'wants_maintenance',
+  'maintenance_weekly', 'maintenance_max', 'business_ein', 'business_owner',
+  'business_address', 'business_phone', 'business_email',
 ];
 
 // Re-screen a driver against their carrier's rubric and persist the verdict.
@@ -41,25 +47,6 @@ export async function rescreen(db, driverId) {
   await db.prepare(`UPDATE leads SET screen_result=?, screen_points=?, screen_detail=?, screened_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
     .bind(s.result, s.points, JSON.stringify(s), driverId).run();
   return s;
-}
-
-// Build the per-driver document checklist from the carrier's template.
-async function seedDocs(db, driver, carrier) {
-  let list = [];
-  try { list = carrier && carrier.doc_checklist ? JSON.parse(carrier.doc_checklist) : []; } catch { list = []; }
-  if (!Array.isArray(list) || !list.length) return 0;
-  const existing = await db.prepare('SELECT kind FROM driver_docs WHERE driver_id=?').bind(driver.id).all();
-  const have = new Set((existing.results || []).map((r) => r.kind));
-  let n = 0;
-  for (const item of list) {
-    // Conditional docs (e.g. title + 2290 only on the carrier's plate program).
-    if (item.if && !driver[item.if]) continue;
-    if (have.has(item.kind)) continue;
-    await db.prepare('INSERT INTO driver_docs (id, driver_id, kind, label, status) VALUES (?,?,?,?,?)')
-      .bind('dd_' + token().slice(0, 10), driver.id, item.kind, item.label || item.kind, 'needed').run();
-    n++;
-  }
-  return n;
 }
 
 export async function onRequest(context) {
@@ -380,7 +367,15 @@ export async function onRequest(context) {
         COALESCE(SUM(CASE WHEN p.status='paid' THEN p.fee_amount ELSE 0 END),0) AS paid
       FROM placements p LEFT JOIN carriers c ON c.id=p.carrier_id GROUP BY p.carrier_id ORDER BY total DESC`).all();
     const funnel = await db.prepare(`SELECT status, COUNT(*) AS n FROM leads GROUP BY status`).all();
-    return json({ totals: tot || {}, by_carrier: byCarrier.results || [], funnel: funnel.results || [] });
+    // What each of you is owed and has been paid, from the per-placement splits.
+    const byRecruiter = await db.prepare(`SELECT r.id, r.name, r.share_pct,
+        COALESCE(SUM(CASE WHEN s.status='pending' THEN s.amount ELSE 0 END),0) AS owed,
+        COALESCE(SUM(CASE WHEN s.status='paid'    THEN s.amount ELSE 0 END),0) AS paid,
+        COUNT(s.id) AS placements
+      FROM recruiters r LEFT JOIN placement_splits s ON s.recruiter_id=r.id
+      GROUP BY r.id ORDER BY r.name`).all();
+    return json({ totals: tot || {}, by_carrier: byCarrier.results || [],
+      by_recruiter: byRecruiter.results || [], funnel: funnel.results || [] });
   }
 
   // ---------- STATS (nav counters + the "needs attention" queue) ----------
@@ -403,20 +398,173 @@ export async function onRequest(context) {
     return json({ ...(s || {}), alerts: alerts.results || [] });
   }
 
-  return json({ error: 'not found' }, 404);
-}
+  // ---------- RECRUITERS + THE SPLIT ----------
+  if (res === 'recruiters') {
+    if (method === 'GET' && !id) {
+      const { results } = await db.prepare(`
+        SELECT r.*,
+          (SELECT COALESCE(SUM(s.amount),0) FROM placement_splits s WHERE s.recruiter_id=r.id AND s.status='pending') AS owed,
+          (SELECT COALESCE(SUM(s.amount),0) FROM placement_splits s WHERE s.recruiter_id=r.id AND s.status='paid')    AS earned
+        FROM recruiters r ORDER BY r.name`).all();
+      return json({ recruiters: results || [] });
+    }
+    if (method === 'POST') {
+      const b = await request.json();
+      if (!b.name) return json({ error: 'name required' }, 400);
+      const nid = b.id || mkSecret().slice(0, 8);
+      await db.prepare('INSERT INTO recruiters (id,name,email,share_pct,notes) VALUES (?,?,?,?,?)')
+        .bind(nid, b.name, b.email || null, b.share_pct != null ? Number(b.share_pct) : 50, b.notes || null).run();
+      return json({ ok: true, id: nid });
+    }
+    if (method === 'PATCH' && id) {
+      const b = await request.json();
+      const sets = [], vals = [];
+      for (const c of ['name', 'email', 'share_pct', 'active', 'notes']) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
+      if (!sets.length) return json({ error: 'nothing to update' }, 400);
+      vals.push(id);
+      await db.prepare(`UPDATE recruiters SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+      return json({ ok: true });
+    }
+    if (method === 'DELETE' && id) { await db.prepare('DELETE FROM recruiters WHERE id=?').bind(id).run(); return json({ ok: true }); }
+  }
 
-// Create the placement row for a driver+carrier if it isn't there yet,
-// resolving the fee from the carrier's deal.
-async function ensurePlacement(db, driver, carrier, trigger, override = {}) {
-  const existing = await db.prepare('SELECT id FROM placements WHERE driver_id=? AND carrier_id=?').bind(driver.id, carrier.id).first();
-  if (existing) return existing.id;
-  const pid = 'pl_' + Math.random().toString(36).slice(2, 10);
-  const feeType = override.fee_type || carrier.fee_type || 'flat';
-  const fee = override.fee_amount != null ? Number(override.fee_amount) : (carrier.fee_amount != null ? Number(carrier.fee_amount) : null);
-  await db.prepare(`INSERT INTO placements (id, driver_id, carrier_id, fee_type, fee_amount, status, trigger_met, seated_at, notes)
-    VALUES (?,?,?,?,?,?,?,?,?)`).bind(
-    pid, driver.id, carrier.id, feeType, fee, override.status || 'pending', trigger,
-    override.seated_at || null, override.notes || null).run();
-  return pid;
+  if (res === 'splits') {
+    if (method === 'GET') {
+      const { results } = await db.prepare(`
+        SELECT s.*, r.name AS recruiter_name, l.name AS driver_name, c.name AS carrier_name, p.status AS placement_status
+          FROM placement_splits s
+          LEFT JOIN recruiters r ON r.id=s.recruiter_id
+          LEFT JOIN placements p ON p.id=s.placement_id
+          LEFT JOIN leads l ON l.id=p.driver_id
+          LEFT JOIN carriers c ON c.id=p.carrier_id
+         ORDER BY s.created_at DESC LIMIT 500`).all();
+      return json({ splits: results || [] });
+    }
+    if (method === 'PATCH' && id) {
+      const b = await request.json();
+      const sets = [], vals = [];
+      for (const c of ['amount', 'share_pct', 'status']) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
+      if (b.status === 'paid') sets.push("paid_at=datetime('now')");
+      if (!sets.length) return json({ error: 'nothing to update' }, 400);
+      vals.push(id);
+      await db.prepare(`UPDATE placement_splits SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+      return json({ ok: true });
+    }
+  }
+
+  // ---------- LEASE FORM: link, send, review ----------
+  if (res === 'drivers' && sub === 'lease-link' && method === 'POST') {
+    const d = await db.prepare('SELECT id, lease_token FROM leads WHERE id=?').bind(int(id)).first();
+    if (!d) return json({ error: 'driver not found' }, 404);
+    let t = d.lease_token;
+    if (!t) { t = mkSecret(); await db.prepare('UPDATE leads SET lease_token=? WHERE id=?').bind(t, d.id).run(); }
+    return json({ ok: true, url: `${new URL(request.url).origin}/lease.html?token=${t}` });
+  }
+
+  if (res === 'drivers' && sub === 'send-lease' && method === 'POST') {
+    const d = await db.prepare('SELECT * FROM leads WHERE id=?').bind(int(id)).first();
+    if (!d) return json({ error: 'driver not found' }, 404);
+    if (!d.email) return json({ error: 'This driver has no email on file. Add one, or use “Get lease link”.' }, 400);
+    const c = d.carrier_id ? await db.prepare('SELECT * FROM carriers WHERE id=?').bind(d.carrier_id).first() : null;
+    if (!c) return json({ error: 'Assign a carrier first — the document list comes from them.' }, 400);
+    let t = d.lease_token;
+    if (!t) { t = mkSecret(); await db.prepare('UPDATE leads SET lease_token=? WHERE id=?').bind(t, d.id).run(); }
+    await seedDocs(db, d, c);
+    const link = `${new URL(request.url).origin}/lease.html?token=${t}`;
+    const first = (d.name || '').split(' ')[0];
+    const r = await sendEmail(env, {
+      to: d.email, replyTo: replyToEmail(env),
+      subject: 'Your lease information & documents',
+      html: emailShell('Next step: lease info & documents', `
+        <p style="margin:0 0 6px;font-size:16px">Hi${first ? ' ' + esc(first) : ''},</p>
+        <p style="margin:0 0 14px;color:#3a4353">Here's everything we need to get your lease agreement prepared. It's one page — your details, your truck, and a few documents you can photograph with your phone.</p>
+        <p style="margin:0 0 18px"><a href="${link}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Open your onboarding page →</a></p>
+        <p style="margin:0 0 10px;color:#5b6472;font-size:13.5px"><b>Documents needed:</b> truck registration, a photo of your ECM port, a federal inspection dated within the last 30 days, and a voided check for direct deposit.</p>
+        <p style="margin:0;color:#5b6472;font-size:13px">Do what you can now — the link stays live, so you can come back for the rest. Questions? Just reply.</p>`, brandName(env)),
+    });
+    if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
+    await db.prepare("UPDATE leads SET onboarding_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(d.id).run();
+    return json({ ok: true, emailed: !!r.ok, sent_to: d.email, url: link });
+  }
+
+  // What the team may see of the lease form: everything except the vault.
+  if (res === 'drivers' && sub === 'lease' && method === 'GET') {
+    const d = await db.prepare('SELECT * FROM leads WHERE id=?').bind(int(id)).first();
+    if (!d) return json({ error: 'driver not found' }, 404);
+    const sec = await openSecure(env, d);
+    return json({ ok: true, done: !!d.lease_info_at, secure: redact(sec), purged: !!d.secure_purged_at });
+  }
+
+  // ---------- SEND THE FULL PACKET TO THE CARRIER ----------
+  // The completed lease form plus every collected document, in one email.
+  if (res === 'drivers' && sub === 'packet' && method === 'POST') {
+    const driverId = int(id);
+    const d = await db.prepare('SELECT * FROM leads WHERE id=?').bind(driverId).first();
+    if (!d) return json({ error: 'driver not found' }, 404);
+    if (!d.carrier_id) return json({ error: 'Assign a carrier first.' }, 400);
+    const c = await db.prepare('SELECT * FROM carriers WHERE id=?').bind(d.carrier_id).first();
+    if (!c || !c.contact_email) return json({ error: 'That carrier has no contact email on file.' }, 400);
+    if (!d.lease_info_at) return json({ error: 'The driver has not completed their lease form yet.' }, 400);
+
+    const docsQ = await db.prepare('SELECT * FROM driver_docs WHERE driver_id=? ORDER BY created_at').bind(driverId).all();
+    const docs = docsQ.results || [];
+    const missing = docs.filter((x) => x.status !== 'received');
+    const body = await request.json().catch(() => ({}));
+    if (missing.length && !body.force)
+      return json({ error: `Still missing: ${missing.map((m) => m.label || m.kind).join(', ')}.`, missing: missing.map((m) => m.label || m.kind), needs_force: true }, 400);
+
+    // Flag a stale federal inspection before the carrier has to.
+    const insp = docs.find((x) => x.kind === 'inspection');
+    let staleNote = '';
+    if (insp && insp.doc_date) {
+      const days = Math.floor((Date.now() - new Date(insp.doc_date + 'T00:00:00Z')) / 86400000);
+      if (days > 30) staleNote = `<div style="background:#fdecec;border:1px solid #f5c2c2;color:#9b2c2c;border-radius:10px;padding:10px 14px;margin:0 0 14px"><b>Note:</b> the federal inspection on file is dated ${esc(insp.doc_date)} (${days} days old). A fresh one is being obtained.</div>`;
+    }
+
+    const sec = await openSecure(env, d);
+    const origin = new URL(request.url).origin;
+    const docRows = docs.map((x) => `<tr>
+        <td style="padding:5px 12px 5px 0;font-size:13px">${esc(x.label || x.kind)}</td>
+        <td style="padding:5px 12px 5px 0;font-size:13px;color:${x.status === 'received' ? '#137a52' : '#9b2c2c'};font-weight:600">${x.status === 'received' ? 'attached' : 'outstanding'}</td>
+        <td style="padding:5px 0;font-size:13px">${x.file_key ? `<a href="${origin}/api/dr/file?key=${encodeURIComponent(x.file_key)}">${esc(x.file_name || 'view')}</a>` : ''}${x.doc_date ? ` <span style="color:#8a95a6">${esc(x.doc_date)}</span>` : ''}</td></tr>`).join('');
+
+    const r = await sendEmail(env, {
+      to: c.contact_email, replyTo: replyToEmail(env),
+      subject: `Lease packet — ${d.name || ''}`,
+      html: emailShell('Driver lease packet', `
+        <p style="margin:0 0 6px;font-size:16px">Hi${c.contact_name ? ' ' + esc(c.contact_name.split(' ')[0]) : ''}, here's the completed packet for <b>${esc(d.name || '')}</b>.</p>
+        ${staleNote}
+        ${leasePacketHtml(d, sec, c)}
+        <div style="margin:16px 0 0">
+          <div style="font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#2f6fed;border-bottom:1px solid #e3e8ef;padding-bottom:5px;margin-bottom:8px">Documents</div>
+          <table style="width:100%">${docRows}</table>
+        </div>
+        ${body.message ? `<p style="margin:16px 0 0;color:#3a4353">${esc(body.message)}</p>` : ''}
+        <p style="margin:16px 0 0;color:#5b6472;font-size:13px">Document links open the file directly. Reply here if anything else is needed and we'll chase it with the driver.</p>`, brandName(env)),
+    });
+    if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
+    await db.prepare("UPDATE leads SET packet_sent_at=datetime('now'), status=CASE WHEN status IN ('Documents','Pre-approved','Drug test') THEN 'Lease sent' ELSE status END, updated_at=datetime('now') WHERE id=?").bind(driverId).run();
+    return json({ ok: true, sent_to: c.contact_email, emailed: !!r.ok, missing: missing.length });
+  }
+
+  // Destroy the sealed fields once the lease is signed — we have no further use
+  // for them and no reason to keep holding them.
+  if (res === 'drivers' && sub === 'purge-secure' && method === 'POST') {
+    await db.prepare("UPDATE leads SET lease_secure=NULL, secure_purged_at=datetime('now') WHERE id=?").bind(int(id)).run();
+    return json({ ok: true });
+  }
+
+  // ---------- SERVE A COLLECTED DOCUMENT (team-gated by _middleware) ----------
+  if (res === 'file' && method === 'GET') {
+    const key = new URL(request.url).searchParams.get('key');
+    if (!key) return json({ error: 'missing key' }, 400);
+    if (!env.DOCS) return json({ error: 'file storage not configured' }, 404);
+    const obj = await env.DOCS.get(key);
+    if (!obj) return json({ error: 'not found' }, 404);
+    return new Response(obj.body, { headers: {
+      'content-type': obj.httpMetadata?.contentType || 'application/octet-stream',
+      'cache-control': 'private, max-age=60' } });
+  }
+
+  return json({ error: 'not found' }, 404);
 }
