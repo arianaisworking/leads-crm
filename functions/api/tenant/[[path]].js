@@ -14,6 +14,16 @@ import { getClientById, scoped, json, uid, logEvent, bumpLedger, toE164, isOpted
 import { sendSms } from '../../_lib/twilio.js';
 import { classify, respond, isStopKeyword, personalize } from '../../_lib/brain.js';
 import { openSlots } from '../../_lib/calendar.js';
+import { sendEmail, emailShell, esc } from '../../_lib/email.js';
+
+// Commission owed for a set of bookings, per the client's model.
+function commissionFor(client, bookingCount, serviceValueSum) {
+  const rate = Number(client.commission_rate) || 0;
+  const owed = (client.commission_type === 'percent')
+    ? (Number(serviceValueSum) || 0) * rate / 100
+    : (bookingCount || 0) * rate;
+  return Math.round(owed * 100) / 100;
+}
 
 export async function onRequest(context) {
   const { request, env, params } = context;
@@ -61,6 +71,24 @@ export async function onRequest(context) {
       await db.prepare('DELETE FROM clients WHERE id=?').bind(cid).run();
       return json({ ok: true });
     }
+  }
+
+  // ---- agency billing: wins + commission across all clients ----
+  if (seg[0] === 'billing' && method === 'GET') {
+    const { results } = await db.prepare(`
+      SELECT c.id, c.name, c.commission_type, c.commission_rate, c.billing_email,
+             (SELECT COUNT(*) FROM conversations v WHERE v.client_id=c.id AND v.status='booked') AS bookings_total,
+             (SELECT COUNT(*) FROM conversations v WHERE v.client_id=c.id AND v.status='booked' AND COALESCE(v.booked_at, v.created_at) >= date('now','-6 days')) AS bookings_week,
+             (SELECT COALESCE(SUM(v.service_value),0) FROM conversations v WHERE v.client_id=c.id AND v.status='booked') AS value_total,
+             (SELECT COALESCE(SUM(v.service_value),0) FROM conversations v WHERE v.client_id=c.id AND v.status='booked' AND COALESCE(v.booked_at, v.created_at) >= date('now','-6 days')) AS value_week
+        FROM clients c ORDER BY c.name`).all();
+    const rows = (results || []).map((r) => ({
+      ...r,
+      owed_week: commissionFor(r, r.bookings_week, r.value_week),
+      owed_total: commissionFor(r, r.bookings_total, r.value_total),
+    }));
+    const totals = rows.reduce((a, r) => ({ bookings_week: a.bookings_week + (r.bookings_week || 0), owed_week: Math.round((a.owed_week + r.owed_week) * 100) / 100 }), { bookings_week: 0, owed_week: 0 });
+    return json({ clients: rows, totals });
   }
 
   // ---- tenant level ----
@@ -401,9 +429,10 @@ export async function onRequest(context) {
   if (action === 'profile' && method === 'POST') {
     const b = await request.json();
     const cols = ['name', 'legal_name', 'ein', 'address', 'website', 'timezone',
-      'twilio_number', 'calendar_id', 'notify_email', 'hot_lead_phone', 'crm_bcc_email'];
+      'twilio_number', 'calendar_id', 'notify_email', 'hot_lead_phone', 'crm_bcc_email',
+      'commission_type', 'commission_rate', 'billing_email'];
     const sets = [], vals = [];
-    for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c] || null); }
+    for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c] === '' ? null : (b[c] ?? null)); }
     if ('business_brain' in b) { sets.push('business_brain=?'); vals.push(b.business_brain ? JSON.stringify(b.business_brain) : null); }
     if (!sets.length) return json({ error: 'nothing to update' }, 400);
     sets.push("updated_at=datetime('now')"); vals.push(clientId);
@@ -427,6 +456,57 @@ export async function onRequest(context) {
               SUM(CASE WHEN needs_human=1 THEN 1 ELSE 0 END) AS needs_human
          FROM conversations WHERE client_id = ?`, clientId).first();
     return json({ daily: results || [], funnel });
+  }
+
+  // Past invoices for this client.
+  if (action === 'invoices' && method === 'GET') {
+    const { results } = await scoped(db,
+      'SELECT id, period_start, period_end, bookings, amount, currency, status, sent_to, created_at, sent_at FROM invoices WHERE client_id=? ORDER BY created_at DESC LIMIT 60', clientId).all();
+    return json({ invoices: results || [] });
+  }
+
+  // Generate a weekly invoice for this client and (best-effort) email it.
+  if (action === 'invoice' && method === 'POST') {
+    const rate = Number(client.commission_rate) || 0;
+    const ctype = client.commission_type || 'flat';
+    const period = await db.prepare("SELECT date('now','-6 days') AS ps, date('now') AS pe").first();
+    const { results: bks } = await db.prepare(
+      `SELECT id, contact_name, interest, service_value, COALESCE(booked_at, created_at) AS at
+         FROM conversations WHERE client_id=? AND status='booked' AND COALESCE(booked_at, created_at) >= date('now','-6 days')
+         ORDER BY COALESCE(booked_at, created_at)`).bind(clientId).all();
+    const bookings = bks || [];
+    let amount = 0;
+    const lineItems = bookings.map((x) => {
+      const line = ctype === 'percent' ? Math.round((Number(x.service_value) || 0) * rate) / 100 : rate;
+      amount += line;
+      return { name: x.contact_name || 'Booking', service: x.interest || null, service_value: x.service_value || null, amount: Math.round(line * 100) / 100, at: x.at };
+    });
+    amount = Math.round(amount * 100) / 100;
+    const invId = uid('inv_');
+    const to = client.billing_email || null;
+    const money = (n) => '$' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    let emailed = false;
+    if (to && amount > 0) {
+      const rows = lineItems.map((li) => `<tr><td style="padding:4px 12px 4px 0">${esc(li.name)}${li.service ? ' — ' + esc(li.service) : ''}</td><td style="padding:4px 0;text-align:right;font-weight:600">${money(li.amount)}</td></tr>`).join('');
+      const r = await sendEmail(env, {
+        from: `${client.name || 'Reactivation'} via Ariana is Working <hello@mxncells.com>`,
+        to,
+        subject: `Invoice — ${bookings.length} booking${bookings.length === 1 ? '' : 's'} (${period.ps} to ${period.pe})`,
+        html: emailShell('Weekly reactivation invoice', `
+          <p style="margin:0 0 6px;font-size:16px">Here's your reactivation summary for <b>${esc(period.ps)}</b> to <b>${esc(period.pe)}</b>.</p>
+          <p style="margin:0 0 14px;color:#5b6472">We booked <b>${bookings.length}</b> appointment${bookings.length === 1 ? '' : 's'} back in from your past leads.</p>
+          <table style="width:100%;font-size:14px;margin:0 0 12px">${rows}
+            <tr><td style="padding:8px 12px 4px 0;border-top:2px solid #1a2230;font-weight:800">Total due</td><td style="padding:8px 0 4px;border-top:2px solid #1a2230;text-align:right;font-weight:800;color:#2f6fed;font-size:16px">${money(amount)}</td></tr>
+          </table>
+          <p style="margin:0;color:#5b6472;font-size:13px">Thank you for your business. Reply to this email with any questions.</p>`, client.name || 'Reactivation'),
+      });
+      emailed = !!r.ok;
+    }
+    await db.prepare(`INSERT INTO invoices (id, client_id, period_start, period_end, bookings, amount, status, line_items, sent_to, sent_at)
+      VALUES (?,?,?,?,?,?,?,?,?, ${emailed ? "datetime('now')" : 'NULL'})`)
+      .bind(invId, clientId, period.ps, period.pe, bookings.length, amount, emailed ? 'sent' : 'draft', JSON.stringify(lineItems), emailed ? to : null).run();
+    await logEvent(db, clientId, 'invoice', invId, { bookings: bookings.length, amount, emailed });
+    return json({ ok: true, invoice: { id: invId, period_start: period.ps, period_end: period.pe, bookings: bookings.length, amount, status: emailed ? 'sent' : 'draft', line_items: lineItems, sent_to: emailed ? to : null }, emailed, has_billing_email: !!to });
   }
 
   return json({ error: 'not found' }, 404);

@@ -359,6 +359,7 @@
       <button data-view="conversations"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span> Conversations <span class="ct" id="ct-convos">0</span></button>
       <button data-view="automations"><span class="ic"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg></span> Automations</button>
       <button data-view="finder"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></span> Find Leads</button>
+      <button data-view="billing"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h5"/></svg></span> Billing</button>
     </nav>
     <div class="player">
       <div class="pl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#17131c"/><circle cx="12" cy="12" r="3.4" fill="#ed1a78"/><circle cx="12" cy="12" r="1" fill="#f7f1e8"/></svg> Now spinning</div>
@@ -553,6 +554,7 @@ async function render(){
   if(state.view==="nurture") return renderList(m,"Nurture","Follow up","Follow-ups due today or overdue.",{due:"1"});
   if(state.view==="conversations") return renderConversations(m);
   if(state.view==="automations") return renderAutomations(m);
+  if(state.view==="billing") return renderBilling(m);
   if(state.view==="finder") return renderFinder(m);
 }
 
@@ -979,6 +981,38 @@ async function renderConversations(m){
   await loadInbox();
 }
 
+async function renderBilling(m){
+  const money=n=>"$"+(Math.round((n||0)*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  m.innerHTML=head("The engine","Wins & Billing")+`<div id="blStats"></div><div id="blWrap"><p class="muted">Loading…</p></div>`;
+  let d; try{ d=await api("/tenant/billing"); }catch(e){ $("#blWrap").innerHTML=`<div class="result">${esc(e.message)}</div>`; return; }
+  const cl=d.clients||[], t=d.totals||{};
+  $("#blStats").innerHTML=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    <div class="cv-card" style="flex:1;min-width:150px"><div style="font-size:26px;font-weight:800">${t.bookings_week||0}</div><div class="muted">Bookings this week</div></div>
+    <div class="cv-card" style="flex:1;min-width:150px"><div style="font-size:26px;font-weight:800;color:var(--pink)">${money(t.owed_week)}</div><div class="muted">Commission this week</div></div>
+    <div class="cv-card" style="flex:1;min-width:150px"><div style="font-size:26px;font-weight:800">${cl.length}</div><div class="muted">Active clients</div></div>
+  </div>`;
+  $("#blWrap").innerHTML=`<div class="cv-card"><h4>This week's wins by client <span class="cs-hint" style="text-transform:none;letter-spacing:0">— last 7 days</span></h4>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px;min-width:520px">
+      <thead><tr>${["Client","Bookings (wk)","Commission","Owed (wk)",""].map((h,i)=>`<th style="text-align:${i===1||i===3?"right":"left"};padding:7px 8px;color:var(--ink-soft);font-weight:600">${h}</th>`).join("")}</tr></thead>
+      <tbody>${cl.length?cl.map(c=>`<tr style="border-top:1px solid var(--line)">
+        <td style="padding:9px 8px;font-weight:600">${esc(c.name)}</td>
+        <td style="padding:9px 8px;text-align:right">${c.bookings_week||0}</td>
+        <td style="padding:9px 8px;color:var(--ink-soft)">${c.commission_type==="percent"?((c.commission_rate||0)+"% of service"):money(c.commission_rate)+" / booking"}</td>
+        <td style="padding:9px 8px;text-align:right;font-weight:800;color:var(--pink)">${money(c.owed_week)}</td>
+        <td style="padding:9px 8px;text-align:right"><button class="btn ghost sm" data-inv="${esc(c.id)}"${c.bookings_week?"":" disabled"}>Send invoice</button></td>
+      </tr>`).join(""):`<tr><td colspan="5" class="muted" style="padding:12px 8px">No clients yet.</td></tr>`}</tbody>
+    </table></div>
+    <p class="muted" style="margin:12px 0 0;font-size:12px">Set each client's commission model &amp; billing email in <b>Automations → ⚙ Client setup → Commission &amp; billing</b>. Invoices cover the last 7 days of bookings.</p></div>`;
+  $("#blWrap").querySelectorAll("[data-inv]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("Generate this week's invoice for this client and email it to their billing address?"))return;
+    b.disabled=true; b.textContent="Sending…";
+    try{ const r=await api("/tenant/"+b.dataset.inv+"/invoice",{method:"POST"}); const inv=r.invoice||{};
+      toast(r.emailed?("Invoice sent — "+money(inv.amount)):(r.has_billing_email?("Invoice created "+money(inv.amount)+" (email not configured)"):"Add a billing email in Client setup to send"));
+      b.textContent=r.emailed?("✓ Sent "+money(inv.amount)):("Created "+money(inv.amount));
+    }catch(e){ alert(e.message); b.disabled=false; b.textContent="Send invoice"; }
+  });
+}
+
 async function renderAutomations(m){
   m.innerHTML = head("The engine","Automations",
     `<div class="cv-top">
@@ -1126,6 +1160,12 @@ async function renderClientSetup(m, clientId){
       ${F("Legal name (on EIN)","cs_legal_name",c.legal_name)}
       ${F("EIN","cs_ein",c.ein)}
       ${F("Address (must match EIN for 10DLC)","cs_address",c.address)}
+    </div></div>
+
+    <div class="cs-card"><h3>Commission &amp; billing <span class="cs-hint">— how you invoice this client for wins</span></h3><div class="cs-grid">
+      <label class="cs-f"><span>Commission type</span><select id="cs_commission_type"><option value="flat" ${c.commission_type!=="percent"?"selected":""}>Flat $ per booking</option><option value="percent" ${c.commission_type==="percent"?"selected":""}>% of service value</option></select></label>
+      <label class="cs-f"><span>Rate <span class="cs-hint" style="text-transform:none;letter-spacing:0">($ per booking, or % if percent)</span></span><input id="cs_commission_rate" type="number" step="0.01" value="${esc(c.commission_rate||"")}" placeholder="100"></label>
+      ${F("Billing email (invoices go here)","cs_billing_email",c.billing_email,"frontdesk@client.com")}
     </div></div>
 
     <div class="cs-card"><h3>Business brain <span class="cs-hint">— the only facts the AI is allowed to state</span></h3>
@@ -1312,6 +1352,7 @@ async function renderClientSetup(m, clientId){
     const payload={ name:$("#cs_name").value.trim(), timezone:$("#cs_timezone").value.trim(), twilio_number:$("#cs_twilio_number").value.trim(),
       calendar_id:$("#cs_calendar_id").value.trim(), notify_email:$("#cs_notify_email").value.trim(), hot_lead_phone:$("#cs_hot_lead_phone").value.trim(),
       website:$("#cs_website").value.trim(), legal_name:$("#cs_legal_name").value.trim(), ein:$("#cs_ein").value.trim(), address:$("#cs_address").value.trim(),
+      commission_type:$("#cs_commission_type").value, commission_rate:$("#cs_commission_rate").value?parseFloat($("#cs_commission_rate").value):null, billing_email:$("#cs_billing_email").value.trim()||null,
       business_brain:brainOut };
     const btn=$("#cs_save"); btn.disabled=true; $("#cs_msg").textContent="Saving…";
     try{ await api("/tenant/"+clientId+"/profile",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});

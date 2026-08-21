@@ -131,8 +131,15 @@ export async function onRequestPost(context) {
           name: conv.contact_name, phone: from,
           service: out.service_interest, context_note: out.context_note,
         });
-        await db.prepare("UPDATE conversations SET status='booked', appointment_at=?, appointment_event_id=? WHERE id=?")
-          .bind(slot.startISO, ev.eventId, conv.id).run();
+        // Resolve the booked service's $ value (for percent-commission billing).
+        let svcVal = null;
+        try {
+          const brain = JSON.parse(client.business_brain || '{}');
+          const svc = (brain.services || []).find((s) => s.name && out.service_interest && s.name.toLowerCase() === String(out.service_interest).toLowerCase());
+          if (svc && svc.price) { const n = parseFloat(String(svc.price).replace(/[^0-9.]/g, '')); if (Number.isFinite(n)) svcVal = n; }
+        } catch {}
+        await db.prepare("UPDATE conversations SET status='booked', booked_at=datetime('now'), service_value=?, appointment_at=?, appointment_event_id=? WHERE id=?")
+          .bind(svcVal, slot.startISO, ev.eventId, conv.id).run();
         await bumpLedger(db, client.id, client.timezone, 'booked');
         await logEvent(db, client.id, 'booked', conv.id, { slot: slot.label, phone: from });
         bookedLabel = slot.label;
