@@ -489,7 +489,8 @@ export async function onRequest(context) {
     if (to && amount > 0) {
       const rows = lineItems.map((li) => `<tr><td style="padding:4px 12px 4px 0">${esc(li.name)}${li.service ? ' — ' + esc(li.service) : ''}</td><td style="padding:4px 0;text-align:right;font-weight:600">${money(li.amount)}</td></tr>`).join('');
       const r = await sendEmail(env, {
-        from: `${client.name || 'Reactivation'} via Ariana is Working <hello@mxncells.com>`,
+        from: env.INVOICE_FROM || 'Office <office@arianaisworking.com>',
+        replyTo: 'office@arianaisworking.com',
         to,
         subject: `Invoice — ${bookings.length} booking${bookings.length === 1 ? '' : 's'} (${period.ps} to ${period.pe})`,
         html: emailShell('Weekly reactivation invoice', `
