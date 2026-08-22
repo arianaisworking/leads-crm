@@ -56,14 +56,22 @@
   .req{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--soft);margin-bottom:7px}
   .req b{color:var(--ink);font-weight:600}
   .tick{color:var(--ok);font-weight:700}
+  /* Language toggle — sticky so it's reachable from anywhere in a long form. */
+  .lang{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;gap:2px;
+        padding:8px 0 10px;background:linear-gradient(var(--bg) 70%,transparent)}
+  .lang button{border:1px solid var(--line);background:#fff;color:var(--soft);font:inherit;
+               font-size:13px;font-weight:700;padding:6px 13px;cursor:pointer}
+  .lang button:first-of-type{border-radius:9px 0 0 9px}
+  .lang button:last-of-type{border-radius:0 9px 9px 0;border-left:0}
+  .lang button.on{background:var(--brand);border-color:var(--brand);color:#fff}
   @media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="wrap" id="wrap"><div class="top"><div class="sub">Loading your application…</div></div></div>
+<div class="wrap" id="wrap"><div class="top"><div class="sub">Loading…</div></div></div>
 <div class="bar" id="bar" style="display:none"><div class="inner">
   <span class="prog" id="prog"></span>
-  <button class="btn" id="submitBtn">Submit application</button>
+  <button class="btn" id="submitBtn">Submit</button>
 </div></div>
 
 <script>
@@ -75,13 +83,143 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 const STATES=["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const ENDORSE=[["twic","TWIC"],["hazmat","Hazmat"],["tanker","Tanker"],["doubles","Doubles/Triples"]];
 const A={violations:[]};   // the answers we build up
-let CHART=[];
+let CHART=[], DATA=null;
 
-function ynField(key,label,hint,invertNo){
+const T={
+ en:{
+  badge:"Driver application", h1:"Drive with {carrier}", oo:"Owner-operator lease-on",
+  r_truck:"<b>You bring the truck.</b> {trailer}", r_trailer_no:"No trailer needed — that's on the carrier.",
+  r_trailer_yes:"You'll need a trailer too.",
+  r_cit:"<b>You don't have to be a U.S. citizen</b> — you just have to be legally able to work here.",
+  r_mis:"<b>Misdemeanors are looked at case by case</b>, not an automatic no.",
+  r_or:"<b>Orientation:</b> {info}",
+
+  s1:"About you", s1n:"The basics, so we can get back to you.",
+  name:"Full name", phone:"Cell phone", email:"Email", city:"City", state:"State",
+  dob:"Date of birth", dob_h:"You must be 22 or older to qualify.",
+  work:"Are you legally authorized to work in the United States?", work_h:"Citizenship isn't required — work authorization is.",
+
+  s2:"Your CDL", s2n:"A valid Class A from your state of residence is required.",
+  cls:"Class", iss:"Issuing state", exp:"Expires",
+  end:"Endorsements", end_h:"Tap any you hold.",
+  med:"DOT medical card expires", med_h:"Your DOT physical must be current.",
+
+  s3:"Your experience", s3n:"Class A driving only. Be accurate — the carrier verifies this with your previous employers.",
+  e5:"Months driving Class A in the last 5 years", e5_h:"At least 12 months required.",
+  e3:"…of those, how many in the last 3 years?", e3_h:"At least 8 months required.",
+  fb:"Months pulling flatbed in the last year", fb_h:"Only matters if you want flatbed work.",
+  ver:"Can your previous employers be reached to verify your experience?", ver_h:"If not, the carrier can accept 3 years of 1099s instead.",
+  t99:"Do you have 3 years of 1099s available?", t99_h:"",
+
+  s4:"Your truck", s4n:"This is an owner-operator lease-on — you bring the tractor.{trailer}",
+  s4n_tr:" The trailer is the carrier's.",
+  owns:"Do you own (or are you buying) your truck?",
+  yr:"Year", mk:"Make", col:"Color", vin:"VIN",
+  lien:"Lienholder", lien_h:"Leave blank if paid off.",
+  plate:"Plate #", plate_st:"Plate state",
+  insp:"Date of your last federal inspection", insp_h:"It has to be dated within 30 days when your file goes in — if yours is older, you'll need a fresh one.",
+  plates:"Do you want the carrier to provide your plates?", plates_h:"Their plate program runs $50/week and needs your title (front & back) plus a current 2290.",
+  ifta:"Do you want the carrier to provide IFTA?", ifta_h:"$10/week.",
+
+  s5:"Business setup", s5n:"Only if you run under an LLC or company.",
+  biz:"Do you have an LLC or business you'll lease under?", biz_h:"If yes, the lease is made in the business's name and there's one extra page to fill in later.",
+  bizname:"Business name", bizname_h:"Optional.",
+
+  s6:"Your driving record",
+  s6n:"Last 5 years — tickets, warnings that stuck, and any accidents. Tell us everything: this gets pulled on your MVR anyway, and a surprise later is what actually costs people the seat.",
+  v_none:"No tickets or accidents in the last 5 years — that's the best answer there is.",
+  v_what:"What happened?", v_when:"When?", v_rm:"Remove", v_add:"+ Add a ticket or accident",
+  v_g1:"Tickets & incidents", v_g2:"Major violations",
+
+  s7:"Background", s7n:"Honest answers here help — most of this is reviewed case by case, not an automatic no.",
+  mis:"Any misdemeanors on your record?", mis_h:"Allowed — reviewed case by case.",
+  fel:"Any felony convictions?", fel_h:"Non-commercial felonies are reviewed case by case.",
+  pos:"Date of any positive or refused drug/alcohol test", pos_h:"Leave blank if this has never happened.",
+  sap:"Date you completed a Substance Abuse Program (SAP)", sap_h:"Leave blank if not applicable.",
+  note:"Anything you'd like to explain?", note_h:"Context helps when Safety reviews your file.",
+
+  consent:"By submitting, you confirm the information above is true and complete to the best of your knowledge, and you authorize us to share it with {carrier} for the purpose of considering you for a driving position. We'll never ask for your Social Security number or bank details on this form — you'll provide those directly to the carrier on their own paperwork.",
+  yes:"Yes", no:"No", dash:"—",
+  submit:"Submit application", sending:"Sending…",
+  need:"Still needed: {list}", ready:"Ready to submit",
+  need_name:"your name", need_phone:"a phone number",
+  err_req:"Please give us your name and a phone number or email so we can reach you.",
+  err_open:"We couldn't open this application",
+  done_h:"Application received", done_p1:"Thanks for taking the time. We're reviewing it now and we'll be in touch shortly.",
+  done_p2:"If it's a fit, next comes the carrier's Clearinghouse query, a drug test, and a short list of truck documents — we'll walk you through all of it."
+ },
+ es:{
+  badge:"Solicitud de conductor", h1:"Maneja con {carrier}", oo:"Dueño de troca (lease-on)",
+  r_truck:"<b>Tú pones la troca.</b> {trailer}", r_trailer_no:"No necesitas trailer — eso lo pone la compañía.",
+  r_trailer_yes:"También vas a necesitar trailer.",
+  r_cit:"<b>No tienes que ser ciudadano americano</b> — solo necesitas permiso legal para trabajar aquí.",
+  r_mis:"<b>Los delitos menores se revisan caso por caso</b>, no son un no automático.",
+  r_or:"<b>Orientación:</b> {info}",
+
+  s1:"Sobre ti", s1n:"Lo básico, para poder contactarte.",
+  name:"Nombre completo", phone:"Teléfono celular", email:"Correo electrónico", city:"Ciudad", state:"Estado",
+  dob:"Fecha de nacimiento", dob_h:"Debes tener 22 años o más para calificar.",
+  work:"¿Tienes permiso legal para trabajar en Estados Unidos?", work_h:"No se requiere ciudadanía — solo permiso de trabajo.",
+
+  s2:"Tu CDL", s2n:"Se requiere una CDL Clase A vigente de tu estado de residencia.",
+  cls:"Clase", iss:"Estado que la emitió", exp:"Vence",
+  end:"Endosos", end_h:"Toca los que tengas.",
+  med:"Vencimiento de tu tarjeta médica DOT", med_h:"Tu examen físico DOT debe estar vigente.",
+
+  s3:"Tu experiencia", s3n:"Solo manejo Clase A. Sé exacto — la compañía lo verifica con tus empleadores anteriores.",
+  e5:"Meses manejando Clase A en los últimos 5 años", e5_h:"Se requieren al menos 12 meses.",
+  e3:"…de esos, ¿cuántos en los últimos 3 años?", e3_h:"Se requieren al menos 8 meses.",
+  fb:"Meses jalando flatbed en el último año", fb_h:"Solo importa si quieres trabajo de flatbed.",
+  ver:"¿Se puede contactar a tus empleadores anteriores para verificar tu experiencia?", ver_h:"Si no, la compañía puede aceptar 3 años de 1099 en su lugar.",
+  t99:"¿Tienes 3 años de formas 1099 disponibles?", t99_h:"",
+
+  s4:"Tu troca", s4n:"Esto es un lease-on de dueño de troca — tú pones el tractor.{trailer}",
+  s4n_tr:" El trailer es de la compañía.",
+  owns:"¿La troca es tuya (o la estás pagando)?",
+  yr:"Año", mk:"Marca", col:"Color", vin:"VIN",
+  lien:"Financiera (lienholder)", lien_h:"Déjalo en blanco si ya está pagada.",
+  plate:"Número de placa", plate_st:"Estado de la placa",
+  insp:"Fecha de tu última inspección federal", insp_h:"Debe tener menos de 30 días cuando entreguemos tu expediente — si la tuya es más vieja, vas a necesitar una nueva.",
+  plates:"¿Quieres que la compañía te dé las placas?", plates_h:"Su programa de placas cuesta $50 por semana y necesita tu título (frente y reverso) más un 2290 vigente.",
+  ifta:"¿Quieres que la compañía te dé el IFTA?", ifta_h:"$10 por semana.",
+
+  s5:"Si tienes empresa", s5n:"Solo si trabajas bajo una LLC o compañía.",
+  biz:"¿Tienes una LLC o empresa bajo la cual vas a firmar?", biz_h:"Si es así, el contrato se hace a nombre de la empresa y después hay una página extra que llenar.",
+  bizname:"Nombre de la empresa", bizname_h:"Opcional.",
+
+  s6:"Tu récord de manejo",
+  s6n:"Últimos 5 años — multas, infracciones que quedaron, y cualquier accidente. Dinos todo: de todos modos aparece en tu MVR, y una sorpresa después es lo que de verdad cuesta el puesto.",
+  v_none:"Sin multas ni accidentes en los últimos 5 años — esa es la mejor respuesta.",
+  v_what:"¿Qué pasó?", v_when:"¿Cuándo?", v_rm:"Quitar", v_add:"+ Agregar una multa o accidente",
+  v_g1:"Multas e incidentes", v_g2:"Infracciones graves",
+
+  s7:"Antecedentes", s7n:"Las respuestas honestas ayudan — casi todo se revisa caso por caso, no es un no automático.",
+  mis:"¿Tienes delitos menores en tu récord?", mis_h:"Permitidos — se revisan caso por caso.",
+  fel:"¿Tienes condenas por delitos graves?", fel_h:"Los delitos graves no comerciales se revisan caso por caso.",
+  pos:"Fecha de algún examen antidoping positivo o rechazado", pos_h:"Déjalo en blanco si nunca ha pasado.",
+  sap:"Fecha en que completaste un programa SAP", sap_h:"Déjalo en blanco si no aplica.",
+  note:"¿Algo que quieras explicar?", note_h:"El contexto ayuda cuando Seguridad revisa tu expediente.",
+
+  consent:"Al enviar, confirmas que la información de arriba es verdadera y completa a tu leal saber y entender, y nos autorizas a compartirla con {carrier} para considerarte para un puesto de manejo. Nunca te pediremos tu número de Seguro Social ni datos bancarios en esta forma — esos los das directamente a la compañía en su propio papeleo.",
+  yes:"Sí", no:"No", dash:"—",
+  submit:"Enviar solicitud", sending:"Enviando…",
+  need:"Todavía falta: {list}", ready:"Listo para enviar",
+  need_name:"tu nombre", need_phone:"un teléfono",
+  err_req:"Danos tu nombre y un teléfono o correo para poder contactarte.",
+  err_open:"No pudimos abrir esta solicitud",
+  done_h:"Solicitud recibida", done_p1:"Gracias por tomarte el tiempo. La estamos revisando y te contactamos muy pronto.",
+  done_p2:"Si es un buen ajuste, lo que sigue es la consulta al Clearinghouse de la compañía, un examen antidoping y una lista corta de documentos de la troca — te guiamos en todo."
+ }
+};
+let lang=(navigator.language||"en").toLowerCase().startsWith("es")?"es":"en";
+try{ const s=localStorage.getItem("tt_lang"); if(s) lang=s; }catch(e){}
+const t=(k,vars)=>{ let v=(T[lang]&&T[lang][k])||T.en[k]||""; if(vars) for(const [a,b] of Object.entries(vars)) v=v.split("{"+a+"}").join(b); return v; };
+
+function ynField(key,label,hint){
   return `<div class="f"><label>${label}${hint?`<span class="hint">${hint}</span>`:""}</label>
     <div class="yn" data-yn="${key}">
-      <button type="button" data-v="1">Yes</button>
-      <button type="button" data-v="0"${invertNo?' class="no-style"':''}>No</button>
+      <button type="button" data-v="1">${t("yes")}</button>
+      <button type="button" data-v="0">${t("no")}</button>
     </div></div>`;
 }
 function wireYN(root){
@@ -96,27 +234,29 @@ function wireYN(root){
     if(A[key]!=null){ const b=g.querySelector(`[data-v="${A[key]}"]`); if(b){b.classList.add("sel"); if(A[key]===0)b.classList.add("no");} }
   });
 }
-function stateOpts(sel){ return `<option value="">—</option>`+STATES.map(s=>`<option${s===sel?" selected":""}>${s}</option>`).join(""); }
+function stateOpts(sel){ return `<option value="">${t("dash")}</option>`+STATES.map(s=>`<option${s===sel?" selected":""}>${s}</option>`).join(""); }
+const vLabel=(c)=>(lang==="es"&&c.label_es)?c.label_es:c.label;
 
 function violationRow(i){
   const v=A.violations[i]||{};
   const minor=CHART.filter(c=>c.group==="minor"), serious=CHART.filter(c=>c.group==="serious");
+  const opt=c=>`<option value="${c.code}"${v.code===c.code?" selected":""}>${esc(vLabel(c))}</option>`;
   return `<div class="vitem" data-i="${i}">
-    <select data-vf="code" aria-label="What happened">
-      <option value="">What happened?</option>
-      <optgroup label="Tickets & incidents">${minor.map(c=>`<option value="${c.code}"${v.code===c.code?" selected":""}>${esc(c.label)}</option>`).join("")}</optgroup>
-      <optgroup label="Major violations">${serious.map(c=>`<option value="${c.code}"${v.code===c.code?" selected":""}>${esc(c.label)}</option>`).join("")}</optgroup>
+    <select data-vf="code" aria-label="${t("v_what")}">
+      <option value="">${t("v_what")}</option>
+      <optgroup label="${t("v_g1")}">${minor.map(opt).join("")}</optgroup>
+      <optgroup label="${t("v_g2")}">${serious.map(opt).join("")}</optgroup>
     </select>
     <div class="v2">
-      <span class="lbl">When?</span>
-      <input type="date" data-vf="date" value="${esc(v.date||"")}" aria-label="Date">
-      <button type="button" class="x" data-del="${i}">Remove</button>
+      <span class="lbl">${t("v_when")}</span>
+      <input type="date" data-vf="date" value="${esc(v.date||"")}" aria-label="${t("v_when")}">
+      <button type="button" class="x" data-del="${i}">${t("v_rm")}</button>
     </div>
   </div>`;
 }
 function drawViolations(){
   const box=$("#vlist"); if(!box)return;
-  box.innerHTML=A.violations.map((_,i)=>violationRow(i)).join("")||`<p class="note" style="margin:0 0 10px">No tickets or accidents in the last 5 years — that's the best answer there is.</p>`;
+  box.innerHTML=A.violations.map((_,i)=>violationRow(i)).join("")||`<p class="note" style="margin:0 0 10px">${t("v_none")}</p>`;
   box.querySelectorAll("[data-vf]").forEach(el=>el.onchange=()=>{
     const i=+el.closest(".vitem").dataset.i;
     A.violations[i][el.dataset.vf]=el.value; onChange();
@@ -125,127 +265,122 @@ function drawViolations(){
 }
 
 function onChange(){
-  const need=[["name","your name"],["phone","a phone number"]];
-  const missing=need.filter(([k])=>!A[k]);
+  const missing=[];
+  if(!A.name) missing.push(t("need_name"));
+  if(!A.phone) missing.push(t("need_phone"));
   const p=$("#prog");
-  if(p) p.textContent = missing.length ? "Still needed: "+missing.map(m=>m[1]).join(", ") : "Ready to submit";
+  if(p) p.textContent = missing.length ? t("need",{list:missing.join(", ")}) : t("ready");
 }
 
-function render(d){
-  const c=d.carrier||{};
+function render(){
+  const d=DATA, c=d.carrier||{};
   const pf=d.prefill||{};
-  Object.assign(A,{name:pf.name||"",phone:pf.phone||"",email:pf.email||"",city:pf.city||"",state:pf.state||""});
-  const where=[c.city,c.state].filter(Boolean).join(", ");
+  // Only seed from the server the first time; a language switch must not wipe
+  // what the driver has already typed.
+  if(!A._seeded){ Object.assign(A,{name:pf.name||"",phone:pf.phone||"",email:pf.email||"",city:pf.city||"",state:pf.state||""}); A._seeded=1; }
+  const trailer=c.needs_own_trailer?t("r_trailer_yes"):t("r_trailer_no");
   $("#wrap").innerHTML=`
+  <div class="lang">
+    <button data-lang="en" class="${lang==="en"?"on":""}">EN</button>
+    <button data-lang="es" class="${lang==="es"?"on":""}">ES</button>
+  </div>
   <div class="top">
-    <div class="badge">Driver application</div>
-    <h1>Drive with ${esc(c.name||"us")}</h1>
-    <div class="sub">${c.driver_type==="owner_operator"?"Owner-operator lease-on":"Driver position"}${c.haul_type?" · "+esc(c.haul_type):""}${where?" · "+esc(where):""}</div>
+    <div class="badge">${t("badge")}</div>
+    <h1>${esc(t("h1",{carrier:c.name||""}))}</h1>
+    <div class="sub">${c.driver_type==="owner_operator"?t("oo"):""}${c.haul_type?" · "+esc(c.haul_type):""}${[c.city,c.state].filter(Boolean).length?" · "+esc([c.city,c.state].filter(Boolean).join(", ")):""}</div>
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-      ${c.needs_own_truck?`<div class="req"><span class="tick">✓</span><div><b>You bring the truck.</b> ${c.needs_own_trailer?"You'll need a trailer too.":"No trailer needed — that's on the carrier."}</div></div>`:""}
-      <div class="req"><span class="tick">✓</span><div><b>You don't have to be a U.S. citizen</b> — you just have to be legally able to work here.</div></div>
-      <div class="req"><span class="tick">✓</span><div><b>Misdemeanors are looked at case by case</b>, not an automatic no.</div></div>
-      ${c.orientation_info?`<div class="req"><span class="tick">✓</span><div><b>Orientation:</b> ${esc(c.orientation_info)}</div></div>`:""}
+      ${c.needs_own_truck?`<div class="req"><span class="tick">✓</span><div>${t("r_truck",{trailer})}</div></div>`:""}
+      <div class="req"><span class="tick">✓</span><div>${t("r_cit")}</div></div>
+      <div class="req"><span class="tick">✓</span><div>${t("r_mis")}</div></div>
+      ${c.orientation_info?`<div class="req"><span class="tick">✓</span><div>${t("r_or",{info:esc(c.orientation_info)})}</div></div>`:""}
     </div>
   </div>
 
   <div class="err" id="err"></div>
 
   <div class="sec">
-    <h2>About you</h2>
-    <p class="note">The basics, so we can get back to you.</p>
-    <div class="f"><label>Full name</label><input id="f_name" value="${esc(A.name)}" autocomplete="name"></div>
+    <h2>${t("s1")}</h2><p class="note">${t("s1n")}</p>
+    <div class="f"><label>${t("name")}</label><input id="f_name" value="${esc(A.name||"")}" autocomplete="name"></div>
     <div class="grid2">
-      <div class="f"><label>Cell phone</label><input id="f_phone" type="tel" value="${esc(A.phone)}" autocomplete="tel"></div>
-      <div class="f"><label>Email</label><input id="f_email" type="email" value="${esc(A.email)}" autocomplete="email"></div>
+      <div class="f"><label>${t("phone")}</label><input id="f_phone" type="tel" value="${esc(A.phone||"")}" autocomplete="tel"></div>
+      <div class="f"><label>${t("email")}</label><input id="f_email" type="email" value="${esc(A.email||"")}" autocomplete="email"></div>
     </div>
     <div class="grid2">
-      <div class="f"><label>City</label><input id="f_city" value="${esc(A.city)}"></div>
-      <div class="f"><label>State</label><select id="f_state">${stateOpts(A.state)}</select></div>
+      <div class="f"><label>${t("city")}</label><input id="f_city" value="${esc(A.city||"")}"></div>
+      <div class="f"><label>${t("state")}</label><select id="f_state">${stateOpts(A.state)}</select></div>
     </div>
-    <div class="f"><label>Date of birth<span class="hint">You must be 22 or older to qualify.</span></label><input id="f_dob" type="date"></div>
-    ${ynField("work_authorized","Are you legally authorized to work in the United States?","Citizenship isn't required — work authorization is.")}
+    <div class="f"><label>${t("dob")}<span class="hint">${t("dob_h")}</span></label><input id="f_dob" type="date" value="${esc(A.dob||"")}"></div>
+    ${ynField("work_authorized",t("work"),t("work_h"))}
   </div>
 
   <div class="sec">
-    <h2>Your CDL</h2>
-    <p class="note">A valid Class A from your state of residence is required.</p>
+    <h2>${t("s2")}</h2><p class="note">${t("s2n")}</p>
     <div class="grid3">
-      <div class="f"><label>Class</label><select id="f_cdl_class"><option value="">—</option><option>A</option><option>B</option><option>C</option></select></div>
-      <div class="f"><label>Issuing state</label><select id="f_cdl_state">${stateOpts("")}</select></div>
-      <div class="f"><label>Expires</label><input id="f_cdl_expires" type="date"></div>
+      <div class="f"><label>${t("cls")}</label><select id="f_cdl_class"><option value="">${t("dash")}</option>${["A","B","C"].map(x=>`<option${A.cdl_class===x?" selected":""}>${x}</option>`).join("")}</select></div>
+      <div class="f"><label>${t("iss")}</label><select id="f_cdl_state">${stateOpts(A.cdl_state)}</select></div>
+      <div class="f"><label>${t("exp")}</label><input id="f_cdl_expires" type="date" value="${esc(A.cdl_expires||"")}"></div>
     </div>
-    <div class="f"><label>Endorsements<span class="hint">Tap any you hold.</span></label>
-      <div class="chips" id="endorse">${ENDORSE.map(([k,l])=>`<div class="chip" data-e="${k}">${l}</div>`).join("")}</div>
+    <div class="f"><label>${t("end")}<span class="hint">${t("end_h")}</span></label>
+      <div class="chips" id="endorse">${ENDORSE.map(([k,l])=>`<div class="chip${(A.endorsements||"").split(",").includes(k)?" sel":""}" data-e="${k}">${l}</div>`).join("")}</div>
     </div>
-    <div class="f"><label>DOT medical card expires<span class="hint">Your DOT physical must be current.</span></label><input id="f_dot_medical_expires" type="date"></div>
+    <div class="f"><label>${t("med")}<span class="hint">${t("med_h")}</span></label><input id="f_dot_medical_expires" type="date" value="${esc(A.dot_medical_expires||"")}"></div>
   </div>
 
   <div class="sec">
-    <h2>Your experience</h2>
-    <p class="note">Class A driving only. Be accurate — the carrier verifies this with your previous employers.</p>
+    <h2>${t("s3")}</h2><p class="note">${t("s3n")}</p>
     <div class="grid2">
-      <div class="f"><label>Months driving Class A in the last 5 years<span class="hint">At least 12 months required.</span></label><input id="f_exp_months_5yr" type="number" min="0" max="60" inputmode="numeric"></div>
-      <div class="f"><label>…of those, how many in the last 3 years?<span class="hint">At least 8 months required.</span></label><input id="f_exp_months_3yr" type="number" min="0" max="36" inputmode="numeric"></div>
+      <div class="f"><label>${t("e5")}<span class="hint">${t("e5_h")}</span></label><input id="f_exp_months_5yr" type="number" min="0" max="60" inputmode="numeric" value="${esc(A.exp_months_5yr||"")}"></div>
+      <div class="f"><label>${t("e3")}<span class="hint">${t("e3_h")}</span></label><input id="f_exp_months_3yr" type="number" min="0" max="36" inputmode="numeric" value="${esc(A.exp_months_3yr||"")}"></div>
     </div>
-    <div class="f"><label>Months pulling flatbed in the last year<span class="hint">Only matters if you want flatbed work.</span></label><input id="f_flatbed_months_1yr" type="number" min="0" max="12" inputmode="numeric"></div>
-    ${ynField("can_verify_employers","Can your previous employers be reached to verify your experience?","If not, the carrier can accept 3 years of 1099s instead.")}
-    ${ynField("has_1099s","Do you have 3 years of 1099s available?","")}
+    <div class="f"><label>${t("fb")}<span class="hint">${t("fb_h")}</span></label><input id="f_flatbed_months_1yr" type="number" min="0" max="12" inputmode="numeric" value="${esc(A.flatbed_months_1yr||"")}"></div>
+    ${ynField("can_verify_employers",t("ver"),t("ver_h"))}
+    ${ynField("has_1099s",t("t99"),t("t99_h"))}
   </div>
 
   <div class="sec">
-    <h2>Your truck</h2>
-    <p class="note">This is an owner-operator lease-on — you bring the tractor.${c.needs_own_trailer?"":" The trailer is the carrier's."}</p>
-    ${ynField("owns_truck","Do you own (or are you buying) your truck?","")}
+    <h2>${t("s4")}</h2><p class="note">${t("s4n",{trailer:c.needs_own_trailer?"":t("s4n_tr")})}</p>
+    ${ynField("owns_truck",t("owns"),"")}
     <div class="grid3">
-      <div class="f"><label>Year</label><input id="f_truck_year" type="number" inputmode="numeric" placeholder="2019"></div>
-      <div class="f"><label>Make</label><input id="f_truck_make" placeholder="Freightliner"></div>
-      <div class="f"><label>Color</label><input id="f_truck_color"></div>
+      <div class="f"><label>${t("yr")}</label><input id="f_truck_year" type="number" inputmode="numeric" placeholder="2019" value="${esc(A.truck_year||"")}"></div>
+      <div class="f"><label>${t("mk")}</label><input id="f_truck_make" placeholder="Freightliner" value="${esc(A.truck_make||"")}"></div>
+      <div class="f"><label>${t("col")}</label><input id="f_truck_color" value="${esc(A.truck_color||"")}"></div>
     </div>
     <div class="grid2">
-      <div class="f"><label>VIN</label><input id="f_truck_vin"></div>
-      <div class="f"><label>Lienholder <span class="hint">Leave blank if paid off.</span></label><input id="f_lienholder"></div>
+      <div class="f"><label>${t("vin")}</label><input id="f_truck_vin" value="${esc(A.truck_vin||"")}"></div>
+      <div class="f"><label>${t("lien")} <span class="hint">${t("lien_h")}</span></label><input id="f_lienholder" value="${esc(A.lienholder||"")}"></div>
     </div>
     <div class="grid2">
-      <div class="f"><label>Plate #</label><input id="f_truck_plate"></div>
-      <div class="f"><label>Plate state</label><select id="f_truck_plate_state">${stateOpts("")}</select></div>
+      <div class="f"><label>${t("plate")}</label><input id="f_truck_plate" value="${esc(A.truck_plate||"")}"></div>
+      <div class="f"><label>${t("plate_st")}</label><select id="f_truck_plate_state">${stateOpts(A.truck_plate_state)}</select></div>
     </div>
-    <div class="f"><label>Date of your last federal inspection<span class="hint">It has to be dated within 30 days when your file goes in — if yours is older, you'll need a fresh one.</span></label><input id="f_inspection_date" type="date"></div>
-    ${ynField("wants_carrier_plates","Do you want the carrier to provide your plates?","Their plate program runs $50/week and needs your title (front & back) plus a current 2290.")}
-    ${ynField("wants_ifta","Do you want the carrier to provide IFTA?","$10/week.")}
+    <div class="f"><label>${t("insp")}<span class="hint">${t("insp_h")}</span></label><input id="f_inspection_date" type="date" value="${esc(A.inspection_date||"")}"></div>
+    ${ynField("wants_carrier_plates",t("plates"),t("plates_h"))}
+    ${ynField("wants_ifta",t("ifta"),t("ifta_h"))}
   </div>
 
   <div class="sec">
-    <h2>Business setup</h2>
-    <p class="note">Only if you run under an LLC or company.</p>
-    ${ynField("has_business","Do you have an LLC or business you'll lease under?","If yes, the lease is made in the business's name and there's one extra page to fill in later.")}
-    <div class="f"><label>Business name <span class="hint">Optional.</span></label><input id="f_business_name"></div>
+    <h2>${t("s5")}</h2><p class="note">${t("s5n")}</p>
+    ${ynField("has_business",t("biz"),t("biz_h"))}
+    <div class="f"><label>${t("bizname")} <span class="hint">${t("bizname_h")}</span></label><input id="f_business_name" value="${esc(A.business_name||"")}"></div>
   </div>
 
   <div class="sec">
-    <h2>Your driving record</h2>
-    <p class="note">Last 5 years — tickets, warnings that stuck, and any accidents. Tell us everything: this gets pulled on your MVR anyway, and a surprise later is what actually costs people the seat.</p>
+    <h2>${t("s6")}</h2><p class="note">${t("s6n")}</p>
     <div id="vlist"></div>
-    <button type="button" class="addv" id="addv">+ Add a ticket or accident</button>
+    <button type="button" class="addv" id="addv">${t("v_add")}</button>
   </div>
 
   <div class="sec">
-    <h2>Background</h2>
-    <p class="note">Honest answers here help — most of this is reviewed case by case, not an automatic no.</p>
-    ${ynField("misdemeanor","Any misdemeanors on your record?","Allowed — reviewed case by case.")}
-    ${ynField("felony","Any felony convictions?","Non-commercial felonies are reviewed case by case.")}
-    <div class="f"><label>Date of any positive or refused drug/alcohol test<span class="hint">Leave blank if this has never happened.</span></label><input id="f_positive_test_at" type="date"></div>
-    <div class="f"><label>Date you completed a Substance Abuse Program (SAP)<span class="hint">Leave blank if not applicable.</span></label><input id="f_sap_completed_at" type="date"></div>
-    <div class="f"><label>Anything you'd like to explain?<span class="hint">Context helps when Safety reviews your file.</span></label><textarea id="f_background_note"></textarea></div>
+    <h2>${t("s7")}</h2><p class="note">${t("s7n")}</p>
+    ${ynField("misdemeanor",t("mis"),t("mis_h"))}
+    ${ynField("felony",t("fel"),t("fel_h"))}
+    <div class="f"><label>${t("pos")}<span class="hint">${t("pos_h")}</span></label><input id="f_positive_test_at" type="date" value="${esc(A.positive_test_at||"")}"></div>
+    <div class="f"><label>${t("sap")}<span class="hint">${t("sap_h")}</span></label><input id="f_sap_completed_at" type="date" value="${esc(A.sap_completed_at||"")}"></div>
+    <div class="f"><label>${t("note")}<span class="hint">${t("note_h")}</span></label><textarea id="f_background_note">${esc(A.background_note||"")}</textarea></div>
   </div>
 
-  <div class="sec">
-    <div class="consent">
-      By submitting, you confirm the information above is true and complete to the best of your knowledge, and you authorize us to share it with ${esc(c.name||"the carrier")} for the purpose of considering you for a driving position. We'll never ask for your Social Security number or bank details on this form — you'll provide those directly to the carrier on their own paperwork.
-    </div>
-  </div>`;
+  <div class="sec"><div class="consent">${t("consent",{carrier:esc(c.name||"")})}</div></div>`;
 
-  // Wire plain text/date/number/select fields.
   ["name","phone","email","city","state","dob","cdl_class","cdl_state","cdl_expires","dot_medical_expires",
    "exp_months_5yr","exp_months_3yr","flatbed_months_1yr","truck_year","truck_make","truck_color","truck_vin",
    "lienholder","truck_plate","truck_plate_state","inspection_date","business_name","positive_test_at",
@@ -260,16 +395,25 @@ function render(d){
     A.endorsements=[...$("#endorse").querySelectorAll(".chip.sel")].map(x=>x.dataset.e).join(",");
   });
   $("#addv").onclick=()=>{ A.violations.push({code:"",date:""}); drawViolations(); };
+  document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>{
+    lang=b.dataset.lang;
+    try{ localStorage.setItem("tt_lang",lang); }catch(e){}
+    document.documentElement.lang=lang;
+    render();                       // re-render in place; answers are kept in A
+  });
   drawViolations(); onChange();
+  $("#submitBtn").textContent=t("submit");
   $("#bar").style.display="flex";
+  document.documentElement.lang=lang;
+  document.title=t("badge");
 }
 
 function done(){
   $("#wrap").innerHTML=`<div class="top msg">
     <div class="check">✓</div>
-    <h1 style="margin:0 0 8px;font-size:22px">Application received</h1>
-    <p style="color:var(--soft);margin:0 0 6px">Thanks for taking the time. We're reviewing it now and we'll be in touch shortly.</p>
-    <p style="color:var(--soft);margin:0;font-size:14px">If it's a fit, next comes the carrier's Clearinghouse query, a drug test, and a short list of truck documents — we'll walk you through all of it.</p>
+    <h1 style="margin:0 0 8px;font-size:22px">${t("done_h")}</h1>
+    <p style="color:var(--soft);margin:0 0 6px">${t("done_p1")}</p>
+    <p style="color:var(--soft);margin:0;font-size:14px">${t("done_p2")}</p>
   </div>`;
   $("#bar").style.display="none";
   window.scrollTo(0,0);
@@ -278,11 +422,11 @@ function done(){
 async function submit(){
   const err=$("#err");
   if(!A.name || !(A.phone||A.email)){
-    err.textContent="Please give us your name and a phone number or email so we can reach you.";
-    err.style.display="block"; window.scrollTo(0,0); return;
+    err.textContent=t("err_req"); err.style.display="block"; window.scrollTo(0,0); return;
   }
   A.violations=A.violations.filter(v=>v.code);
-  const btn=$("#submitBtn"); btn.disabled=true; btn.textContent="Sending…";
+  A.lang=lang;                      // so follow-ups reach them in their language
+  const btn=$("#submitBtn"); btn.disabled=true; btn.textContent=t("sending");
   try{
     const r=await fetch("/api/apply/submit?"+Q,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(A)});
     const d=await r.json().catch(()=>({}));
@@ -290,7 +434,7 @@ async function submit(){
     done();
   }catch(e){
     err.textContent=e.message; err.style.display="block"; window.scrollTo(0,0);
-    btn.disabled=false; btn.textContent="Submit application";
+    btn.disabled=false; btn.textContent=t("submit");
   }
 }
 
@@ -299,12 +443,12 @@ async function submit(){
     const r=await fetch("/api/apply/form?"+Q);
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||"This link isn't working.");
-    CHART=d.chart||[];
+    CHART=d.chart||[]; DATA=d;
     if(d.submitted){ done(); return; }
-    render(d);
+    render();
     $("#submitBtn").onclick=submit;
   }catch(e){
-    $("#wrap").innerHTML=`<div class="top msg"><h1 style="font-size:20px;margin:0 0 8px">We couldn't open this application</h1><p style="color:var(--soft);margin:0">${esc(e.message)}</p></div>`;
+    $("#wrap").innerHTML=`<div class="top msg"><h1 style="font-size:20px;margin:0 0 8px">${t("err_open")}</h1><p style="color:var(--soft);margin:0">${esc(e.message)}</p></div>`;
   }
 })();
 </script>

@@ -415,7 +415,7 @@ function chart() {
   // Drivers see plain English; the carrier's official wording stays on `label`
   // for the CRM and the packet.
   return Object.entries(VIOLATIONS).map(([code, v]) => ({
-    code, label: v.short || v.label,
+    code, label: v.short || v.label, label_es: v.es || v.short || v.label,
     group: v.prohibit_years ? 'serious' : 'minor',
   }));
 }
