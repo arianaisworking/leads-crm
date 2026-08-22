@@ -412,8 +412,10 @@ async function firstCarrier(db) {
 
 // The violation list the form renders, grouped for a human to self-report.
 function chart() {
+  // Drivers see plain English; the carrier's official wording stays on `label`
+  // for the CRM and the packet.
   return Object.entries(VIOLATIONS).map(([code, v]) => ({
-    code, label: v.label,
+    code, label: v.short || v.label,
     group: v.prohibit_years ? 'serious' : 'minor',
   }));
 }

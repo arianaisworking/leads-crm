@@ -30,9 +30,19 @@
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:14px;cursor:pointer;background:#fff;user-select:none}
   .chip.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand);font-weight:600}
-  .vrow{display:grid;grid-template-columns:1fr 145px 38px;gap:8px;margin-bottom:9px;align-items:center}
-  .vrow select,.vrow input{padding:10px;font-size:14px}
-  .vrow .x{border:1px solid var(--line);background:#fff;border-radius:9px;height:42px;cursor:pointer;color:var(--soft);font-size:17px}
+  /* Each ticket is its own small card. The violation names are long — giving
+     the dropdown a full line means it stays readable on a phone, which is
+     where most of these get filled in. */
+  .vitem{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fbfcfe}
+  .vitem select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+                font:inherit;font-size:15px;background:#fff;color:var(--ink)}
+  .vitem .v2{display:flex;gap:9px;align-items:center;margin-top:9px;flex-wrap:wrap}
+  .vitem .v2 .lbl{font-size:13.5px;color:var(--soft);font-weight:600}
+  .vitem .v2 input{flex:1;min-width:130px;padding:10px 11px;border:1px solid var(--line);
+                   border-radius:10px;font:inherit;font-size:15px;background:#fff;color:var(--ink)}
+  .vitem .x{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:9px;
+            padding:9px 14px;cursor:pointer;color:var(--soft);font:inherit;font-size:13.5px;font-weight:600}
+  .vitem .x:hover{border-color:#d99;color:#9b2c2c}
   .addv{border:1px dashed var(--line);background:#fbfcfe;color:var(--brand);border-radius:11px;padding:11px;width:100%;font:inherit;font-weight:600;cursor:pointer}
   .consent{background:#fbfcfe;border:1px solid var(--line);border-radius:11px;padding:13px;font-size:13px;color:var(--soft);line-height:1.55;margin-bottom:13px}
   .bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px 14px;display:flex;justify-content:center;box-shadow:0 -2px 12px rgba(20,22,40,.06)}
@@ -46,7 +56,7 @@
   .req{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--soft);margin-bottom:7px}
   .req b{color:var(--ink);font-weight:600}
   .tick{color:var(--ok);font-weight:700}
-  @media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr}.vrow{grid-template-columns:1fr 120px 38px}}
+  @media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -91,21 +101,24 @@ function stateOpts(sel){ return `<option value="">—</option>`+STATES.map(s=>`<
 function violationRow(i){
   const v=A.violations[i]||{};
   const minor=CHART.filter(c=>c.group==="minor"), serious=CHART.filter(c=>c.group==="serious");
-  return `<div class="vrow" data-i="${i}">
-    <select data-vf="code">
-      <option value="">Choose…</option>
+  return `<div class="vitem" data-i="${i}">
+    <select data-vf="code" aria-label="What happened">
+      <option value="">What happened?</option>
       <optgroup label="Tickets & incidents">${minor.map(c=>`<option value="${c.code}"${v.code===c.code?" selected":""}>${esc(c.label)}</option>`).join("")}</optgroup>
       <optgroup label="Major violations">${serious.map(c=>`<option value="${c.code}"${v.code===c.code?" selected":""}>${esc(c.label)}</option>`).join("")}</optgroup>
     </select>
-    <input type="date" data-vf="date" value="${esc(v.date||"")}">
-    <button type="button" class="x" data-del="${i}">×</button>
+    <div class="v2">
+      <span class="lbl">When?</span>
+      <input type="date" data-vf="date" value="${esc(v.date||"")}" aria-label="Date">
+      <button type="button" class="x" data-del="${i}">Remove</button>
+    </div>
   </div>`;
 }
 function drawViolations(){
   const box=$("#vlist"); if(!box)return;
   box.innerHTML=A.violations.map((_,i)=>violationRow(i)).join("")||`<p class="note" style="margin:0 0 10px">No tickets or accidents in the last 5 years — that's the best answer there is.</p>`;
   box.querySelectorAll("[data-vf]").forEach(el=>el.onchange=()=>{
-    const i=+el.closest(".vrow").dataset.i;
+    const i=+el.closest(".vitem").dataset.i;
     A.violations[i][el.dataset.vf]=el.value; onChange();
   });
   box.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ A.violations.splice(+b.dataset.del,1); drawViolations(); onChange(); });
