@@ -65,6 +65,20 @@
   .lang button:last-of-type{border-radius:0 9px 9px 0;border-left:0}
   .lang button.on{background:var(--brand);border-color:var(--brand);color:#fff}
   @media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  /* ---- Touch sizing. Drivers are on phones, not desktops. ----
+     16px on form controls: below that, iOS zooms the page the moment a field is
+     focused, which throws the layout around mid-answer.
+     44px minimum on tap targets: Apple's guideline, and about right for a thumb. */
+  input,select,textarea,button{font-size:16px}
+  .lang button{min-height:44px;padding-left:16px;padding-right:16px}
+  .yn button{min-height:48px}
+  .chip{min-height:44px}
+  .btn{min-height:48px}
+  .f input,.f select,.f textarea{font-size:16px;min-height:48px}
+  .vitem select,.vitem .v2 input{font-size:16px;min-height:48px}
+  .vitem .x{min-height:44px}
+  .addv{min-height:48px}
 </style>
 </head>
 <body>

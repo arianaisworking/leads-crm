@@ -44,6 +44,8 @@ const PUBLIC_FIELDS = [
   'truck_vin', 'truck_plate', 'truck_plate_state', 'lienholder', 'business_name',
   'inspection_date', 'background_note',
 ];
+// Which language the driver filled the form in — every later email follows it.
+const LANG = (v) => (String(v || '').toLowerCase().startsWith('es') ? 'es' : 'en');
 const BIT_FIELDS = ['work_authorized', 'us_citizen', 'owns_truck', 'wants_carrier_plates', 'wants_ifta',
   'has_business', 'felony', 'misdemeanor', 'can_verify_employers', 'has_1099s'];
 const INT_FIELDS = ['exp_months_5yr', 'exp_months_3yr', 'flatbed_months_1yr'];
@@ -107,6 +109,7 @@ export async function onRequest(context) {
     if (b.positive_test_at) rec.positive_test_at = String(b.positive_test_at).slice(0, 10);
     rec.application = JSON.stringify(b);
     rec.carrier_id = carrier ? carrier.id : null;
+    rec.lang = LANG(b.lang);
 
     if (!driver) {
       // Open link: don't create a duplicate if they already applied.
@@ -177,8 +180,24 @@ export async function onRequest(context) {
     // carrier's internal thresholds back at them.
     if (full.email) {
       const first = (full.name || '').split(' ')[0];
+      const es = rec.lang === 'es';
       const msg = s.result === 'disqualified'
-        ? `<p style="margin:0 0 14px;color:#3a4353">Thanks for taking the time to apply. Based on what you've told us, we don't have a seat that fits your record right now. Records change — if your situation changes, get back in touch and we'll take another look.</p>`
+        ? (es
+          ? `<p style="margin:0 0 14px;color:#3a4353">Gracias por tomarte el tiempo de aplicar. Con lo que nos platicaste, ahorita no tenemos un puesto que le quede a tu récord. Las cosas cambian — si tu situación cambia, búscanos otra vez y lo revisamos de nuevo.</p>`
+          : `<p style="margin:0 0 14px;color:#3a4353">Thanks for taking the time to apply. Based on what you've told us, we don't have a seat that fits your record right now. Records change — if your situation changes, get back in touch and we'll take another look.</p>`)
+        : es && leaseUrl
+          ? `<p style="margin:0 0 14px;color:#3a4353">Buenas noticias${first ? ', ' + esc(first) : ''} — pareces ser un buen ajuste${carrier ? ' para ' + esc(carrier.name) : ''}, así que vamos a seguir. Son dos pasos y puedes empezar con cualquiera.</p>
+             ${carrierAppUrl ? `<div style="border:1px solid #e3e8ef;border-radius:12px;padding:14px 16px;margin:0 0 12px">
+               <div style="font-weight:700;font-size:14px;margin-bottom:4px">Paso 1 — la solicitud de la compañía</div>
+               <p style="margin:0 0 12px;color:#5b6472;font-size:13.5px">Esta va directo a su departamento de seguridad y te da un número de confirmación. Aparta unos 20 minutos y ten a la mano tu historial de trabajo.</p>
+               <a href="${carrierAppUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700">Abrir la solicitud →</a>
+             </div>` : ''}
+             <div style="border:1px solid #e3e8ef;border-radius:12px;padding:14px 16px;margin:0 0 14px">
+               <div style="font-weight:700;font-size:14px;margin-bottom:4px">Paso ${carrierAppUrl ? '2' : '1'} — tus datos del contrato y documentos</div>
+               <p style="margin:0 0 12px;color:#5b6472;font-size:13.5px">Tus datos, tu troca, y cuatro documentos que puedes fotografiar con el teléfono: la registración, el puerto ECM, una inspección federal de menos de 30 días, y un cheque anulado.</p>
+               <a href="${leaseUrl}" style="display:inline-block;background:#fff;color:#2f6fed;border:1px solid #2f6fed;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700">Abrir tu página →</a>
+             </div>
+             <p style="margin:0 0 14px;color:#5b6472;font-size:13.5px">Los dos enlaces se quedan activos, así que puedes hacerlo por partes. Nosotros le damos seguimiento con la compañía.</p>`
         : leaseUrl
           ? `<p style="margin:0 0 14px;color:#3a4353">Good news${first ? ', ' + esc(first) : ''} — you look like a fit${carrier ? ' for ' + esc(carrier.name) : ''}, so let's keep moving. There are two steps, and you can start either one now.</p>
              ${carrierAppUrl ? `<div style="border:1px solid #e3e8ef;border-radius:12px;padding:14px 16px;margin:0 0 12px">
@@ -195,8 +214,10 @@ export async function onRequest(context) {
           : `<p style="margin:0 0 14px;color:#3a4353">Thanks${first ? ', ' + esc(first) : ''} — we've got your application and we're reviewing it now. We'll be in touch shortly.</p>`;
       context.waitUntil(sendEmail(env, {
         to: full.email, replyTo: replyToEmail(env),
-        subject: 'We received your application',
-        html: emailShell('Application received', `<p style="margin:0 0 6px;font-size:16px">Hi${first ? ' ' + esc(first) : ''},</p>${msg}<p style="margin:0;color:#5b6472;font-size:13px">Questions? Just reply to this email.</p>`, brandName(env)),
+        subject: es ? 'Recibimos tu solicitud' : 'We received your application',
+        html: emailShell(es ? 'Solicitud recibida' : 'Application received',
+          `<p style="margin:0 0 6px;font-size:16px">${es ? 'Hola' : 'Hi'}${first ? ' ' + esc(first) : ''},</p>${msg}
+           <p style="margin:0;color:#5b6472;font-size:13px">${es ? '¿Preguntas? Contesta este correo y te ayudamos.' : 'Questions? Just reply to this email.'}</p>`, brandName(env)),
       }));
     }
 

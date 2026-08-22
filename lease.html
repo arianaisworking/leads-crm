@@ -47,7 +47,27 @@
   .msg{text-align:center;padding:52px 22px}
   .check{width:60px;height:60px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px}
   .err{background:#fdecec;border:1px solid #f5c2c2;color:#9b2c2c;border-radius:11px;padding:11px 13px;font-size:14px;margin-bottom:12px;display:none}
+  .lang{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;gap:2px;
+        padding:8px 0 10px;background:linear-gradient(var(--bg) 70%,transparent)}
+  .lang button{border:1px solid var(--line);background:#fff;color:var(--soft);font:inherit;
+               font-size:13px;font-weight:700;padding:6px 13px;cursor:pointer}
+  .lang button:first-of-type{border-radius:9px 0 0 9px}
+  .lang button:last-of-type{border-radius:0 9px 9px 0;border-left:0}
+  .lang button.on{background:var(--brand);border-color:var(--brand);color:#fff}
   @media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  /* ---- Touch sizing. Drivers are on phones, not desktops. ----
+     16px on form controls: below that, iOS zooms the page the moment a field is
+     focused, which throws the layout around mid-answer.
+     44px minimum on tap targets: Apple's guideline, and about right for a thumb. */
+  input,select,textarea,button{font-size:16px}
+  .lang button{min-height:44px;padding-left:16px;padding-right:16px}
+  .yn button{min-height:48px}
+  .chip{min-height:44px}
+  .btn{min-height:48px}
+  .f input,.f select,.f textarea{font-size:16px;min-height:48px}
+  .up input[type=date]{font-size:16px;min-height:44px}
+  .upbtn{min-height:44px;display:inline-flex;align-items:center}
 </style>
 </head>
 <body>
@@ -63,12 +83,141 @@ const TOKEN=new URLSearchParams(location.search).get("token")||"";
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const STATES=["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const A={};
-let DOCS=[], SECURE=false, UPLOADS=false;
+let DOCS=[], SECURE=false, UPLOADS=false, DATA=null;
 
-function stateOpts(sel){ return `<option value="">—</option>`+STATES.map(s=>`<option${s===sel?" selected":""}>${s}</option>`).join(""); }
+const T={
+ en:{
+  step:"Step 2 of 2", h1:"Let's get your lease ready",
+  intro:"Two things here: the details the lease agreement needs, and a few documents. You can upload photos straight from your phone, and this link stays live — do what you can now and come back for the rest.",
+  ca_h:"The carrier's own application", ca_done:"✓ The carrier's own application",
+  ca_new:"Separate from this page, and it has to be done: it goes straight to their Safety team and gets you a confirmation number. Around 20 minutes — have your employment history to hand.",
+  ca_started:"You've opened this already. If you didn't finish it, pick up where you left off — nothing below replaces it.",
+  ca_btn:"Open the carrier application ↗", ca_btn2:"Reopen the carrier application ↗",
+
+  s1:"Your details", s1n:"Exactly as they should appear on the lease.",
+  name:"Full name", cell:"Cell phone", home:"Home phone", home_h:"Optional.",
+  addr:"Street address", city:"City", state:"State", zip:"Zip",
+  gender:"Gender", gender_h:"The lease form asks.", cit:"U.S. citizen",
+  lock:"🔒 Encrypted — used once, then deleted",
+  lock_n:"The carrier's lease and payroll setup needs these. They're encrypted the moment you send them, nobody browses them in our system, and they're destroyed once your lease is signed.",
+  ssn:"Social Security number", dl:"Driver's licence number",
+
+  s2:"Your truck", s2n:"The lease is written against this equipment.",
+  yr:"Year", mk:"Make", col:"Color", plate:"Plate #", plate_st:"Plate state",
+  vin:"VIN", unit:"Unit #", unit_h:"Optional.",
+  lien:"Lienholder", lien_h:"Blank if paid off.", val:"Truck value",
+  lien_a:"Lienholder address", lien_p:"Lienholder phone", lien_e:"Lienholder email",
+
+  s3:"What you want the carrier to cover", s3n:"These are weekly deductions from your settlement — your call on each.",
+  plates:"Carrier-provided plates?", plates_h:"$50 a week.",
+  plates_note:"Because you've chosen the plate program, we'll need your <b>title (front and back)</b> and your <b>current 2290</b> — both are in the document list below.",
+  ifta:"Carrier-provided IFTA?", ifta_h:"$10 a week.",
+  maint:"Set up a maintenance escrow?", maint_h:"Money set aside weekly for repairs.",
+  maint_w:"Amount per week", maint_m:"Maximum to hold",
+
+  s4:"Direct deposit", s4n:"So you get paid without waiting on a paper check.",
+  bank:"Bank name", acct_n:"Name on the account", routing:"Routing number", account:"Account number",
+  s4_foot:"You'll also upload a voided check below — the carrier asks for both.",
+
+  s5:"Business setup", s5n:"Only if the truck is owned by your company, or you want to be paid as a business.",
+  biz:"Leasing under an LLC or company?", bizname:"Business name", ein:"Federal ID # (EIN)",
+  bizowner:"Business owner", bizaddr:"Business address", bizphone:"Business phone", bizemail:"Business email",
+
+  s6:"Documents", s6n:"Photos from your phone are fine, as long as everything's readable.",
+  d_reg:"Your truck's current registration.",
+  d_title:"Front and back — needed for the carrier's plate program.",
+  d_2290:"Your current Heavy Highway Use Tax form.",
+  d_ecm:"Just a photo of the port where the ELD plugs in.",
+  d_insp:"Must be dated within the last 30 days. Add the date below.",
+  d_check:"So your settlements go to the right account.",
+  d_1099:"Your last 3 years of 1099s. The carrier asks for these when previous employers can't be reached to verify your experience.",
+  d_lease:"Handled by this page — nothing to upload.",
+  d_recv:"✓ received", d_need:"needed",
+  d_replace:"Replace", d_upload:"Take a photo or upload",
+  d_again:"— send a new one any time to replace it.",
+  d_email:"Email this one to us and we'll add it.",
+  d_date_first:"Add the inspection date first.", d_uploading:"Uploading…",
+  d_insp_date:"Inspection date",
+
+  save:"Send my information", save2:"Update my information", saving:"Sending…",
+  prog:"{done} of {total} documents in",
+  done_h:"Got it — thank you",
+  done_p:"Your information is in and we're preparing your lease agreement.",
+  done_left:"Your information is in. We still need {n} more document{s} — come back to this same link any time to add {it}.",
+  done_foot:"We'll be in touch about your orientation date. If we need anything else, we'll email you.",
+  err_open:"We couldn't open this page", yes:"Yes", no:"No", dash:"—"
+ },
+ es:{
+  step:"Paso 2 de 2", h1:"Vamos a preparar tu contrato",
+  intro:"Aquí hay dos cosas: los datos que necesita el contrato, y unos documentos. Puedes subir fotos directo desde tu teléfono, y este enlace se queda activo — haz lo que puedas ahora y regresa por lo demás.",
+  ca_h:"La solicitud de la compañía", ca_done:"✓ La solicitud de la compañía",
+  ca_new:"Es aparte de esta página, y hay que hacerla: va directo a su departamento de seguridad y te da un número de confirmación. Unos 20 minutos — ten a la mano tu historial de trabajo.",
+  ca_started:"Ya la abriste. Si no la terminaste, continúa donde te quedaste — nada de lo de abajo la reemplaza.",
+  ca_btn:"Abrir la solicitud de la compañía ↗", ca_btn2:"Volver a abrir la solicitud ↗",
+
+  s1:"Tus datos", s1n:"Tal como deben aparecer en el contrato.",
+  name:"Nombre completo", cell:"Teléfono celular", home:"Teléfono de casa", home_h:"Opcional.",
+  addr:"Dirección", city:"Ciudad", state:"Estado", zip:"Código postal",
+  gender:"Género", gender_h:"El contrato lo pide.", cit:"¿Ciudadano americano?",
+  lock:"🔒 Encriptado — se usa una vez y se borra",
+  lock_n:"La compañía los necesita para el contrato y para pagarte. Se encriptan en el momento en que los envías, nadie los anda viendo en nuestro sistema, y se destruyen cuando se firma tu contrato.",
+  ssn:"Número de Seguro Social", dl:"Número de licencia de manejo",
+
+  s2:"Tu troca", s2n:"El contrato se hace sobre este equipo.",
+  yr:"Año", mk:"Marca", col:"Color", plate:"Número de placa", plate_st:"Estado de la placa",
+  vin:"VIN", unit:"Número de unidad", unit_h:"Opcional.",
+  lien:"Financiera (lienholder)", lien_h:"En blanco si ya está pagada.", val:"Valor de la troca",
+  lien_a:"Dirección de la financiera", lien_p:"Teléfono de la financiera", lien_e:"Correo de la financiera",
+
+  s3:"Qué quieres que cubra la compañía", s3n:"Son descuentos semanales de tu liquidación — tú decides en cada uno.",
+  plates:"¿Placas de la compañía?", plates_h:"$50 por semana.",
+  plates_note:"Como elegiste el programa de placas, vamos a necesitar tu <b>título (frente y reverso)</b> y tu <b>2290 vigente</b> — los dos están en la lista de documentos abajo.",
+  ifta:"¿IFTA de la compañía?", ifta_h:"$10 por semana.",
+  maint:"¿Quieres un fondo para mantenimiento?", maint_h:"Dinero apartado cada semana para reparaciones.",
+  maint_w:"Cantidad por semana", maint_m:"Máximo a guardar",
+
+  s4:"Depósito directo", s4n:"Para que te paguen sin esperar un cheque de papel.",
+  bank:"Nombre del banco", acct_n:"Nombre en la cuenta", routing:"Número de ruta (routing)", account:"Número de cuenta",
+  s4_foot:"Abajo también vas a subir un cheque anulado — la compañía pide los dos.",
+
+  s5:"Si tienes empresa", s5n:"Solo si la troca está a nombre de tu compañía, o quieres que te paguen como empresa.",
+  biz:"¿Vas a firmar bajo una LLC o compañía?", bizname:"Nombre de la empresa", ein:"Número federal (EIN)",
+  bizowner:"Dueño de la empresa", bizaddr:"Dirección de la empresa", bizphone:"Teléfono de la empresa", bizemail:"Correo de la empresa",
+
+  s6:"Documentos", s6n:"Las fotos desde tu teléfono están bien, mientras se lea todo.",
+  d_reg:"La registración vigente de tu troca.",
+  d_title:"Frente y reverso — se necesita para el programa de placas.",
+  d_2290:"Tu forma vigente del impuesto federal (2290).",
+  d_ecm:"Solo una foto del puerto donde se conecta el ELD.",
+  d_insp:"Debe tener menos de 30 días. Pon la fecha abajo.",
+  d_check:"Para que tu pago llegue a la cuenta correcta.",
+  d_1099:"Tus últimos 3 años de formas 1099. La compañía los pide cuando no se puede contactar a tus empleadores anteriores para verificar tu experiencia.",
+  d_lease:"Se maneja en esta página — no hay nada que subir.",
+  d_recv:"✓ recibido", d_need:"falta",
+  d_replace:"Reemplazar", d_upload:"Tomar foto o subir",
+  d_again:"— manda otro cuando quieras para reemplazarlo.",
+  d_email:"Mándanos este por correo y nosotros lo agregamos.",
+  d_date_first:"Primero pon la fecha de la inspección.", d_uploading:"Subiendo…",
+  d_insp_date:"Fecha de inspección",
+
+  save:"Enviar mis datos", save2:"Actualizar mis datos", saving:"Enviando…",
+  prog:"{done} de {total} documentos recibidos",
+  done_h:"Listo — gracias",
+  done_p:"Ya tenemos tus datos y estamos preparando tu contrato.",
+  done_left:"Ya tenemos tus datos. Todavía nos faltan {n} documento{s} — regresa a este mismo enlace cuando quieras para agregar{it}.",
+  done_foot:"Te avisamos sobre tu fecha de orientación. Si necesitamos algo más, te mandamos un correo.",
+  err_open:"No pudimos abrir esta página", yes:"Sí", no:"No", dash:"—"
+ }
+};
+let lang=(navigator.language||"en").toLowerCase().startsWith("es")?"es":"en";
+try{ const sv=localStorage.getItem("tt_lang"); if(sv) lang=sv; }catch(e){}
+const t=(k,vars)=>{ let v=(T[lang]&&T[lang][k])||T.en[k]||""; if(vars) for(const [a,b] of Object.entries(vars)) v=v.split("{"+a+"}").join(b); return v; };
+
+
+function stateOpts(sel){ return `<option value="">${t("dash")}</option>`+STATES.map(s=>`<option${s===sel?" selected":""}>${s}</option>`).join(""); }
 function ynField(key,label,hint){
   return `<div class="f"><label>${label}${hint?`<span class="hint">${hint}</span>`:""}</label>
-    <div class="yn" data-yn="${key}"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></div></div>`;
+    <div class="yn" data-yn="${key}"><button type="button" data-v="1">${t("yes")}</button><button type="button" data-v="0">${t("no")}</button></div></div>`;
 }
 function wireYN(root){
   root.querySelectorAll("[data-yn]").forEach(g=>{
@@ -93,165 +242,161 @@ function reflect(){
   if(bz) bz.style.display=A.has_business===1?"block":"none";
   const done=DOCS.filter(d=>d.status==="received").length;
   const p=$("#prog");
-  if(p) p.textContent=DOCS.length?`${done} of ${DOCS.length} documents in`:"";
+  if(p) p.textContent=DOCS.length?t("prog",{done,total:DOCS.length}):"";
 }
 
 function docCard(d){
   const why={
-    registration:"Your truck's current registration.",
-    title:"Front and back — needed for the carrier's plate program.",
-    form_2290:"Your current Heavy Highway Use Tax form.",
-    ecm_photo:"Just a photo of the port where the ELD plugs in.",
-    inspection:"Must be dated within the last 30 days. Add the date below.",
-    voided_check:"So your settlements go to the right account.",
-    form_1099:"Your last 3 years of 1099s. The carrier asks for these when previous employers can't be reached to verify your experience.",
-    lease_form:"Handled by this page — nothing to upload.",
+    registration:t("d_reg"),
+    title:t("d_title"),
+    form_2290:t("d_2290"),
+    ecm_photo:t("d_ecm"),
+    inspection:t("d_insp"),
+    voided_check:t("d_check"),
+    form_1099:t("d_1099"),
+    lease_form:t("d_lease"),
   }[d.kind]||"";
   const done=d.status==="received";
   if(d.kind==="lease_form") return "";
   return `<div class="doc${done?" done":""}" data-doc="${d.id}">
     <div class="dt"><div><div class="nm">${esc(d.label||d.kind)}</div>${why?`<div class="why">${esc(why)}</div>`:""}</div>
-      <span class="st">${done?"✓ received":"needed"}</span></div>
-    ${done?`<div class="why" style="margin-top:8px">${esc(d.file_name||"")}${d.doc_date?" · "+esc(d.doc_date):""} — send a new one any time to replace it.</div>`:""}
+      <span class="st">${done?t("d_recv"):t("d_need")}</span></div>
+    ${done?`<div class="why" style="margin-top:8px">${esc(d.file_name||"")}${d.doc_date?" · "+esc(d.doc_date):""} ${t("d_again")}</div>`:""}
     ${UPLOADS?`<div class="up">
-      ${d.kind==="inspection"?`<input type="date" data-date="${d.id}" value="${esc(d.doc_date||"")}" title="Inspection date">`:""}
-      <label class="upbtn">${done?"Replace":"Take a photo or upload"}<input type="file" data-file="${d.id}" accept="image/*,application/pdf"></label>
+      ${d.kind==="inspection"?`<input type="date" data-date="${d.id}" value="${esc(d.doc_date||"")}" title="${t('d_insp_date')}">`:""}
+      <label class="upbtn">${done?t("d_replace"):t("d_upload")}<input type="file" data-file="${d.id}" accept="image/*,application/pdf"></label>
       <span class="why" data-out="${d.id}"></span></div>`
-      :`<div class="why" style="margin-top:8px">Email this one to us and we'll add it.</div>`}
+      :`<div class="why" style="margin-top:8px">${t("d_email")}</div>`}
   </div>`;
 }
 
-function render(d){
-  const c=d.carrier||{};
-  Object.assign(A,d.prefill||{});
+function render(){
+  const d=DATA, c=d.carrier||{};
+  if(!A._seeded){ Object.assign(A,d.prefill||{}); A._seeded=1; }
   DOCS=d.docs||[]; SECURE=!!d.secure_enabled; UPLOADS=!!d.uploads_enabled;
   $("#wrap").innerHTML=`
+  <div class="lang">
+    <button data-lang="en" class="${lang==="en"?"on":""}">EN</button>
+    <button data-lang="es" class="${lang==="es"?"on":""}">ES</button>
+  </div>
   <div class="top">
-    <div class="badge">Step 2 of 2</div>
-    <h1>Let's get your lease ready</h1>
+    <div class="badge">${t("step")}</div>
+    <h1>${t("h1")}</h1>
     <div class="sub">${esc(c.name||"")}${c.terminal?" · "+esc(c.terminal):""}</div>
-    <p class="sub" style="margin:12px 0 0">Two things here: the details the lease agreement needs, and a few documents. You can upload photos straight from your phone, and this link stays live — do what you can now and come back for the rest.</p>
+    <p class="sub" style="margin:12px 0 0">${t("intro")}</p>
   </div>
 
   <div class="err" id="err"></div>
 
   ${d.carrier_app?`<div class="sec" style="${d.carrier_app.started?"":"border-color:#2f6fed;box-shadow:0 0 0 3px rgba(47,111,237,.09)"}">
-    <h2>${d.carrier_app.started?"✓ ":""}The carrier's own application</h2>
-    <p class="note">${d.carrier_app.started
-      ? "You've opened this already. If you didn't finish it, pick up where you left off — nothing below replaces it."
-      : "Separate from this page, and it has to be done: it goes straight to their Safety team and gets you a confirmation number. Around 20 minutes — have your employment history to hand."}</p>
-    <a class="btn" href="${esc(d.carrier_app.url)}" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none">${d.carrier_app.started?"Reopen the carrier application ↗":"Open the carrier application ↗"}</a>
+    <h2>${d.carrier_app.started?t("ca_done"):t("ca_h")}</h2>
+    <p class="note">${d.carrier_app.started?t("ca_started"):t("ca_new")}</p>
+    <a class="btn" href="${esc(d.carrier_app.url)}" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none">${d.carrier_app.started?t("ca_btn2"):t("ca_btn")}</a>
   </div>`:""}
 
   <div class="sec">
-    <h2>Your details</h2>
-    <p class="note">Exactly as they should appear on the lease.</p>
-    <div class="f"><label>Full name</label><input id="f_name" value="${esc(A.name||"")}" disabled style="background:#f7f8fa"></div>
+    <h2>${t("s1")}</h2><p class="note">${t("s1n")}</p>
+    <div class="f"><label>${t("name")}</label><input id="f_name" value="${esc(A.name||"")}" disabled style="background:#f7f8fa"></div>
     <div class="grid2">
-      <div class="f"><label>Cell phone</label><input id="f_phone" type="tel" value="${esc(A.phone||"")}"></div>
-      <div class="f"><label>Home phone <span class="hint">Optional.</span></label><input id="f_home_phone" type="tel" value="${esc(A.home_phone||"")}"></div>
+      <div class="f"><label>${t("cell")}</label><input id="f_phone" type="tel" value="${esc(A.phone||"")}"></div>
+      <div class="f"><label>${t("home")} <span class="hint">${t("home_h")}</span></label><input id="f_home_phone" type="tel" value="${esc(A.home_phone||"")}"></div>
     </div>
-    <div class="f"><label>Street address</label><input id="f_address" value="${esc(A.address||"")}"></div>
+    <div class="f"><label>${t("addr")}</label><input id="f_address" value="${esc(A.address||"")}"></div>
     <div class="grid3">
-      <div class="f"><label>City</label><input id="f_city" value="${esc(A.city||"")}"></div>
-      <div class="f"><label>State</label><select id="f_state">${stateOpts(A.state)}</select></div>
-      <div class="f"><label>Zip</label><input id="f_postcode" value="${esc(A.postcode||"")}" inputmode="numeric"></div>
+      <div class="f"><label>${t("city")}</label><input id="f_city" value="${esc(A.city||"")}"></div>
+      <div class="f"><label>${t("state")}</label><select id="f_state">${stateOpts(A.state)}</select></div>
+      <div class="f"><label>${t("zip")}</label><input id="f_postcode" value="${esc(A.postcode||"")}" inputmode="numeric"></div>
     </div>
     <div class="grid2">
-      <div class="f"><label>Gender <span class="hint">The lease form asks.</span></label>
-        <select id="f_gender"><option value="">—</option><option${A.gender==="M"?" selected":""}>M</option><option${A.gender==="F"?" selected":""}>F</option></select></div>
-      <div class="f"><label>U.S. citizen</label>
-        <select id="f_us_citizen"><option value="">—</option><option value="1"${A.us_citizen===1?" selected":""}>Yes</option><option value="0"${A.us_citizen===0?" selected":""}>No</option></select></div>
+      <div class="f"><label>${t("gender")} <span class="hint">${t("gender_h")}</span></label>
+        <select id="f_gender"><option value="">${t("dash")}</option><option${A.gender==="M"?" selected":""}>M</option><option${A.gender==="F"?" selected":""}>F</option></select></div>
+      <div class="f"><label>${t("cit")}</label>
+        <select id="f_us_citizen"><option value="">${t("dash")}</option><option value="1"${A.us_citizen===1?" selected":""}>${t("yes")}</option><option value="0"${A.us_citizen===0?" selected":""}>${t("no")}</option></select></div>
     </div>
     ${SECURE?`<div class="secure">
-      <div class="lock">🔒 Encrypted — used once, then deleted</div>
-      <p class="note" style="margin:0 0 12px">The carrier's lease and payroll setup needs these. They're encrypted the moment you send them, nobody browses them in our system, and they're destroyed once your lease is signed.</p>
+      <div class="lock">${t("lock")}</div>
+      <p class="note" style="margin:0 0 12px">${t("lock_n")}</p>
       <div class="grid2">
-        <div class="f"><label>Social Security number</label><input id="f_ssn" inputmode="numeric" autocomplete="off" placeholder="•••-••-••••"></div>
-        <div class="f"><label>Driver's licence number</label><input id="f_dl_number" autocomplete="off"></div>
+        <div class="f"><label>${t("ssn")}</label><input id="f_ssn" inputmode="numeric" autocomplete="off" placeholder="•••-••-••••"></div>
+        <div class="f"><label>${t("dl")}</label><input id="f_dl_number" autocomplete="off"></div>
       </div></div>`:""}
   </div>
 
   <div class="sec">
-    <h2>Your truck</h2>
-    <p class="note">The lease is written against this equipment.</p>
+    <h2>${t("s2")}</h2><p class="note">${t("s2n")}</p>
     <div class="grid3">
-      <div class="f"><label>Year</label><input id="f_truck_year" type="number" inputmode="numeric" value="${esc(A.truck_year||"")}"></div>
-      <div class="f"><label>Make</label><input id="f_truck_make" value="${esc(A.truck_make||"")}"></div>
-      <div class="f"><label>Color</label><input id="f_truck_color" value="${esc(A.truck_color||"")}"></div>
+      <div class="f"><label>${t("yr")}</label><input id="f_truck_year" type="number" inputmode="numeric" value="${esc(A.truck_year||"")}"></div>
+      <div class="f"><label>${t("mk")}</label><input id="f_truck_make" value="${esc(A.truck_make||"")}"></div>
+      <div class="f"><label>${t("col")}</label><input id="f_truck_color" value="${esc(A.truck_color||"")}"></div>
     </div>
     <div class="grid2">
-      <div class="f"><label>Plate #</label><input id="f_truck_plate" value="${esc(A.truck_plate||"")}"></div>
-      <div class="f"><label>Plate state</label><select id="f_truck_plate_state">${stateOpts(A.truck_plate_state)}</select></div>
+      <div class="f"><label>${t("plate")}</label><input id="f_truck_plate" value="${esc(A.truck_plate||"")}"></div>
+      <div class="f"><label>${t("plate_st")}</label><select id="f_truck_plate_state">${stateOpts(A.truck_plate_state)}</select></div>
     </div>
     <div class="grid2">
-      <div class="f"><label>VIN</label><input id="f_truck_vin" value="${esc(A.truck_vin||"")}"></div>
-      <div class="f"><label>Unit # <span class="hint">Optional.</span></label><input id="f_truck_unit_no" value="${esc(A.truck_unit_no||"")}"></div>
+      <div class="f"><label>${t("vin")}</label><input id="f_truck_vin" value="${esc(A.truck_vin||"")}"></div>
+      <div class="f"><label>${t("unit")} <span class="hint">${t("unit_h")}</span></label><input id="f_truck_unit_no" value="${esc(A.truck_unit_no||"")}"></div>
     </div>
     <div class="grid2">
-      <div class="f"><label>Lienholder <span class="hint">Blank if paid off.</span></label><input id="f_lienholder" value="${esc(A.lienholder||"")}"></div>
-      <div class="f"><label>Truck value</label><input id="f_truck_value" type="number" inputmode="numeric" value="${esc(A.truck_value||"")}"></div>
+      <div class="f"><label>${t("lien")} <span class="hint">${t("lien_h")}</span></label><input id="f_lienholder" value="${esc(A.lienholder||"")}"></div>
+      <div class="f"><label>${t("val")}</label><input id="f_truck_value" type="number" inputmode="numeric" value="${esc(A.truck_value||"")}"></div>
     </div>
-    <div class="f"><label>Lienholder address</label><input id="f_lienholder_address" value="${esc(A.lienholder_address||"")}"></div>
+    <div class="f"><label>${t("lien_a")}</label><input id="f_lienholder_address" value="${esc(A.lienholder_address||"")}"></div>
     <div class="grid2">
-      <div class="f"><label>Lienholder phone</label><input id="f_lienholder_phone" value="${esc(A.lienholder_phone||"")}"></div>
-      <div class="f"><label>Lienholder email</label><input id="f_lienholder_email" value="${esc(A.lienholder_email||"")}"></div>
+      <div class="f"><label>${t("lien_p")}</label><input id="f_lienholder_phone" value="${esc(A.lienholder_phone||"")}"></div>
+      <div class="f"><label>${t("lien_e")}</label><input id="f_lienholder_email" value="${esc(A.lienholder_email||"")}"></div>
     </div>
   </div>
 
   <div class="sec">
-    <h2>What you want the carrier to cover</h2>
-    <p class="note">These are weekly deductions from your settlement — your call on each.</p>
-    ${ynField("wants_carrier_plates","Carrier-provided plates?","$50 a week.")}
+    <h2>${t("s3")}</h2><p class="note">${t("s3n")}</p>
+    ${ynField("wants_carrier_plates",t("plates"),t("plates_h"))}
     <div id="plateNote" class="note" style="display:none;background:var(--brand-wash);border-radius:10px;padding:11px 13px;margin:-6px 0 15px;color:#1d4ea8">
-      Because you've chosen the plate program, we'll need your <b>title (front and back)</b> and your <b>current 2290</b> — both are in the document list below.
+      ${t("plates_note")}
     </div>
-    ${ynField("wants_ifta","Carrier-provided IFTA?","$10 a week.")}
-    ${ynField("wants_maintenance","Set up a maintenance escrow?","Money set aside weekly for repairs.")}
+    ${ynField("wants_ifta",t("ifta"),t("ifta_h"))}
+    ${ynField("wants_maintenance",t("maint"),t("maint_h"))}
     <div class="grid2" id="maintFields" style="display:none">
-      <div class="f"><label>Amount per week</label><input id="f_maintenance_weekly" type="number" inputmode="decimal" value="${esc(A.maintenance_weekly||"")}"></div>
-      <div class="f"><label>Maximum to hold</label><input id="f_maintenance_max" type="number" inputmode="decimal" value="${esc(A.maintenance_max||"")}"></div>
+      <div class="f"><label>${t("maint_w")}</label><input id="f_maintenance_weekly" type="number" inputmode="decimal" value="${esc(A.maintenance_weekly||"")}"></div>
+      <div class="f"><label>${t("maint_m")}</label><input id="f_maintenance_max" type="number" inputmode="decimal" value="${esc(A.maintenance_max||"")}"></div>
     </div>
   </div>
 
   ${SECURE?`<div class="sec">
-    <h2>Direct deposit</h2>
-    <p class="note">So you get paid without waiting on a paper check.</p>
+    <h2>${t("s4")}</h2><p class="note">${t("s4n")}</p>
     <div class="secure">
-      <div class="lock">🔒 Encrypted — used once, then deleted</div>
+      <div class="lock">${t("lock")}</div>
       <div class="grid2">
-        <div class="f"><label>Bank name</label><input id="f_bank_name" autocomplete="off"></div>
-        <div class="f"><label>Name on the account</label><input id="f_account_name" autocomplete="off" value="${esc(A.name||"")}"></div>
+        <div class="f"><label>${t("bank")}</label><input id="f_bank_name" autocomplete="off"></div>
+        <div class="f"><label>${t("acct_n")}</label><input id="f_account_name" autocomplete="off" value="${esc(A.name||"")}"></div>
       </div>
       <div class="grid2">
-        <div class="f"><label>Routing number</label><input id="f_routing" inputmode="numeric" autocomplete="off"></div>
-        <div class="f"><label>Account number</label><input id="f_account" inputmode="numeric" autocomplete="off"></div>
+        <div class="f"><label>${t("routing")}</label><input id="f_routing" inputmode="numeric" autocomplete="off"></div>
+        <div class="f"><label>${t("account")}</label><input id="f_account" inputmode="numeric" autocomplete="off"></div>
       </div>
-      <p class="note" style="margin:0">You'll also upload a voided check below — the carrier asks for both.</p>
+      <p class="note" style="margin:0">${t("s4_foot")}</p>
     </div>
   </div>`:""}
 
   <div class="sec">
-    <h2>Business setup</h2>
-    <p class="note">Only if the truck is owned by your company, or you want to be paid as a business.</p>
-    ${ynField("has_business","Leasing under an LLC or company?","")}
+    <h2>${t("s5")}</h2><p class="note">${t("s5n")}</p>
+    ${ynField("has_business",t("biz"),"")}
     <div id="bizFields" style="display:none">
       <div class="grid2">
-        <div class="f"><label>Business name</label><input id="f_business_name" value="${esc(A.business_name||"")}"></div>
-        <div class="f"><label>Federal ID # (EIN)</label><input id="f_business_ein" value="${esc(A.business_ein||"")}"></div>
+        <div class="f"><label>${t("bizname")}</label><input id="f_business_name" value="${esc(A.business_name||"")}"></div>
+        <div class="f"><label>${t("ein")}</label><input id="f_business_ein" value="${esc(A.business_ein||"")}"></div>
       </div>
-      <div class="f"><label>Business owner</label><input id="f_business_owner" value="${esc(A.business_owner||"")}"></div>
-      <div class="f"><label>Business address</label><input id="f_business_address" value="${esc(A.business_address||"")}"></div>
+      <div class="f"><label>${t("bizowner")}</label><input id="f_business_owner" value="${esc(A.business_owner||"")}"></div>
+      <div class="f"><label>${t("bizaddr")}</label><input id="f_business_address" value="${esc(A.business_address||"")}"></div>
       <div class="grid2">
-        <div class="f"><label>Business phone</label><input id="f_business_phone" value="${esc(A.business_phone||"")}"></div>
-        <div class="f"><label>Business email</label><input id="f_business_email" value="${esc(A.business_email||"")}"></div>
+        <div class="f"><label>${t("bizphone")}</label><input id="f_business_phone" value="${esc(A.business_phone||"")}"></div>
+        <div class="f"><label>${t("bizemail")}</label><input id="f_business_email" value="${esc(A.business_email||"")}"></div>
       </div>
     </div>
   </div>
 
   <div class="sec">
-    <h2>Documents</h2>
-    <p class="note">Photos from your phone are fine, as long as everything's readable.</p>
+    <h2>${t("s6")}</h2><p class="note">${t("s6n")}</p>
     <div id="docList">${DOCS.map(docCard).join("")}</div>
   </div>`;
 
@@ -266,8 +411,15 @@ function render(d){
   });
   wireYN($("#wrap"));
   wireDocs();
+  document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>{
+    lang=b.dataset.lang;
+    try{ localStorage.setItem("tt_lang",lang); }catch(e){}
+    render();                    // answers live in A, so nothing is lost
+  });
   reflect();
+  $("#saveBtn").textContent=DATA.done?t("save2"):t("save");
   $("#bar").style.display="flex";
+  document.documentElement.lang=lang;
 }
 
 function wireDocs(){
@@ -275,8 +427,8 @@ function wireDocs(){
     const id=inp.dataset.file, out=$(`[data-out="${id}"]`), f=inp.files&&inp.files[0];
     if(!f)return;
     const dateEl=$(`[data-date="${id}"]`);
-    if(dateEl && !dateEl.value){ out.textContent="Add the inspection date first."; return; }
-    out.textContent="Uploading…";
+    if(dateEl && !dateEl.value){ out.textContent=t("d_date_first"); return; }
+    out.textContent=t("d_uploading");
     const fd=new FormData(); fd.append("file",f);
     let q=`/api/apply/upload?token=${encodeURIComponent(TOKEN)}&doc=${encodeURIComponent(id)}`;
     if(dateEl&&dateEl.value) q+=`&date=${encodeURIComponent(dateEl.value)}`;
@@ -293,25 +445,25 @@ function wireDocs(){
 
 function done(msg){
   $("#wrap").innerHTML=`<div class="top msg"><div class="check">✓</div>
-    <h1 style="margin:0 0 8px;font-size:22px">Got it — thank you</h1>
-    <p style="color:var(--soft);margin:0 0 8px">${msg||"Your information is in and we're preparing your lease agreement."}</p>
-    <p style="color:var(--soft);margin:0;font-size:14px">We'll be in touch about your orientation date. If we need anything else, we'll email you.</p></div>`;
+    <h1 style="margin:0 0 8px;font-size:22px">${t("done_h")}</h1>
+    <p style="color:var(--soft);margin:0 0 8px">${msg||t("done_p")}</p>
+    <p style="color:var(--soft);margin:0;font-size:14px">${t("done_foot")}</p></div>`;
   $("#bar").style.display="none"; window.scrollTo(0,0);
 }
 
 async function save(){
   const btn=$("#saveBtn"), err=$("#err");
-  btn.disabled=true; btn.textContent="Sending…";
+  btn.disabled=true; btn.textContent=t("saving");
   try{
     const r=await fetch("/api/apply/lease?token="+encodeURIComponent(TOKEN),
       {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(A)});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.error||"Something went wrong.");
     const left=DOCS.filter(x=>x.status!=="received"&&x.kind!=="lease_form").length;
-    done(left?`Your information is in. We still need ${left} document${left===1?"":"s"} — come back to this same link any time to add ${left===1?"it":"them"}.`:null);
+    done(left?t("done_left",{n:left,s:left===1?"":"s",it:left===1?(lang==="es"?"lo":" it"):(lang==="es"?"los":" them")}):null);
   }catch(e){
     err.textContent=e.message; err.style.display="block"; window.scrollTo(0,0);
-    btn.disabled=false; btn.textContent="Send my information";
+    btn.disabled=false; btn.textContent=t("save");
   }
 }
 
@@ -320,14 +472,11 @@ async function save(){
     const r=await fetch("/api/apply/lease?token="+encodeURIComponent(TOKEN));
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||"This link isn't working.");
-    render(d);
-    if(d.done){
-      // Already submitted: they're here to finish uploading documents.
-      $("#saveBtn").textContent="Update my information";
-    }
+    DATA=d;
+    render();
     $("#saveBtn").onclick=save;
   }catch(e){
-    $("#wrap").innerHTML=`<div class="top msg"><h1 style="font-size:20px;margin:0 0 8px">We couldn't open this page</h1><p style="color:var(--soft);margin:0">${esc(e.message)}</p></div>`;
+    $("#wrap").innerHTML=`<div class="top msg"><h1 style="font-size:20px;margin:0 0 8px">${t("err_open")}</h1><p style="color:var(--soft);margin:0">${esc(e.message)}</p></div>`;
   }
 })();
 </script>
