@@ -1378,6 +1378,7 @@ const drapi=(p,o)=>api("/dr"+p,o);
 let DR_CARRIERS=[], DR_CHART=[];
 const drMoney=n=>"$"+(Math.round((n||0)*100)/100).toLocaleString("en-US",{maximumFractionDigits:0});
 const carrierName=id=>{const c=DR_CARRIERS.find(x=>x.id===id);return c?c.name:"—";};
+const recName=(list,id)=>{const r=(list||[]).find(x=>x.id===id);return r?r.name:id;};
 
 function applyRecruitingProfile(){
   const nav=document.getElementById("nav"); if(!nav)return;
@@ -1406,19 +1407,36 @@ async function renderDrivers(m){
         <select id="drfCarrier"></select>
         <select id="drfStage"><option value="">All stages</option>${DR_STAGES.map(s=>`<option>${s}</option>`).join("")}</select>
         <select id="drfScreen"><option value="">Any screening</option><option value="qualified">Pre-qualified</option><option value="review">Safety review</option><option value="disqualified">Not qualified</option></select>
+        <select id="drfSource"><option value="">Any source</option></select>
+        <select id="drfWho"><option value="">Anyone's</option></select>
       </div><div id="drTbl"></div>`;
   await loadCarriers();
   $("#drfCarrier").innerHTML=`<option value="">All carriers</option>`+DR_CARRIERS.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
-  let rows=[];
+  let rows=[], recs=[];
   async function load(){
     try{ const r=await drapi("/drivers"); rows=r.drivers||[]; }catch(e){ rows=[]; }
     let st={}; try{ st=await drapi("/stats"); }catch(e){ st={}; }
+    try{ const r=await drapi("/recruiters"); recs=r.recruiters||[]; }catch(e){ recs=[]; }
+    const newLeads=rows.filter(x=>!x.applied_at&&x.screen_result==null).length;
     $("#drStats").innerHTML=`
       <div class="stat"><div class="n">${st.total||0}</div><div class="l">Drivers</div></div>
+      <div class="stat${newLeads?" due":""}"><div class="n">${newLeads}</div><div class="l">New leads</div></div>
       <div class="stat"><div class="n">${st.qualified||0}</div><div class="l">Pre-qualified</div></div>
       <div class="stat"><div class="n">${st.review||0}</div><div class="l">Safety review</div></div>
       <div class="stat"><div class="n">${st.applied||0}</div><div class="l">Applied</div></div>
       <div class="stat"><div class="n">${st.rolling||0}</div><div class="l">Rolling</div></div>`;
+    // Where leads are actually coming from — populated from the data, so a new
+    // ad or landing page shows up here on its own.
+    const srcs=[...new Set(rows.map(x=>x.source).filter(Boolean))].sort();
+    const keepS=$("#drfSource").value;
+    $("#drfSource").innerHTML=`<option value="">Any source</option>`+srcs.map(x=>{
+      const n=rows.filter(r=>r.source===x).length;
+      return `<option value="${esc(x)}"${keepS===x?" selected":""}>${esc(x)} (${n})</option>`;}).join("");
+    const keepW=$("#drfWho").value;
+    $("#drfWho").innerHTML=`<option value="">Anyone's</option>`+recs.map(r=>{
+      const n=rows.filter(x=>x.recruiter_id===r.id).length;
+      return `<option value="${esc(r.id)}"${keepW===r.id?" selected":""}>${esc(r.name)} (${n})</option>`;}).join("")
+      +(rows.some(x=>!x.recruiter_id)?`<option value="__none"${keepW==="__none"?" selected":""}>Unassigned (${rows.filter(x=>!x.recruiter_id).length})</option>`:"");
     const al=st.alerts||[];
     $("#drAlerts").innerHTML=al.length?`<div class="card" style="margin-bottom:14px;padding:12px 16px;border-left:3px solid #e0a800">
       <div style="font-weight:700;font-size:13px;margin-bottom:6px">⏱ Clocks running out</div>
@@ -1464,25 +1482,29 @@ async function renderDrivers(m){
     draw();
   }
   function draw(){
-    const q=($("#drq").value||"").toLowerCase(), fc=$("#drfCarrier").value, fs=$("#drfStage").value, fr=$("#drfScreen").value;
+    const q=($("#drq").value||"").toLowerCase(), fc=$("#drfCarrier").value, fs=$("#drfStage").value,
+          fr=$("#drfScreen").value, fsrc=$("#drfSource").value, fwho=$("#drfWho").value;
     const r=rows.filter(x=>(!q||((x.name||"")+(x.phone||"")+(x.city||"")+(x.email||"")).toLowerCase().includes(q))
-      &&(!fc||x.carrier_id===fc)&&(!fs||x.status===fs)&&(!fr||x.screen_result===fr));
+      &&(!fc||x.carrier_id===fc)&&(!fs||x.status===fs)&&(!fr||x.screen_result===fr)
+      &&(!fsrc||x.source===fsrc)&&(!fwho||(fwho==="__none"?!x.recruiter_id:x.recruiter_id===fwho)));
     $("#drTbl").innerHTML=r.length?`<div class="card"><table><thead><tr>
-        <th>Driver</th><th>CDL / experience</th><th>Truck</th><th>Carrier</th><th>Screening</th><th>Stage</th>
+        <th>Driver</th><th>Came from</th><th>CDL / experience</th><th>Truck</th><th>Screening</th><th>Stage</th>
       </tr></thead><tbody>${r.map(x=>`<tr data-id="${x.id}">
         <td><div class="biz">${avatar(x)}<div><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.phone||x.email||"")}${x.city?" · "+esc(x.city):""}${x.state?", "+esc(x.state):""}</div></div></div></td>
+        <td class="sub">${esc(x.source||"—")}${x.recruiter_id?`<div>${esc(recName(recs,x.recruiter_id))}</div>`:""}
+          ${!x.applied_at&&x.screen_result==null?`<div style="color:var(--pink);font-weight:600">not applied yet</div>`:""}</td>
         <td class="sub">${x.cdl_class?`Class ${esc(x.cdl_class)}${x.cdl_state?" · "+esc(x.cdl_state):""}`:"—"}${x.exp_months_5yr?`<div>${x.exp_months_5yr} mo / 5 yr</div>`:""}</td>
         <td class="sub">${[x.truck_year,x.truck_make].filter(Boolean).join(" ")||(x.owns_truck===0?"No truck":"—")}</td>
-        <td class="sub">${esc(x.carrier_name||"—")}</td>
         <td>${screenPill(x.screen_result,x.screen_points)}</td>
         <td><span class="pill">${esc(x.status||"New")}</span>${x.docs_needed?`<div class="sub">${x.docs_needed} docs needed</div>`:""}</td>
       </tr>`).join("")}</tbody></table></div>`
-      :`<div class="card"><div class="empty"><div class="mark">🚚</div><h3>No drivers yet</h3>
-        <p>Add one by hand, or share your application link and let them come to you.</p>
-        <button class="btn" onclick="setView('carriers')">Get the application link</button></div></div>`;
+      :`<div class="card"><div class="empty"><div class="mark">🚚</div><h3>${rows.length?"Nothing matches those filters":"No drivers yet"}</h3>
+        <p>${rows.length?"Try widening the search.":"Share your site or application link and they'll land here on their own — already screened."}</p>
+        ${rows.length?"":`<button class="btn" onclick="setView('carriers')">Get the application link</button>`}</div></div>`;
     $("#drTbl").querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>openDriver(parseInt(tr.dataset.id,10),load));
   }
   $("#drq").oninput=draw; $("#drfCarrier").onchange=draw; $("#drfStage").onchange=draw; $("#drfScreen").onchange=draw;
+  $("#drfSource").onchange=draw; $("#drfWho").onchange=draw;
   $("#drAdd").onclick=()=>openDriver(null,load);
   await load();
 }
