@@ -127,6 +127,7 @@ const T={
 
   s4:"Your truck", s4n:"This is an owner-operator lease-on — you bring the tractor.{trailer}",
   s4n_tr:" The trailer is the carrier's.",
+  s4_later:"We'll collect your VIN, plate and lienholder later, on the lease form — no need to dig them out now.",
   owns:"Do you own (or are you buying) your truck?",
   yr:"Year", mk:"Make", col:"Color", vin:"VIN",
   lien:"Lienholder", lien_h:"Leave blank if paid off.",
@@ -199,6 +200,7 @@ const T={
 
   s4:"Tu troca", s4n:"Esto es un lease-on de dueño de troca — tú pones el tractor.{trailer}",
   s4n_tr:" El trailer es de la compañía.",
+  s4_later:"El VIN, la placa y la financiera los pedimos después, en el contrato — no hace falta buscarlos ahorita.",
   owns:"¿La troca es tuya (o la estás pagando)?",
   yr:"Año", mk:"Marca", col:"Color", vin:"VIN",
   lien:"Financiera (lienholder)", lien_h:"Déjalo en blanco si ya está pagada.",
@@ -374,28 +376,11 @@ function render(){
   <div class="sec">
     <h2>${t("s4")}</h2><p class="note">${t("s4n",{trailer:c.needs_own_trailer?"":t("s4n_tr")})}</p>
     ${ynField("owns_truck",t("owns"),"")}
-    <div class="grid3">
+    <div class="grid2">
       <div class="f"><label>${t("yr")}</label><input id="f_truck_year" type="number" inputmode="numeric" placeholder="2019" value="${esc(A.truck_year||"")}"></div>
       <div class="f"><label>${t("mk")}</label><input id="f_truck_make" placeholder="Freightliner" value="${esc(A.truck_make||"")}"></div>
-      <div class="f"><label>${t("col")}</label><input id="f_truck_color" value="${esc(A.truck_color||"")}"></div>
     </div>
-    <div class="grid2">
-      <div class="f"><label>${t("vin")}</label><input id="f_truck_vin" value="${esc(A.truck_vin||"")}"></div>
-      <div class="f"><label>${t("lien")} <span class="hint">${t("lien_h")}</span></label><input id="f_lienholder" value="${esc(A.lienholder||"")}"></div>
-    </div>
-    <div class="grid2">
-      <div class="f"><label>${t("plate")}</label><input id="f_truck_plate" value="${esc(A.truck_plate||"")}"></div>
-      <div class="f"><label>${t("plate_st")}</label><select id="f_truck_plate_state">${stateOpts(A.truck_plate_state)}</select></div>
-    </div>
-    <div class="f"><label>${t("insp")}<span class="hint">${t("insp_h")}</span></label><input id="f_inspection_date" type="date" value="${esc(A.inspection_date||"")}"></div>
-    ${ynField("wants_carrier_plates",t("plates"),t("plates_h"))}
-    ${ynField("wants_ifta",t("ifta"),t("ifta_h"))}
-  </div>
-
-  <div class="sec">
-    <h2>${t("s5")}</h2><p class="note">${t("s5n")}</p>
-    ${ynField("has_business",t("biz"),t("biz_h"))}
-    <div class="f"><label>${t("bizname")} <span class="hint">${t("bizname_h")}</span></label><input id="f_business_name" value="${esc(A.business_name||"")}"></div>
+    <p class="note" style="margin:0">${t("s4_later")}</p>
   </div>
 
   <div class="sec">
@@ -416,9 +401,8 @@ function render(){
   <div class="sec"><div class="consent">${t("consent",{carrier:esc(c.name||"")})}</div></div>`;
 
   ["name","phone","email","city","state","dob","cdl_class","cdl_state","cdl_expires","dot_medical_expires",
-   "exp_months_5yr","exp_months_3yr","flatbed_months_1yr","truck_year","truck_make","truck_color","truck_vin",
-   "lienholder","truck_plate","truck_plate_state","inspection_date","business_name","positive_test_at",
-   "sap_completed_at","background_note"].forEach(k=>{
+   "exp_months_5yr","exp_months_3yr","flatbed_months_1yr","truck_year","truck_make",
+   "positive_test_at","sap_completed_at","background_note"].forEach(k=>{
     const el=$("#f_"+k); if(!el)return;
     const set=()=>{A[k]=el.value;onChange();};
     el.oninput=set; el.onchange=set;

@@ -26,6 +26,9 @@
   .yn button{flex:1;padding:12px;border:1px solid var(--line);background:#fff;border-radius:11px;font:inherit;font-weight:600;cursor:pointer;color:var(--soft)}
   .yn button.sel{border-color:var(--brand);background:var(--brand-wash);color:var(--brand)}
   .yn button.sel.no{border-color:#d99;background:#fdecec;color:#9b2c2c}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:11px;
+        padding:11px 14px;font-size:15px;cursor:pointer;background:#fff;user-select:none;font-weight:600;color:var(--soft)}
+  .chip.sel{border-color:var(--ok);background:#e9f7f0;color:#136c47}
   .secure{background:#f7fbf8;border:1px solid #cfe8db;border-radius:12px;padding:14px;margin-bottom:15px}
   .secure .lock{font-size:12.5px;color:#137a52;font-weight:700;margin-bottom:9px;display:flex;gap:6px;align-items:center}
   .doc{border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px}
@@ -93,6 +96,14 @@ const T={
   ca_new:"Separate from this page, and it has to be done: it goes straight to their Safety team and gets you a confirmation number. Around 20 minutes — have your employment history to hand.",
   ca_started:"You've opened this already. If you didn't finish it, pick up where you left off — nothing below replaces it.",
   ca_btn:"Open the carrier application ↗", ca_btn2:"Reopen the carrier application ↗",
+  pg_h:"Where you are with the carrier",
+  pg_n:"The carrier doesn't tell us any of this — so if you let us know here, we can chase the right things for you instead of guessing.",
+  pg_conf:"Your confirmation number", pg_conf_h:"They give you this once your application goes in.",
+  pg_cl:"Have you accepted the Evans query in the Drug & Alcohol Clearinghouse?",
+  pg_cl_h:"They can't move forward until you do — it's a quick approval in your Clearinghouse account.",
+  pg_dt:"Drug test date", pg_dt_h:"The date you're scheduled for, or the date you went.",
+  pg_done:"I've completed my drug test",
+  pg_due:"Needs to be done by {d}",
 
   s1:"Your details", s1n:"Exactly as they should appear on the lease.",
   name:"Full name", cell:"Cell phone", home:"Home phone", home_h:"Optional.",
@@ -154,6 +165,14 @@ const T={
   ca_new:"Es aparte de esta página, y hay que hacerla: va directo a su departamento de seguridad y te da un número de confirmación. Unos 20 minutos — ten a la mano tu historial de trabajo.",
   ca_started:"Ya la abriste. Si no la terminaste, continúa donde te quedaste — nada de lo de abajo la reemplaza.",
   ca_btn:"Abrir la solicitud de la compañía ↗", ca_btn2:"Volver a abrir la solicitud ↗",
+  pg_h:"Cómo vas con la compañía",
+  pg_n:"La compañía no nos avisa nada de esto — si nos dices aquí, podemos darle seguimiento a lo correcto en vez de adivinar.",
+  pg_conf:"Tu número de confirmación", pg_conf_h:"Te lo dan cuando entra tu solicitud.",
+  pg_cl:"¿Ya aceptaste la consulta de Evans en el Clearinghouse de drogas y alcohol?",
+  pg_cl_h:"No pueden avanzar hasta que lo hagas — es una aprobación rápida en tu cuenta del Clearinghouse.",
+  pg_dt:"Fecha del examen antidoping", pg_dt_h:"La fecha que te dieron, o el día que fuiste.",
+  pg_done:"Ya hice mi examen antidoping",
+  pg_due:"Debe hacerse antes del {d}",
 
   s1:"Tus datos", s1n:"Tal como deben aparecer en el contrato.",
   name:"Nombre completo", cell:"Teléfono celular", home:"Teléfono de casa", home_h:"Opcional.",
@@ -272,7 +291,7 @@ function docCard(d){
 
 function render(){
   const d=DATA, c=d.carrier||{};
-  if(!A._seeded){ Object.assign(A,d.prefill||{}); A._seeded=1; }
+  if(!A._seeded){ Object.assign(A,d.prefill||{},d.progress||{}); A._seeded=1; }
   DOCS=d.docs||[]; SECURE=!!d.secure_enabled; UPLOADS=!!d.uploads_enabled;
   $("#wrap").innerHTML=`
   <div class="lang">
@@ -292,6 +311,17 @@ function render(){
     <h2>${d.carrier_app.started?t("ca_done"):t("ca_h")}</h2>
     <p class="note">${d.carrier_app.started?t("ca_started"):t("ca_new")}</p>
     <a class="btn" href="${esc(d.carrier_app.url)}" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none">${d.carrier_app.started?t("ca_btn2"):t("ca_btn")}</a>
+  </div>`:""}
+
+  ${d.carrier_app?`<div class="sec">
+    <h2>${t("pg_h")}</h2><p class="note">${t("pg_n")}</p>
+    <div class="f"><label>${t("pg_conf")}<span class="hint">${t("pg_conf_h")}</span></label>
+      <input id="f_confirmation_no" value="${esc(A.confirmation_no||"")}"></div>
+    ${ynField("clearinghouse_ok",t("pg_cl"),t("pg_cl_h"))}
+    <div class="f"><label>${t("pg_dt")}<span class="hint">${t("pg_dt_h")}</span></label>
+      <input id="f_drug_test_scheduled_at" type="date" value="${esc(A.drug_test_scheduled_at||"")}">
+      ${A.drug_test_due?`<div class="hint" style="color:#b7791f;font-weight:600;margin-top:6px">${t("pg_due",{d:esc(A.drug_test_due)})}</div>`:""}</div>
+    <div class="f"><label class="chip${A.drug_test_done_at?" sel":""}" id="dtDone" style="display:inline-flex">${t("pg_done")}</label></div>
   </div>`:""}
 
   <div class="sec">
@@ -404,12 +434,16 @@ function render(){
    "truck_color","truck_plate","truck_plate_state","truck_vin","truck_unit_no","lienholder","truck_value",
    "lienholder_address","lienholder_phone","lienholder_email","maintenance_weekly","maintenance_max",
    "business_name","business_ein","business_owner","business_address","business_phone","business_email",
-   "ssn","dl_number","bank_name","account_name","routing","account"].forEach(k=>{
+   "ssn","dl_number","bank_name","account_name","routing","account",
+   "confirmation_no","drug_test_scheduled_at"].forEach(k=>{
     const el=$("#f_"+k); if(!el)return;
     const set=()=>{A[k]=el.value;};
     el.oninput=set; el.onchange=set;
   });
   wireYN($("#wrap"));
+  const dt=$("#dtDone");
+  if(dt) dt.onclick=()=>{ const on=dt.classList.toggle("sel");
+    A.drug_test_done_at = on ? new Date().toISOString().slice(0,10) : ""; };
   wireDocs();
   document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>{
     lang=b.dataset.lang;

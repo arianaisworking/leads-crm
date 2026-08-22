@@ -18,7 +18,7 @@
 
 import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
-import { screen, parseRules, screenSummary, VIOLATIONS } from '../../_lib/screening.js';
+import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '../../_lib/screening.js';
 import { seal, vaultReady } from '../../_lib/vault.js';
 import { seedDocs, secret as mkSecret, carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
 
@@ -334,6 +334,14 @@ export async function onRequest(context) {
           business_phone: X.business_phone, business_email: X.business_email,
         },
         docs: (docsQ.results || []).map((x) => ({ id: x.id, kind: x.kind, label: x.label, status: x.status, file_name: x.file_name, doc_date: x.doc_date })),
+        // What the driver has already told us about the carrier's own steps.
+        progress: {
+          confirmation_no: d.confirmation_no || null,
+          clearinghouse_ok: d.clearinghouse_ok,
+          drug_test_scheduled_at: d.drug_test_scheduled_at || null,
+          drug_test_due: d.drug_test_due || null,
+          drug_test_done_at: d.drug_test_done_at || null,
+        },
         uploads_enabled: !!env.DOCS });
     }
 
@@ -375,7 +383,20 @@ export async function onRequest(context) {
       await db.prepare(`INSERT INTO driver_lease (driver_id, ${xcols.join(', ')}) VALUES (?${xcols.map(() => ', ?').join('')})
         ON CONFLICT(driver_id) DO UPDATE SET ${xcols.map((c) => `${c}=excluded.${c}`).join(', ')}, updated_at=datetime('now')`)
         .bind(d.id, ...xcols.map((c) => onLease[c])).run();
-      await db.prepare("UPDATE leads SET lease_info_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(d.id).run();
+      // The carrier never reports back to us, so the driver is the one person
+      // who actually knows these. Let them tell us directly.
+      const prog = {}, PROG = ['confirmation_no', 'drug_test_scheduled_at', 'drug_test_done_at'];
+      for (const f of PROG) if (b[f]) prog[f] = String(b[f]).slice(0, 60);
+      if ('clearinghouse_ok' in b) prog.clearinghouse_ok = bit(b.clearinghouse_ok);
+      if (prog.drug_test_scheduled_at) {
+        // Scheduling starts the carrier's business-day clock.
+        let days = 7;
+        if (c) days = parseRules(c.qual_rules).drug_test_business_days || 7;
+        prog.drug_test_due = addBusinessDays(prog.drug_test_scheduled_at, days);
+      }
+      const pcols = Object.keys(prog);
+      const sets = ["lease_info_at=datetime('now')", "updated_at=datetime('now')", ...pcols.map((k) => k + '=?')];
+      await db.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id=?`).bind(...pcols.map((k) => prog[k]), d.id).run();
 
       // Electing the plate program adds the title and 2290 to their checklist.
       if (c) { const fresh = await db.prepare('SELECT * FROM leads WHERE id=?').bind(d.id).first(); await seedDocs(db, fresh, c); }
