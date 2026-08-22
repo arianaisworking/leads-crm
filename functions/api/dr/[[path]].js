@@ -95,7 +95,7 @@ export async function onRequest(context) {
       const cols = ['name', 'terminal', 'mc_number', 'dot_number', 'scac', 'address', 'city', 'state', 'postcode',
         'contact_name', 'contact_email', 'contact_phone', 'haul_type', 'driver_type', 'needs_own_truck',
         'needs_own_trailer', 'apply_url', 'apply_source_param', 'orientation_info', 'fee_type',
-        'fee_amount', 'fee_trigger', 'terms', 'active', 'notes'];
+        'fee_amount', 'fee_trigger', 'terms', 'active', 'notes', 'billing_email', 'payment_terms'];
       const sets = [], vals = [];
       for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
       for (const jcol of ['qual_rules', 'doc_checklist'])
@@ -404,7 +404,20 @@ export async function onRequest(context) {
          AND ((carrier_app_clicked_at IS NOT NULL AND date(carrier_app_clicked_at) <= date('now','-3 day'))
            OR (carrier_app_sent_at IS NOT NULL AND carrier_app_clicked_at IS NULL AND date(carrier_app_sent_at) <= date('now','-2 day')))
        ORDER BY carrier_app_sent_at LIMIT 50`).all();
-    return json({ ...(s || {}), alerts: alerts.results || [], stalled: stalled.results || [] });
+    // Orientation has been and gone and nobody recorded whether they started.
+    // Each unanswered row is a fee we may have earned and never billed.
+    const unseated = await db.prepare(`SELECT id, name, orientation_at, lease_signed_at, carrier_id
+        FROM leads
+       WHERE started_at IS NULL AND status NOT IN ('Not qualified')
+         AND ((orientation_at IS NOT NULL AND date(orientation_at) <= date('now','-1 day'))
+           OR (lease_signed_at IS NOT NULL AND date(lease_signed_at) <= date('now','-7 day')))
+         AND (seat_checked_at IS NULL OR date(seat_checked_at) <= date('now','-7 day'))
+       ORDER BY orientation_at LIMIT 50`).all();
+    // Money sitting in the CRM waiting to be billed.
+    const bill = await db.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(fee_amount),0) AS amount
+        FROM placements WHERE status='pending' AND invoice_id IS NULL`).first();
+    return json({ ...(s || {}), alerts: alerts.results || [], stalled: stalled.results || [],
+      unseated: unseated.results || [], billable: bill || { n: 0, amount: 0 } });
   }
 
   // ---------- RECRUITERS + THE SPLIT ----------
@@ -591,6 +604,160 @@ export async function onRequest(context) {
   if (res === 'drivers' && sub === 'purge-secure' && method === 'POST') {
     await db.prepare("UPDATE leads SET lease_secure=NULL, secure_purged_at=datetime('now') WHERE id=?").bind(int(id)).run();
     return json({ ok: true });
+  }
+
+  // ---------- INVOICING THE CARRIER ----------
+  // Built entirely from our own records: the drivers we seated, at the fee each
+  // placement was opened with. The carrier's systems are corroboration, not the
+  // source of truth.
+  if (res === 'invoices') {
+    if (method === 'GET' && !id) {
+      const { results } = await db.prepare(`
+        SELECT i.*, c.name AS carrier_name FROM carrier_invoices i
+        LEFT JOIN carriers c ON c.id=i.carrier_id
+        ORDER BY i.created_at DESC LIMIT 200`).all();
+      return json({ invoices: results || [] });
+    }
+    if (method === 'GET' && id) {
+      const inv = await db.prepare('SELECT * FROM carrier_invoices WHERE id=?').bind(id).first();
+      if (!inv) return json({ error: 'not found' }, 404);
+      return json({ invoice: inv });
+    }
+    if (method === 'PATCH' && id) {
+      const b = await request.json();
+      const sets = [], vals = [];
+      for (const c of ['status', 'notes', 'number', 'amount']) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
+      if (b.status === 'paid') sets.push("paid_at=datetime('now')");
+      if (!sets.length) return json({ error: 'nothing to update' }, 400);
+      vals.push(id);
+      await db.prepare(`UPDATE carrier_invoices SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+      // Paying the invoice pays the placements on it, and the splits with them.
+      if (b.status === 'paid') {
+        await db.prepare("UPDATE placements SET status='paid', paid_at=datetime('now') WHERE invoice_id=?").bind(id).run();
+        await db.prepare(`UPDATE placement_splits SET status='paid', paid_at=datetime('now')
+          WHERE placement_id IN (SELECT id FROM placements WHERE invoice_id=?)`).bind(id).run();
+      }
+      return json({ ok: true });
+    }
+  }
+
+  // What's billable right now: seated drivers whose placement hasn't gone out.
+  if (res === 'billable' && method === 'GET') {
+    const { results } = await db.prepare(`
+      SELECT p.id AS placement_id, p.fee_amount, p.seated_at, p.carrier_id,
+             l.id AS driver_id, l.name AS driver_name, l.confirmation_no, l.started_at,
+             c.name AS carrier_name, c.billing_email, c.contact_email
+        FROM placements p
+        LEFT JOIN leads l ON l.id=p.driver_id
+        LEFT JOIN carriers c ON c.id=p.carrier_id
+       WHERE p.status='pending' AND p.invoice_id IS NULL
+       ORDER BY p.carrier_id, COALESCE(p.seated_at, p.created_at)`).all();
+    return json({ billable: results || [] });
+  }
+
+  if (res === 'invoice' && method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const carrierId = b.carrier_id;
+    if (!carrierId) return json({ error: 'carrier_id required' }, 400);
+    const c = await db.prepare('SELECT * FROM carriers WHERE id=?').bind(carrierId).first();
+    if (!c) return json({ error: 'carrier not found' }, 404);
+
+    // Only placements that are actually ours to bill: seated, unbilled.
+    let sql = `SELECT p.*, l.name AS driver_name, l.confirmation_no, l.started_at
+                 FROM placements p LEFT JOIN leads l ON l.id=p.driver_id
+                WHERE p.carrier_id=? AND p.status='pending' AND p.invoice_id IS NULL`;
+    const binds = [carrierId];
+    if (Array.isArray(b.placement_ids) && b.placement_ids.length) {
+      sql += ` AND p.id IN (${b.placement_ids.map(() => '?').join(',')})`;
+      binds.push(...b.placement_ids);
+    }
+    const { results } = await db.prepare(sql + ' ORDER BY COALESCE(p.seated_at, p.created_at)').bind(...binds).all();
+    const rows = results || [];
+    if (!rows.length) return json({ error: 'Nothing to invoice for this carrier right now.' }, 400);
+
+    let amount = 0;
+    const lineItems = rows.map((p) => {
+      const line = Number(p.fee_amount) || 0;
+      amount += line;
+      return { placement_id: p.id, driver: p.driver_name || 'Driver', driver_id: p.driver_id,
+        seated_at: p.seated_at || p.started_at || null, confirmation_no: p.confirmation_no || null,
+        amount: Math.round(line * 100) / 100 };
+    });
+    amount = Math.round(amount * 100) / 100;
+
+    const seq = await db.prepare('SELECT COUNT(*) AS n FROM carrier_invoices').first();
+    const year = new Date().getUTCFullYear();
+    const number = b.number || `AIW-${year}-${String(((seq && seq.n) || 0) + 1).padStart(4, '0')}`;
+    const invId = 'inv_' + mkSecret().slice(0, 10);
+    const dates = lineItems.map((l) => l.seated_at).filter(Boolean).sort();
+    const ps = dates[0] || null, pe = dates[dates.length - 1] || null;
+
+    const money = (n) => '$' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const to = c.billing_email || c.contact_email || null;
+    let emailed = false;
+    if (to && !b.draft) {
+      const rowsHtml = lineItems.map((li) => `<tr>
+        <td style="padding:6px 12px 6px 0;font-size:14px">${esc(li.driver)}${li.confirmation_no ? `<div style="color:#8a95a6;font-size:12px">confirmation ${esc(li.confirmation_no)}</div>` : ''}</td>
+        <td style="padding:6px 12px 6px 0;font-size:13px;color:#5b6472;white-space:nowrap">${esc(li.seated_at || '')}</td>
+        <td style="padding:6px 0;text-align:right;font-weight:600;font-size:14px">${money(li.amount)}</td></tr>`).join('');
+      const r = await sendEmail(env, {
+        from: env.INVOICE_FROM || 'Office <office@arianaisworking.com>',
+        replyTo: env.INVOICE_REPLY_TO || 'office@arianaisworking.com',
+        to,
+        subject: `Invoice ${number} — ${rows.length} driver${rows.length === 1 ? '' : 's'} placed`,
+        html: emailShell(`Invoice ${number}`, `
+          <p style="margin:0 0 6px;font-size:16px">Hi${c.contact_name ? ' ' + esc(c.contact_name.split(' ')[0]) : ''},</p>
+          <p style="margin:0 0 16px;color:#3a4353">Invoice for ${rows.length} driver${rows.length === 1 ? '' : 's'} placed and seated with ${esc(c.name)}${ps ? ` between ${esc(ps)} and ${esc(pe)}` : ''}.</p>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><th style="text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8a95a6;padding-bottom:6px;border-bottom:1px solid #e3e8ef">Driver</th>
+                <th style="text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8a95a6;padding-bottom:6px;border-bottom:1px solid #e3e8ef">Seated</th>
+                <th style="text-align:right;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8a95a6;padding-bottom:6px;border-bottom:1px solid #e3e8ef">Amount</th></tr>
+            ${rowsHtml}
+            <tr><td colspan="2" style="padding:10px 12px 4px 0;border-top:2px solid #1a2230;font-weight:800">Total due</td>
+                <td style="padding:10px 0 4px;border-top:2px solid #1a2230;text-align:right;font-weight:800;color:#2f6fed;font-size:17px">${money(amount)}</td></tr>
+          </table>
+          <p style="margin:16px 0 0;color:#5b6472;font-size:13px">${esc(c.payment_terms || 'Net 15')}. Reply to this email with any questions and we'll sort it out same day.</p>`,
+          brandName(env)),
+      });
+      emailed = !!r.ok;
+    }
+
+    await db.prepare(`INSERT INTO carrier_invoices (id, number, carrier_id, period_start, period_end, drivers, amount, status, line_items, sent_to, sent_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?, ${emailed ? "datetime('now')" : 'NULL'})`)
+      .bind(invId, number, carrierId, ps, pe, rows.length, amount, emailed ? 'sent' : 'draft',
+        JSON.stringify(lineItems), emailed ? to : null).run();
+    for (const p of rows) {
+      await db.prepare("UPDATE placements SET invoice_id=?, status='invoiced', invoiced_at=datetime('now') WHERE id=?").bind(invId, p.id).run();
+    }
+    return json({ ok: true, invoice: { id: invId, number, drivers: rows.length, amount, line_items: lineItems,
+      status: emailed ? 'sent' : 'draft', sent_to: emailed ? to : null }, emailed, has_billing_email: !!to });
+  }
+
+  // ---------- "DID THEY START?" — the answer that turns work into money ----------
+  // The carrier never tells us. Marking a driver seated is what opens the
+  // placement, so an unanswered question here is an uninvoiced fee.
+  if (res === 'drivers' && sub === 'seated' && method === 'POST') {
+    const b = await request.json().catch(() => ({}));
+    const driverId = int(id);
+    const d = await db.prepare('SELECT * FROM leads WHERE id=?').bind(driverId).first();
+    if (!d) return json({ error: 'driver not found' }, 404);
+    if (b.started === false) {
+      // Not seated: record that we asked, so it stops nagging but isn't lost.
+      await db.prepare("UPDATE leads SET seat_checked_at=datetime('now'), lost_reason=COALESCE(?,lost_reason), status=CASE WHEN ? IS NOT NULL THEN 'Not qualified' ELSE status END, updated_at=datetime('now') WHERE id=?")
+        .bind(b.reason || null, b.reason || null, driverId).run();
+      return json({ ok: true, seated: false });
+    }
+    const started = b.started_at || new Date().toISOString().slice(0, 10);
+    await db.prepare(`UPDATE leads SET started_at=?, status='Rolling', seat_checked_at=datetime('now'),
+        seat_confirmed_by=?, updated_at=datetime('now') WHERE id=?`)
+      .bind(started, b.by || 'us', driverId).run();
+    let placement = null;
+    if (d.carrier_id) {
+      const c = await db.prepare('SELECT * FROM carriers WHERE id=?').bind(d.carrier_id).first();
+      if (c && c.fee_trigger !== 'submitted')
+        placement = await ensurePlacement(db, { ...d, started_at: started }, c, c.fee_trigger || 'seated', { seated_at: started });
+    }
+    return json({ ok: true, seated: true, started_at: started, placement });
   }
 
   // ---------- SERVE A COLLECTED DOCUMENT (team-gated by _middleware) ----------

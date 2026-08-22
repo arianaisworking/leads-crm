@@ -1428,6 +1428,30 @@ async function renderDrivers(m){
         if(a.dot_medical_expires)bits.push(`med card expires ${a.dot_medical_expires}`);
         return `<div class="sub" style="padding:2px 0"><a href="#" data-alert="${a.id}" style="font-weight:600">${esc(a.name)}</a> — ${esc(bits.join(" · "))}</div>`;}).join("")}
     </div>`:"";
+    const unseated=st.unseated||[];
+    if(unseated.length) $("#drAlerts").insertAdjacentHTML("beforeend",`<div class="card" style="margin-bottom:14px;padding:12px 16px;border-left:3px solid #35c08a">
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px">💵 Did they start?</div>
+      <div class="sub" style="margin-bottom:7px;font-size:11.5px">The carrier won't tell us. Until this is answered the placement stays closed and the fee never gets billed.</div>
+      ${unseated.map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--line-2)">
+        <div class="sub"><a href="#" data-alert="${a.id}" style="font-weight:600">${esc(a.name)}</a>${a.orientation_at?` — orientation ${esc(a.orientation_at)}`:a.lease_signed_at?` — lease signed ${esc(a.lease_signed_at)}`:""}</div>
+        <div style="display:flex;gap:6px;flex:none">
+          <button class="btn sm" data-seated="${a.id}" type="button">Started</button>
+          <button class="btn ghost sm" data-notseated="${a.id}" type="button">No</button>
+        </div></div>`).join("")}
+    </div>`);
+    $("#drAlerts").querySelectorAll("[data-seated]").forEach(b=>b.onclick=async()=>{
+      b.disabled=true;
+      try{ const r=await drapi("/drivers/"+b.dataset.seated+"/seated",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({started:true,by:"us"})});
+        toast(r.placement?"Seated — placement opened, ready to invoice.":"Marked seated."); load();
+      }catch(e){ toast(e.message); b.disabled=false; }
+    });
+    $("#drAlerts").querySelectorAll("[data-notseated]").forEach(b=>b.onclick=async()=>{
+      const reason=prompt("What happened? (leave blank to just snooze the question)");
+      if(reason===null)return;
+      try{ await drapi("/drivers/"+b.dataset.notseated+"/seated",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({started:false,reason:reason||null})});
+        toast(reason?"Recorded.":"Snoozed for a week."); load();
+      }catch(e){ toast(e.message); }
+    });
     const stalled=st.stalled||[];
     if(stalled.length) $("#drAlerts").insertAdjacentHTML("beforeend",`<div class="card" style="margin-bottom:14px;padding:12px 16px;border-left:3px solid #2f6fed">
       <div style="font-weight:700;font-size:13px;margin-bottom:6px">⤴ Stuck on the carrier's application</div>
@@ -1559,6 +1583,8 @@ async function openCarrier(id,onSave){
           <select id="cFeeTrig">${[["submitted","when submitted"],["seated","when seated"],["days_30","after 30 days"]].map(([v,l])=>`<option value="${v}" ${c.fee_trigger===v?"selected":""}>${l}</option>`).join("")}</select>
         </div>
         <p class="sub" style="margin:6px 0 0">Leave the amount blank until the deal's agreed — everything else still works.</p></div>
+      <div class="drow"><div class="field"><label>Billing email <span class="sub" style="font-weight:400">· if not the recruiting contact</span></label><input id="cBillEmail" value="${esc(c.billing_email||"")}"></div>
+        <div class="field"><label>Payment terms</label><input id="cTerms" value="${esc(c.payment_terms||"Net 15")}"></div></div>
       <div class="field"><label>Notes</label><textarea id="cNotes" rows="3">${esc(c.notes||"")}</textarea></div>
       <div class="dfoot"><button class="btn" id="cSave">Save carrier</button>
         ${id?`<button class="btn ghost" id="cDel">Delete</button>`:""}
@@ -1572,7 +1598,8 @@ async function openCarrier(id,onSave){
       haul_type:$("#cHaul").value.trim()||null,driver_type:$("#cDType").value,orientation_info:$("#cOrient").value.trim()||null,
       apply_url:$("#cApply").value.trim()||null,apply_source_param:$("#cSrcParam").value.trim()||"uri_b",
       fee_type:$("#cFeeType").value,fee_amount:$("#cFeeAmt").value?parseFloat($("#cFeeAmt").value):null,
-      fee_trigger:$("#cFeeTrig").value,notes:$("#cNotes").value.trim()||null};
+      fee_trigger:$("#cFeeTrig").value,notes:$("#cNotes").value.trim()||null,
+      billing_email:$("#cBillEmail").value.trim()||null,payment_terms:$("#cTerms").value.trim()||null};
     if(!p.name){ $("#cMsg").textContent="Name is required."; return; }
     try{
       if(id) await drapi("/carriers/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(p)});
@@ -1585,11 +1612,43 @@ async function openCarrier(id,onSave){
 }
 
 async function renderDrMoney(m){
-  m.innerHTML=head("The money","Placements")+`<div id="mStats" class="stats"></div><div id="mBody"></div>`;
-  let d={},pl=[],sp=[];
+  m.innerHTML=head("The money","Placements")+`<div id="mStats" class="stats"></div><div id="mBill"></div><div id="mBody"></div>`;
+  let d={},pl=[],sp=[],bill=[],invs=[];
   try{ d=await drapi("/money"); }catch(e){}
   try{ const r=await drapi("/placements"); pl=r.placements||[]; }catch(e){}
   try{ const r=await drapi("/splits"); sp=r.splits||[]; }catch(e){}
+  try{ const r=await drapi("/billable"); bill=r.billable||[]; }catch(e){}
+  try{ const r=await drapi("/invoices"); invs=r.invoices||[]; }catch(e){}
+  await loadCarriers();
+  // Ready to bill, grouped by carrier — the CRM knows who we seated and what
+  // each is worth, so it writes the invoice rather than us reading it off.
+  const groups={};
+  bill.forEach(b=>{ (groups[b.carrier_id]=groups[b.carrier_id]||{name:b.carrier_name,to:b.billing_email||b.contact_email,rows:[]}).rows.push(b); });
+  $("#mBill").innerHTML=Object.entries(groups).map(([cid,g])=>{
+    const total=g.rows.reduce((a,r)=>a+(Number(r.fee_amount)||0),0);
+    return `<div class="card" style="margin-bottom:14px;padding:18px 20px;border-left:3px solid #35c08a">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div><div style="font-weight:800;font-size:15px">Ready to invoice — ${esc(g.name||"carrier")}</div>
+          <div class="sub">${g.rows.length} seated driver${g.rows.length===1?"":"s"}${g.to?" · to "+esc(g.to):" · no billing email on file"}</div></div>
+        <div style="text-align:right"><div style="font-weight:800;font-size:20px;color:var(--pink)">${drMoney(total)}</div></div>
+      </div>
+      <table style="width:100%;margin-top:10px;font-size:13px">${g.rows.map(r=>`<tr>
+        <td style="padding:3px 0">${esc(r.driver_name||"—")}${r.confirmation_no?`<span class="sub"> · ${esc(r.confirmation_no)}</span>`:""}</td>
+        <td class="sub" style="padding:3px 0">${esc(r.seated_at||r.started_at||"")}</td>
+        <td style="padding:3px 0;text-align:right;font-weight:600">${drMoney(r.fee_amount)}</td></tr>`).join("")}</table>
+      <div style="margin-top:11px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" data-inv="${cid}" type="button">Send invoice →</button>
+        <button class="btn ghost" data-invdraft="${cid}" type="button">Create as draft</button></div>
+    </div>`;
+  }).join("");
+  $("#mBill").querySelectorAll("[data-inv],[data-invdraft]").forEach(b=>b.onclick=async()=>{
+    const cid=b.dataset.inv||b.dataset.invdraft, draft=!!b.dataset.invdraft;
+    b.disabled=true;
+    try{ const r=await drapi("/invoice",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({carrier_id:cid,draft})});
+      toast(r.emailed?`Invoice ${r.invoice.number} sent to ${r.sent_to||r.invoice.sent_to}`:`Invoice ${r.invoice.number} created as a draft.`);
+      renderDrMoney(m);
+    }catch(e){ toast(e.message); b.disabled=false; }
+  });
   const t=d.totals||{};
   $("#mStats").innerHTML=`
     <div class="stat"><div class="n">${t.placements||0}</div><div class="l">Placements</div></div>
@@ -1618,6 +1677,12 @@ async function renderDrMoney(m){
         <td>${p.fee_amount!=null?drMoney(p.fee_amount):"—"}</td><td class="sub">${esc(p.trigger_met||"")}</td>
         <td><select data-pl="${p.id}" class="plst">${["pending","invoiced","paid","clawed_back"].map(s=>`<option value="${s}" ${p.status===s?"selected":""}>${s.replace("_"," ")}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div>`
       :`<div class="card"><div class="empty"><div class="mark">💵</div><h3>No placements yet</h3><p>A placement opens when a driver is submitted or seated, depending on the carrier's fee trigger.</p></div></div>`}
+    ${invs.length?`<div class="card" style="margin-bottom:14px"><div style="padding:14px 16px 0;font-weight:800;font-size:14px">Invoices</div>
+      <table><thead><tr><th>Invoice</th><th>Carrier</th><th>Drivers</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>${invs.map(i=>`<tr><td>${esc(i.number||i.id)}<div class="sub">${esc((i.created_at||"").slice(0,10))}</div></td>
+        <td class="sub">${esc(i.carrier_name||"—")}</td><td>${i.drivers}</td><td>${drMoney(i.amount)}</td>
+        <td><select data-invst="${i.id}" class="invst">${["draft","sent","paid","void"].map(s=>`<option value="${s}" ${i.status===s?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table>
+      <p class="sub" style="padding:0 16px 12px;margin:8px 0 0;font-size:11.5px">Marking an invoice paid pays its placements and everyone's share of them.</p></div>`:""}
     ${sp.length?`<div class="card"><div style="padding:14px 16px 0;font-weight:800;font-size:14px">Who's owed what</div>
       <table><thead><tr><th>Person</th><th>Driver</th><th>Share</th><th>Amount</th><th>Status</th></tr></thead>
       <tbody>${sp.map(s=>`<tr><td>${esc(s.recruiter_name||"—")}</td><td class="sub">${esc(s.driver_name||"—")}</td>
@@ -1626,6 +1691,11 @@ async function renderDrMoney(m){
   $("#mBody").querySelectorAll(".plst").forEach(sel=>sel.onchange=async()=>{
     try{ await drapi("/placements/"+sel.dataset.pl,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:sel.value})}); toast("Updated."); renderDrMoney(m); }
     catch(e){ toast(e.message); }
+  });
+  $("#mBody").querySelectorAll(".invst").forEach(sel=>sel.onchange=async()=>{
+    try{ await drapi("/invoices/"+sel.dataset.invst,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:sel.value})});
+      toast(sel.value==="paid"?"Invoice paid — placements and shares settled.":"Invoice updated."); renderDrMoney(m);
+    }catch(e){ toast(e.message); }
   });
   $("#mBody").querySelectorAll(".spst").forEach(sel=>sel.onchange=async()=>{
     try{ await drapi("/splits/"+sel.dataset.sp,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:sel.value})}); toast("Updated."); renderDrMoney(m); }
