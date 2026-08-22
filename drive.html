@@ -5,8 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Truckers &amp; Trokeros — owner-operator placement</title>
 <meta name="description" content="Own your truck? We place owner-operators with intermodal carriers. No trailer needed, no citizenship requirement, weekly settlements. Apply in five minutes.">
+<link rel="canonical" href="https://truckersandtrokeros.com/">
+<link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/">
+<link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es">
+<link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/">
+<meta name="theme-color" content="#0d1620">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://truckersandtrokeros.com/">
+<meta property="og:site_name" content="Truckers &amp; Trokeros">
 <meta property="og:title" content="Truckers &amp; Trokeros">
 <meta property="og:description" content="Own your truck? Get placed with a carrier that keeps you loaded. Apply in five minutes.">
+<meta property="og:image" content="https://truckersandtrokeros.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="es_US">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
   :root{
     --ink:#101720; --ink-2:#1c2733; --soft:#5d6b7a; --line:#e2e8ef; --bg:#fff; --wash:#f5f7fa;
@@ -77,6 +92,17 @@
   .req .x{color:var(--brand);font-weight:800;flex:none;margin-top:1px}
   @media(max-width:640px){.reqs{grid-template-columns:1fr}}
   .note{background:var(--brand-wash);border:1px solid #ffd9c2;border-radius:14px;padding:17px 20px;margin-top:28px;font-size:15.5px;color:#7c3908;max-width:760px}
+
+  /* fees -- the carrier's optional programs, priced in the open */
+  .fees{margin-top:34px;border:1px solid var(--line);border-radius:16px;padding:24px;max-width:760px;background:var(--wash)}
+  .fees h3{font-size:18px;font-weight:800;margin-bottom:5px}
+  .fee_sub{color:var(--soft);font-size:15px;margin:0 0 16px}
+  .fee{display:grid;grid-template-columns:1fr auto;gap:3px 16px;padding:13px 0;border-top:1px solid var(--line)}
+  .fee:first-child{border-top:0}
+  .fee .lbl{font-weight:700;font-size:15.5px}
+  .fee .amt{font-weight:800;font-size:15.5px;white-space:nowrap;color:var(--brand-dark);text-align:right}
+  .fee .d{grid-column:1/-1;color:var(--soft);font-size:14px}
+  .fee_note{color:var(--soft);font-size:14px;margin:17px 0 0}
 
   /* faq */
   .faq{max-width:760px}
@@ -169,7 +195,27 @@
   </div></div>
 </div>
 
-<section>
+<section id="work">
+  <div class="wrap">
+    <div class="eyebrow" data-t="k_eyebrow">The work</div>
+    <h2 data-t="k_h2"></h2>
+    <p class="lede" data-t="k_lede"></p>
+    <div class="cards">
+      <div class="card"><div class="ic">📦</div><h3 data-t="k1_h"></h3><p data-t="k1_p"></p></div>
+      <div class="card"><div class="ic">🏠</div><h3 data-t="k2_h"></h3><p data-t="k2_p"></p></div>
+      <div class="card"><div class="ic">🔑</div><h3 data-t="k3_h"></h3><p data-t="k3_p"></p></div>
+    </div>
+
+    <div class="fees">
+      <h3 data-t="fee_h"></h3>
+      <p class="fee_sub" data-t="fee_sub"></p>
+      <div id="fees"></div>
+      <p class="fee_note" data-t="fee_note"></p>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
   <div class="wrap">
     <div class="eyebrow" data-t="w_eyebrow">Why drivers call us</div>
     <h2 data-t="w_h2"></h2>
@@ -183,7 +229,7 @@
   </div>
 </section>
 
-<section class="alt" id="how">
+<section id="how">
   <div class="wrap">
     <div class="eyebrow" data-t="h_eyebrow">The process</div>
     <h2 data-t="h_h2"></h2>
@@ -271,6 +317,26 @@ const T = {
     t2_n:"Weekly", t2_l:"settlements, direct deposit",
     t3_n:"Plates & IFTA", t3_l:"available if you want them",
 
+    k_eyebrow:"The work",
+    k_h2:"Intermodal container work out of Dallas",
+    k_lede:"You pull containers on the carrier's chassis, running out of the Dallas–Fort Worth rail yards. It's not over-the-road — it's drayage, and the day looks different because of it.",
+    k1_h:"Containers, not freight you load",
+    k1_p:"The container comes off the rail on the carrier's chassis. No trailer to buy, no trailer to maintain, and you're not touching the freight.",
+    k2_h:"Local and regional, not weeks out",
+    k2_p:"Drayage runs between the yards, ports and customers rather than across the country. Your exact schedule depends on the lane you're put on — ask us and we'll get you the specifics before you commit to anything.",
+    k3_h:"You stay your own boss",
+    k3_p:"This is a lease-on: you own the tractor and run under the carrier's authority. You're not becoming a company driver, and the truck stays yours.",
+
+    fee_h:"What the carrier can handle for you",
+    fee_sub:"All optional — you choose each one on the lease form. Nobody else publishes these. We do, because you'll find out anyway and we'd rather you hear it from us.",
+    fee_note:"Deducted weekly from your settlement. If you'd rather run your own plates and file your own IFTA, that's completely fine — plenty of drivers do.",
+    fees:[
+      ["Trailer &amp; chassis","Included","The carrier supplies it. This is the big one — a trailer of your own runs well into five figures."],
+      ["Apportioned plates","$50 / week","They pull the plates. You skip the IRP account and the lump sum in January. You'll need your title, front and back, plus a current 2290."],
+      ["IFTA","$10 / week","They file your quarterly fuel tax. This is where new owner-operators most often eat a penalty."],
+      ["Maintenance escrow","You set it","Optional savings for the repair that's coming. You pick the weekly amount and you set the ceiling."]
+    ],
+
     w_eyebrow:"Why drivers call us",
     w_h2:"Recruiting that doesn't waste your time",
     w_lede:"Most recruiters send your file in and hope. We check you against the carrier's actual qualification standards first — so you find out where you stand in a day, not three weeks.",
@@ -336,6 +402,9 @@ const T = {
       [0,"No positive or refused drug test in 10 years"]
     ],
     faq:[
+      ["What will I make?","Ask us and we'll give you the carrier's pay structure in writing before you fill out anything binding. We won't quote you a number we can't stand behind — and be careful with anyone who throws a big figure at you before they know your lane."],
+      ["What comes out of my settlement?","Plates are $50/week and IFTA $10/week if you take them, and maintenance escrow only if you choose it and at whatever amount you set. Ask us for the full deduction list before you sign — you're entitled to see it, and we'll get it for you."],
+      ["How much will I be home?","This is drayage, so it's container work between the yards, ports and customers rather than weeks across the country. The exact schedule comes down to the lane you're assigned. Ask us and we'll get the specifics from the carrier before you commit."],
       ["Do I need my own trailer?","No. This is intermodal work — the carrier supplies the chassis and containers. You bring the tractor."],
       ["Do I have to be a U.S. citizen?","No. You need to be legally authorized to work in the United States. Citizenship is not a requirement."],
       ["I have a misdemeanor. Am I out?","Not automatically. Misdemeanors are reviewed case by case, and so are non-commercial felonies. Be upfront with us — it gets checked either way, and a surprise later is what actually costs people the seat."],
@@ -355,6 +424,26 @@ const T = {
     t1_n:"Sin trailer", t1_l:"— eso lo pone la compañía",
     t2_n:"Pagos", t2_l:"semanales, depósito directo",
     t3_n:"Placas e IFTA", t3_l:"disponibles si las quieres",
+
+    k_eyebrow:"El trabajo",
+    k_h2:"Trabajo intermodal de contenedores desde Dallas",
+    k_lede:"Jalas contenedores sobre el chasis de la compañía, saliendo de los patios de tren de Dallas–Fort Worth. No es carretera larga — es dray, y por eso el día se ve distinto.",
+    k1_h:"Contenedores, no carga que tú subes",
+    k1_p:"El contenedor sale del tren sobre el chasis de la compañía. No hay trailer que comprar ni mantener, y tú no tocas la carga.",
+    k2_h:"Local y regional, no semanas fuera",
+    k2_p:"El dray se mueve entre patios, puertos y clientes, no de costa a costa. Tu horario exacto depende de la ruta que te toque — pregúntanos y te conseguimos los detalles antes de que te comprometas a nada.",
+    k3_h:"Sigues siendo tu propio jefe",
+    k3_p:"Esto es un lease-on: la troca es tuya y trabajas bajo la autoridad de la compañía. No te vuelves chofer de compañía, y la troca sigue siendo tuya.",
+
+    fee_h:"Lo que la compañía te puede resolver",
+    fee_sub:"Todo es opcional — tú eliges cada cosa en el contrato. Nadie más publica estos precios. Nosotros sí, porque de todos modos te vas a enterar y preferimos que sea por nosotros.",
+    fee_note:"Se descuenta semanalmente de tu pago. Si prefieres traer tus propias placas y hacer tu propio IFTA, no hay ningún problema — muchos lo hacen así.",
+    fees:[
+      ["Trailer y chasis","Incluido","Lo pone la compañía. Este es el grande — un trailer propio te cuesta decenas de miles."],
+      ["Placas apportioned","$50 / semana","Ellos sacan las placas. Te ahorras la cuenta de IRP y el pagote de enero. Vas a necesitar tu título, por delante y por detrás, más un 2290 vigente."],
+      ["IFTA","$10 / semana","Ellos declaran tu impuesto de combustible cada trimestre. Aquí es donde más seguido caen multas los nuevos dueños de troca."],
+      ["Fondo de mantenimiento","Tú decides","Ahorro opcional para la reparación que siempre llega. Tú pones la cantidad semanal y tú pones el tope."]
+    ],
 
     w_eyebrow:"Por qué nos buscan",
     w_h2:"Reclutamiento que no te hace perder el tiempo",
@@ -421,6 +510,9 @@ const T = {
       [0,"Sin examen antidoping positivo o rechazado en 10 años"]
     ],
     faq:[
+      ["¿Cuánto voy a ganar?","Pregúntanos y te damos por escrito la estructura de pago de la compañía antes de que llenes nada definitivo. No te vamos a decir un número que no podamos sostener — y ten cuidado con quien te avienta una cifra grande sin saber siquiera qué ruta te toca."],
+      ["¿Qué me descuentan del pago?","Las placas son $50/semana y el IFTA $10/semana si los tomas, y el fondo de mantenimiento solo si tú lo eliges y por la cantidad que tú pongas. Pídenos la lista completa de descuentos antes de firmar — tienes derecho a verla y nosotros te la conseguimos."],
+      ["¿Cuánto voy a estar en casa?","Esto es dray, o sea trabajo de contenedores entre patios, puertos y clientes, no semanas cruzando el país. El horario exacto depende de la ruta que te asignen. Pregúntanos y te conseguimos los detalles con la compañía antes de que te comprometas."],
       ["¿Necesito mi propio trailer?","No. Es trabajo intermodal — la compañía pone el chasis y los contenedores. Tú pones el tractor."],
       ["¿Tengo que ser ciudadano americano?","No. Necesitas permiso legal para trabajar en Estados Unidos. La ciudadanía no es requisito."],
       ["Tengo un delito menor. ¿Estoy fuera?","No automáticamente. Los delitos menores se revisan caso por caso, igual que los delitos mayores no comerciales. Sé honesto con nosotros — de todos modos lo revisan, y una sorpresa después es lo que de verdad cuesta el puesto."],
@@ -433,8 +525,11 @@ const T = {
   }
 };
 
+// Language, most explicit signal first. /es is a deliberate act — someone chose
+// to share that link — so it outranks both a saved preference and the browser's.
 let lang = (navigator.language || 'en').toLowerCase().startsWith('es') ? 'es' : 'en';
 try { const s = localStorage.getItem('tt_lang'); if (s) lang = s; } catch (e) {}
+if (/^\/es\/?$/.test(location.pathname)) lang = 'es';
 
 function paint(){
   const t = T[lang];
@@ -446,10 +541,20 @@ function paint(){
   });
   document.getElementById('reqs').innerHTML = t.reqs.map(([ok,txt])=>
     `<div class="req"><span class="${ok?'tick':'x'}">${ok?'✓':'✕'}</span><span>${txt}</span></div>`).join('');
+  document.getElementById('fees').innerHTML = t.fees.map(([lbl,amt,d])=>
+    `<div class="fee"><div class="lbl">${lbl}</div><div class="amt">${amt}</div><div class="d">${d}</div></div>`).join('');
   document.getElementById('faq').innerHTML = t.faq.map(([q,a])=>
     `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
   document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on', b.dataset.lang===lang));
   try { localStorage.setItem('tt_lang', lang); } catch (e) {}
+  // Keep the address bar honest: whatever they're reading is what they'd send.
+  // The canonical follows, so /es doesn't get indexed as a duplicate of /.
+  if (history.replaceState && !location.pathname.endsWith('.html')) {
+    const want = lang === 'es' ? '/es' : '/';
+    if (location.pathname !== want) history.replaceState(null, '', want + location.search + location.hash);
+  }
+  const canon = document.querySelector('link[rel=canonical]');
+  if (canon) canon.href = 'https://truckersandtrokeros.com' + (lang === 'es' ? '/es' : '/');
 }
 document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>{ lang=b.dataset.lang; paint(); });
 document.getElementById('yr').textContent = new Date().getFullYear();

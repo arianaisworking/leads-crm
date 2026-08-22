@@ -31,8 +31,13 @@ export async function onRequest(context) {
   const path = url.pathname;
 
   // Public site hosts never expose the CRM shell at the root.
+  //
+  // /es is a real URL, not just a toggle. Half this audience finds us through a
+  // link forwarded in a WhatsApp or Facebook group, and a link that opens in
+  // English for a Spanish speaker is a link that gets closed. Same page either
+  // way — the page reads the path and paints itself in that language.
   const site = PUBLIC_SITES[url.hostname.toLowerCase()];
-  if (site && (path === '/' || path === '/index.html')) {
+  if (site && (path === '/' || path === '/index.html' || path === '/es' || path === '/es/')) {
     return next(new Request(new URL(site, url), request));
   }
 
