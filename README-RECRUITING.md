@@ -20,6 +20,11 @@ Each arrow after the first is automatic. See **The automation chain** below.
 schema-recruiting-extra.sql      drivers + carriers + docs + placements (run after schema-full.sql)
 migration-recruiting-002.sql     revenue split + the lease/document workflow
 migration-recruiting-003.sql     the carrier's own application (Tenstreet) + attribution
+migration-recruiting-004.sql     invoicing the carrier + the seating question
+migration-recruiting-005.sql     follow-up nudges
+functions/api/cron/[[path]].js   the nudge pass (cron-key gated)
+cron-worker-recruiting/          Cloudflare Worker that pokes it twice a day
+drive.html                       truckerandtrokeros.com — the public site (EN/ES)
 functions/_lib/screening.js      the qualification engine — points chart + prohibitions
 functions/_lib/recruiting.js     doc checklists, placements + splits, the carrier packet
 functions/_lib/vault.js          AES-GCM for the lease form's sensitive fields
@@ -265,3 +270,81 @@ npx wrangler d1 execute aiw-recruiting --remote --file=migration-recruiting-003.
 
 Losing `LEASE_KEY` makes existing sealed fields unrecoverable — drivers would
 have to re-enter them. Keep a copy somewhere safe.
+
+
+## Follow-ups
+
+Drivers rarely stall because they changed their mind — they stall because the
+carrier's application is long, the inspection expired, or they meant to do it
+Sunday. `/api/cron/nudge` runs twice a day and chases exactly seven stuck
+states:
+
+| Nudge | Fires when |
+|---|---|
+| `carrier_app_unopened` | link sent 2+ days ago, never opened |
+| `carrier_app_unfinished` | opened 3+ days ago, no confirmation number |
+| `lease_form` | onboarding pack sent 2+ days ago, form not returned |
+| `docs_missing` | lease returned 2+ days ago, documents still outstanding (names them) |
+| `drug_test` | the 7-business-day window closes within 2 days |
+| `inspection_stale` | inspection is 25+ days old and the packet hasn't gone |
+| `orientation_tomorrow` | orientation is tomorrow |
+
+Every send is logged to `driver_nudges`. **No repeat inside 3 days, three sends
+maximum, ever.** A driver who acts stops being chased immediately — the rules
+key off the stuck state, not a timer. Muted (`nudge_paused`), disqualified,
+seated and no-email drivers are never contacted.
+
+Once a day the team gets a short digest of what only a human can move: drivers
+whose seating is unconfirmed, money ready to invoice, and anyone the emails have
+stopped working on — those are the phone calls.
+
+```bash
+cd cron-worker-recruiting && npx wrangler deploy
+npx wrangler secret put CRON_KEY     # same value as the Pages CRON_KEY secret
+```
+
+Dry-run it any time without sending anything:
+
+```bash
+curl -H "x-cron-key: $CRON_KEY" "https://aiw-recruiting.pages.dev/api/cron/nudge?dry=1"
+```
+
+## truckerandtrokeros.com
+
+`drive.html` is the public site: hero, why-us, the five-step process, real
+qualification requirements, eight FAQs and the lead form. It is **fully
+bilingual (EN/ES)** — the name is half Spanish, Dallas drayage runs heavily on
+Spanish-speaking owner-operators, and the carrier confirmed citizenship isn't
+required. Language follows the browser, is switchable in the header, and sticks
+in `localStorage`.
+
+The form posts to `/api/apply/lead`, so a driver who fills it in is in the CRM
+and has their application emailed **before anyone reads the lead**.
+
+### Hosting it
+
+The site shares this Pages project — no second deployment, no CORS. Add
+`truckerandtrokeros.com` (and `www`) as custom domains on the recruiting Pages
+project. `functions/_middleware.js` serves `/drive.html` at `/` for those
+hostnames; the CRM stays on the pages.dev host and any admin domain. To add
+another site, add a line to `PUBLIC_SITES`.
+
+Tracking parameters the site understands:
+
+| Param | Use |
+|---|---|
+| `?src=` | overrides the recorded source (default `truckerandtrokeros.com`) |
+| `?r=` | recruiter id, so leads land attributed — e.g. `?r=mystica` |
+| `?carrier=` | which carrier the lead is for (default `evans_dal`) |
+
+So Mystica's Facebook ad points at
+`https://truckerandtrokeros.com/?r=mystica&src=fb-ad-oct`, and every driver from
+it shows up in the CRM tagged to her and to that ad.
+
+### One thing to confirm before launch
+
+The site describes the work but doesn't name Evans. `apply.html` does name them,
+because the driver is by then applying to a specific carrier. If Daphine is
+happy being named publicly it's worth doing — drivers trust a named carrier more
+than "our partner carrier" — but that's her call, not ours. Ask before adding it
+to the marketing page.

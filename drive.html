@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trucker &amp; Trokeros — owner-operator placement</title>
+<meta name="description" content="Own your truck? We place owner-operators with intermodal carriers. No trailer needed, no citizenship requirement, weekly settlements. Apply in five minutes.">
+<meta property="og:title" content="Trucker &amp; Trokeros">
+<meta property="og:description" content="Own your truck? Get placed with a carrier that keeps you loaded. Apply in five minutes.">
+<style>
+  :root{
+    --ink:#101720; --ink-2:#1c2733; --soft:#5d6b7a; --line:#e2e8ef; --bg:#fff; --wash:#f5f7fa;
+    --brand:#e8590c; --brand-dark:#c04a08; --brand-wash:#fff3ec; --deep:#0d1620; --ok:#1f9d6b;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.15;margin:0}
+  a{color:inherit}
+
+  /* header */
+  header{position:sticky;top:0;z-index:40;background:rgba(13,22,32,.94);backdrop-filter:blur(8px);color:#fff}
+  .hd{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em}
+  .logo svg{flex:none}
+  .lang{display:flex;gap:2px;background:rgba(255,255,255,.12);border-radius:9px;padding:3px}
+  .lang button{border:0;background:transparent;color:#c3cedb;font:inherit;font-size:13px;font-weight:700;padding:5px 11px;border-radius:7px;cursor:pointer}
+  .lang button.on{background:#fff;color:var(--deep)}
+  .hd .cta{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;text-decoration:none;white-space:nowrap}
+  .hd .cta:hover{background:var(--brand-dark)}
+  @media(max-width:620px){.hd .cta{display:none}}
+
+  /* hero */
+  .hero{background:linear-gradient(165deg,#0d1620 0%,#16242f 55%,#1d3040 100%);color:#fff;padding:64px 0 74px;position:relative;overflow:hidden}
+  .hero:after{content:"";position:absolute;right:-90px;bottom:-70px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(232,89,12,.22),transparent 68%)}
+  .hero .in{position:relative;z-index:2;max-width:660px}
+  .kicker{display:inline-block;background:rgba(232,89,12,.18);color:#ffb185;border:1px solid rgba(232,89,12,.35);font-size:12.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:6px 13px;border-radius:20px;margin-bottom:18px}
+  .hero h1{font-size:clamp(33px,5.4vw,52px);font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
+  .hero h1 em{font-style:normal;color:#ff8f4d}
+  .hero p{font-size:18.5px;color:#b9c6d4;margin:0 0 28px;max-width:560px}
+  .btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:30px}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:15px 30px;font:inherit;font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;display:inline-block}
+  .btn:hover{background:var(--brand-dark)}
+  .btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3)}
+  .btn.ghost:hover{background:rgba(255,255,255,.09)}
+  .trust{display:flex;gap:26px;flex-wrap:wrap;color:#93a3b4;font-size:14.5px}
+  .trust b{color:#fff;display:block;font-size:20px;font-weight:800;margin-bottom:1px}
+
+  /* sections */
+  section{padding:66px 0}
+  section.alt{background:var(--wash)}
+  .eyebrow{color:var(--brand);font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:11px}
+  section h2{font-size:clamp(25px,3.6vw,35px);font-weight:800;letter-spacing:-.015em;margin-bottom:12px}
+  .lede{color:var(--soft);font-size:17.5px;max-width:620px;margin:0 0 36px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px}
+  section.alt .card{background:#fff}
+  .card .ic{width:40px;height:40px;border-radius:11px;background:var(--brand-wash);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:13px}
+  .card h3{font-size:17px;font-weight:700;margin-bottom:6px}
+  .card p{color:var(--soft);font-size:15px;margin:0}
+
+  /* steps */
+  .steps{counter-reset:s;display:grid;gap:2px}
+  .step{display:grid;grid-template-columns:46px 1fr;gap:16px;padding:19px 0;border-top:1px solid var(--line)}
+  .step:first-child{border-top:0}
+  .step .n{width:36px;height:36px;border-radius:50%;background:var(--deep);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+  .step h3{font-size:17.5px;font-weight:700;margin-bottom:4px}
+  .step p{color:var(--soft);font-size:15.5px;margin:0}
+  .step .tag{display:inline-block;background:var(--brand-wash);color:var(--brand-dark);font-size:12px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:8px;vertical-align:middle}
+
+  /* requirements */
+  .reqs{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;max-width:760px}
+  .req{display:flex;gap:11px;align-items:flex-start;font-size:16px}
+  .req .tick{color:var(--ok);font-weight:800;flex:none;margin-top:1px}
+  .req .x{color:var(--brand);font-weight:800;flex:none;margin-top:1px}
+  @media(max-width:640px){.reqs{grid-template-columns:1fr}}
+  .note{background:var(--brand-wash);border:1px solid #ffd9c2;border-radius:14px;padding:17px 20px;margin-top:28px;font-size:15.5px;color:#7c3908;max-width:760px}
+
+  /* faq */
+  .faq{max-width:760px}
+  details{border-bottom:1px solid var(--line);padding:17px 0}
+  details summary{font-weight:700;font-size:16.5px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:14px;align-items:center}
+  details summary::-webkit-details-marker{display:none}
+  details summary:after{content:"+";color:var(--brand);font-size:22px;font-weight:400;flex:none}
+  details[open] summary:after{content:"–"}
+  details p{color:var(--soft);font-size:15.5px;margin:10px 0 0}
+
+  /* form */
+  .formwrap{background:var(--deep);color:#fff;padding:66px 0}
+  .fgrid{display:grid;grid-template-columns:1fr 420px;gap:48px;align-items:start}
+  @media(max-width:860px){.fgrid{grid-template-columns:1fr;gap:32px}}
+  .formwrap h2{color:#fff}
+  .formwrap .lede{color:#b9c6d4}
+  .fpoints{display:grid;gap:13px;margin-top:8px}
+  .fpoint{display:flex;gap:11px;font-size:15.5px;color:#c8d4e0}
+  .fpoint .tick{color:#4ade80;font-weight:800;flex:none}
+  form{background:#fff;border-radius:18px;padding:26px;color:var(--ink)}
+  form h3{font-size:19px;font-weight:800;margin-bottom:4px}
+  form .sub{color:var(--soft);font-size:14.5px;margin:0 0 18px}
+  .f{margin-bottom:13px}
+  .f label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
+  .f input,.f select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;font:inherit;font-size:16px;background:#fff;color:var(--ink)}
+  .f input:focus,.f select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(232,89,12,.13)}
+  .row2{display:grid;grid-template-columns:1fr 96px;gap:11px}
+  form .btn{width:100%;text-align:center;margin-top:6px;padding:15px}
+  .fine{color:var(--soft);font-size:12.5px;margin:13px 0 0;text-align:center}
+  .hp{position:absolute;left:-9999px}
+  .done{text-align:center;padding:26px 6px}
+  .done .big{width:58px;height:58px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-size:29px;margin:0 auto 15px}
+  .done h3{font-size:20px;margin-bottom:8px}
+  .done p{color:var(--soft);font-size:15px;margin:0 0 6px}
+  .err{background:#fdecec;border:1px solid #f5c2c2;color:#9b2c2c;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px;display:none}
+
+  footer{background:#080f16;color:#7d8b9a;padding:34px 0;font-size:13.5px}
+  .ft{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
+  footer a{color:#a9b7c5;text-decoration:none}
+  footer a:hover{color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e8590c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 16V6.5h11.5V16"/><path d="M13.5 10H18l3.2 3.9V16"/>
+        <circle cx="7" cy="17.6" r="2.1"/><circle cx="17.5" cy="17.6" r="2.1"/>
+      </svg>
+      <span>Trucker <span style="color:#ff8f4d">&amp;</span> Trokeros</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="lang">
+        <button data-lang="en" class="on">EN</button>
+        <button data-lang="es">ES</button>
+      </div>
+      <a class="cta" href="#apply" data-t="nav_cta">Apply now</a>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap"><div class="in">
+    <span class="kicker" data-t="hero_kicker">Owner-operators · Dallas–Fort Worth</span>
+    <h1 data-t="hero_h1"></h1>
+    <p data-t="hero_p"></p>
+    <div class="btns">
+      <a class="btn" href="#apply" data-t="hero_btn1">Apply in 5 minutes</a>
+      <a class="btn ghost" href="#how" data-t="hero_btn2">See how it works</a>
+    </div>
+    <div class="trust">
+      <div><b data-t="t1_n">No trailer</b><span data-t="t1_l">needed — that's on the carrier</span></div>
+      <div><b data-t="t2_n">Weekly</b><span data-t="t2_l">settlements, direct deposit</span></div>
+      <div><b data-t="t3_n">Plates &amp; IFTA</b><span data-t="t3_l">available if you want them</span></div>
+    </div>
+  </div></div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow" data-t="w_eyebrow">Why drivers call us</div>
+    <h2 data-t="w_h2"></h2>
+    <p class="lede" data-t="w_lede"></p>
+    <div class="cards">
+      <div class="card"><div class="ic">🚛</div><h3 data-t="w1_h"></h3><p data-t="w1_p"></p></div>
+      <div class="card"><div class="ic">🌎</div><h3 data-t="w2_h"></h3><p data-t="w2_p"></p></div>
+      <div class="card"><div class="ic">⚖️</div><h3 data-t="w3_h"></h3><p data-t="w3_p"></p></div>
+      <div class="card"><div class="ic">⏱️</div><h3 data-t="w4_h"></h3><p data-t="w4_p"></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="how">
+  <div class="wrap">
+    <div class="eyebrow" data-t="h_eyebrow">The process</div>
+    <h2 data-t="h_h2"></h2>
+    <p class="lede" data-t="h_lede"></p>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><div><h3 data-t="s1_h"></h3><p data-t="s1_p"></p></div></div>
+      <div class="step"><div class="n">2</div><div><h3 data-t="s2_h"></h3><p data-t="s2_p"></p></div></div>
+      <div class="step"><div class="n">3</div><div><h3 data-t="s3_h"></h3><p data-t="s3_p"></p></div></div>
+      <div class="step"><div class="n">4</div><div><h3 data-t="s4_h"></h3><p data-t="s4_p"></p></div></div>
+      <div class="step"><div class="n">5</div><div><h3 data-t="s5_h"></h3><p data-t="s5_p"></p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow" data-t="r_eyebrow">Straight answers</div>
+    <h2 data-t="r_h2"></h2>
+    <p class="lede" data-t="r_lede"></p>
+    <div class="reqs" id="reqs"></div>
+    <div class="note" data-t="r_note"></div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="eyebrow" data-t="f_eyebrow">Questions</div>
+    <h2 data-t="f_h2" style="margin-bottom:28px"></h2>
+    <div class="faq" id="faq"></div>
+  </div>
+</section>
+
+<div class="formwrap" id="apply">
+  <div class="wrap fgrid">
+    <div>
+      <div class="eyebrow" data-t="a_eyebrow">Get started</div>
+      <h2 data-t="a_h2"></h2>
+      <p class="lede" data-t="a_lede"></p>
+      <div class="fpoints">
+        <div class="fpoint"><span class="tick">✓</span><span data-t="a_p1"></span></div>
+        <div class="fpoint"><span class="tick">✓</span><span data-t="a_p2"></span></div>
+        <div class="fpoint"><span class="tick">✓</span><span data-t="a_p3"></span></div>
+      </div>
+    </div>
+    <form id="lead" novalidate>
+      <h3 data-t="form_h"></h3>
+      <p class="sub" data-t="form_sub"></p>
+      <div class="err" id="err"></div>
+      <div class="f"><label data-t="l_name">Full name</label><input name="name" autocomplete="name" required></div>
+      <div class="f"><label data-t="l_phone">Cell phone</label><input name="phone" type="tel" autocomplete="tel" required></div>
+      <div class="f"><label data-t="l_email">Email</label><input name="email" type="email" autocomplete="email"></div>
+      <div class="f"><label data-t="l_city">City &amp; state</label>
+        <div class="row2"><input name="city" autocomplete="address-level2"><input name="state" maxlength="2" placeholder="TX"></div>
+      </div>
+      <div class="f"><label data-t="l_truck">Do you own your truck?</label>
+        <select name="interest">
+          <option value="owns" data-t="o_owns"></option>
+          <option value="buying" data-t="o_buying"></option>
+          <option value="no" data-t="o_no"></option>
+        </select>
+      </div>
+      <input class="hp" name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn" type="submit" data-t="form_btn"></button>
+      <p class="fine" data-t="form_fine"></p>
+    </form>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap ft">
+    <div>© <span id="yr"></span> Trucker &amp; Trokeros · <span data-t="ft_tag"></span></div>
+    <div><a href="#apply" data-t="ft_link">Apply to drive</a></div>
+  </div>
+</footer>
+
+<script>
+const T = {
+  en: {
+    nav_cta:"Apply now",
+    hero_kicker:"Owner-operators · Dallas–Fort Worth",
+    hero_h1:"You own the truck. <em>We'll get you loaded.</em>",
+    hero_p:"We place owner-operators with intermodal carriers running steady freight out of Dallas. You bring the tractor — the trailer, the plates and the loads are handled.",
+    hero_btn1:"Apply in 5 minutes", hero_btn2:"See how it works",
+    t1_n:"No trailer", t1_l:"needed — that's on the carrier",
+    t2_n:"Weekly", t2_l:"settlements, direct deposit",
+    t3_n:"Plates & IFTA", t3_l:"available if you want them",
+
+    w_eyebrow:"Why drivers call us",
+    w_h2:"Recruiting that doesn't waste your time",
+    w_lede:"Most recruiters send your file in and hope. We check you against the carrier's actual qualification standards first — so you find out where you stand in a day, not three weeks.",
+    w1_h:"Your truck, their trailer",
+    w1_p:"Intermodal work. You bring the tractor; the carrier supplies the chassis and the containers. No trailer to buy or maintain.",
+    w2_h:"Citizenship isn't required",
+    w2_p:"You need to be legally authorized to work in the United States. That's the requirement — not a passport.",
+    w3_h:"A record isn't automatically a no",
+    w3_p:"Misdemeanors are reviewed case by case. So are older items. Tell us the truth up front and we'll tell you honestly where you stand.",
+    w4_h:"We chase the paperwork",
+    w4_p:"Lease forms, inspections, the drug-test window — we track every deadline and stay on it so your file doesn't die waiting on a document.",
+
+    h_eyebrow:"The process",
+    h_h2:"From application to rolling",
+    h_lede:"Five steps. Most drivers who qualify are in orientation within a couple of weeks.",
+    s1_h:"You apply — about five minutes",
+    s1_p:"Your CDL, your experience, your truck, your driving record. Short and straight to the point.",
+    s2_h:"We screen you the same day",
+    s2_p:"We check your record against the carrier's published standards before anything is submitted. If it's not a fit, we tell you straight instead of leaving you hanging.",
+    s3_h:"The carrier's application",
+    s3_p:"About 20 minutes, and it goes to their Safety team. You'll get a confirmation number, then a Clearinghouse query and a drug test.",
+    s4_h:"Lease and documents",
+    s4_p:"One page on your phone: your lease details, plus your registration, ECM port photo, federal inspection and a voided check. Photos are fine.",
+    s5_h:"Orientation, then you're rolling",
+    s5_p:"A few hours, typically on a Wednesday in Hutchins. Finish it and you can start as soon as the next day.",
+
+    r_eyebrow:"Straight answers",
+    r_h2:"What you need to qualify",
+    r_lede:"These come from the carrier, not from us. Better you know them now than three weeks in.",
+    r_note:"<b>Not sure you qualify?</b> Apply anyway. Points age off, and plenty of things people assume are disqualifying get reviewed case by case. We'd rather look at it and tell you than have you count yourself out.",
+
+    f_eyebrow:"Questions", f_h2:"Fair questions, honest answers",
+
+    a_eyebrow:"Get started",
+    a_h2:"Let's see where you stand",
+    a_lede:"Fill this in and we'll send your application over. No cost to you, ever — the carrier pays us when you're seated.",
+    a_p1:"Costs you nothing, now or later",
+    a_p2:"We'll tell you honestly if it isn't a fit",
+    a_p3:"A real person, not a call centre",
+
+    form_h:"Start your application",
+    form_sub:"Two minutes now, five when we send the full one.",
+    l_name:"Full name", l_phone:"Cell phone", l_email:"Email", l_city:"City & state",
+    l_truck:"Do you own your truck?",
+    o_owns:"Yes, I own it", o_buying:"I'm buying / financing one", o_no:"Not yet",
+    form_btn:"Send my information",
+    form_fine:"We'll text or email you your application. We never sell your details.",
+    done_h:"Got it — check your email",
+    done_p1:"Your application is on its way. It takes about five minutes.",
+    done_p2:"Nothing in your inbox in a few minutes? Check spam, or just reply to this text.",
+    ft_tag:"Owner-operator placement · Dallas–Fort Worth", ft_link:"Apply to drive",
+    err_req:"Please give us your name and a phone number so we can reach you.",
+    reqs:[
+      [1,"22 years old or older"],
+      [1,"Valid Class A CDL from your home state"],
+      [1,"1 year of Class A experience in the last 5 years"],
+      [1,"8 of those months within the last 3 years"],
+      [1,"Current DOT medical card"],
+      [1,"Legally authorized to work in the U.S."],
+      [1,"Your own tractor (owned or financing)"],
+      [0,"No DUI/DWI in the last 5 years"],
+      [0,"No handheld/texting ticket in the last 6 months"],
+      [0,"No positive or refused drug test in 10 years"]
+    ],
+    faq:[
+      ["Do I need my own trailer?","No. This is intermodal work — the carrier supplies the chassis and containers. You bring the tractor."],
+      ["Do I have to be a U.S. citizen?","No. You need to be legally authorized to work in the United States. Citizenship is not a requirement."],
+      ["I have a misdemeanor. Am I out?","Not automatically. Misdemeanors are reviewed case by case, and so are non-commercial felonies. Be upfront with us — it gets checked either way, and a surprise later is what actually costs people the seat."],
+      ["What does this cost me?","Nothing. Not now, not later. The carrier pays us when you're placed and seated. If anyone in trucking asks you for money to get hired, walk away."],
+      ["What about plates and IFTA?","The carrier can provide both for a weekly fee — plates run $50/week and IFTA $10/week. If you'd rather run your own, that's fine too. Your call on the lease form."],
+      ["How fast can I start?","Orientation is usually a Wednesday and takes a few hours. Finish it and you can be eligible to start as early as the next day. The slow part is usually documents, which is exactly what we push on."],
+      ["What if my inspection is old?","You'll need a federal inspection dated within the last 30 days when your file goes in. If yours has aged out we'll tell you before it becomes a problem."],
+      ["Can I run under my LLC?","Yes. If the truck is owned by your company, the lease is written in the company's name — we'll collect the EIN details when we get to the lease form."]
+    ]
+  },
+  es: {
+    nav_cta:"Aplica ya",
+    hero_kicker:"Dueños de troca · Dallas–Fort Worth",
+    hero_h1:"Tú tienes la troca. <em>Nosotros te conseguimos la carga.</em>",
+    hero_p:"Colocamos a dueños de troca con compañías intermodales que mueven carga constante desde Dallas. Tú pones el tractor — el trailer, las placas y las cargas ya están resueltos.",
+    hero_btn1:"Aplica en 5 minutos", hero_btn2:"Mira cómo funciona",
+    t1_n:"Sin trailer", t1_l:"— eso lo pone la compañía",
+    t2_n:"Pagos", t2_l:"semanales, depósito directo",
+    t3_n:"Placas e IFTA", t3_l:"disponibles si las quieres",
+
+    w_eyebrow:"Por qué nos buscan",
+    w_h2:"Reclutamiento que no te hace perder el tiempo",
+    w_lede:"La mayoría manda tu solicitud y espera a ver qué pasa. Nosotros revisamos tu récord contra los requisitos reales de la compañía primero — así sabes en un día dónde estás parado, no en tres semanas.",
+    w1_h:"Tu troca, su trailer",
+    w1_p:"Trabajo intermodal. Tú pones el tractor; la compañía pone el chasis y los contenedores. No hay trailer que comprar ni mantener.",
+    w2_h:"No se requiere ciudadanía",
+    w2_p:"Necesitas permiso legal para trabajar en Estados Unidos. Ese es el requisito — no un pasaporte.",
+    w3_h:"Un récord no es un no automático",
+    w3_p:"Los delitos menores se revisan caso por caso, igual que cosas más viejas. Dinos la verdad desde el principio y te decimos con honestidad cómo estás.",
+    w4_h:"Nosotros perseguimos el papeleo",
+    w4_p:"El contrato, la inspección, el plazo del examen antidoping — le damos seguimiento a cada fecha para que tu solicitud no se muera esperando un documento.",
+
+    h_eyebrow:"El proceso",
+    h_h2:"De la solicitud a la carretera",
+    h_lede:"Cinco pasos. La mayoría de quienes califican están en orientación en un par de semanas.",
+    s1_h:"Aplicas — unos cinco minutos",
+    s1_p:"Tu CDL, tu experiencia, tu troca y tu récord de manejo. Corto y al grano.",
+    s2_h:"Te revisamos el mismo día",
+    s2_p:"Comparamos tu récord con los requisitos publicados de la compañía antes de mandar nada. Si no da, te lo decimos claro en vez de dejarte esperando.",
+    s3_h:"La solicitud de la compañía",
+    s3_p:"Unos 20 minutos, y va directo a su departamento de seguridad. Te dan un número de confirmación, luego la consulta al Clearinghouse y el examen antidoping.",
+    s4_h:"Contrato y documentos",
+    s4_p:"Una sola página en tu teléfono: los datos del contrato, más tu registración, foto del puerto ECM, inspección federal y un cheque anulado. Las fotos sirven.",
+    s5_h:"Orientación y a rodar",
+    s5_p:"Unas horas, normalmente un miércoles en Hutchins. Al terminar puedes empezar hasta el día siguiente.",
+
+    r_eyebrow:"Sin rodeos",
+    r_h2:"Lo que necesitas para calificar",
+    r_lede:"Estos requisitos vienen de la compañía, no de nosotros. Mejor que los sepas hoy y no en tres semanas.",
+    r_note:"<b>¿No estás seguro de calificar?</b> Aplica de todos modos. Los puntos se vencen con el tiempo, y muchas cosas que la gente cree que la descalifican se revisan caso por caso. Preferimos revisarlo y decirte, a que tú solo te descartes.",
+
+    f_eyebrow:"Preguntas", f_h2:"Preguntas justas, respuestas honestas",
+
+    a_eyebrow:"Empieza aquí",
+    a_h2:"Vamos a ver cómo estás",
+    a_lede:"Llena esto y te mandamos la solicitud. No te cuesta nada, nunca — la compañía nos paga cuando ya estás trabajando.",
+    a_p1:"No te cuesta nada, ni hoy ni después",
+    a_p2:"Te decimos con honestidad si no da",
+    a_p3:"Una persona de verdad, no un call center",
+
+    form_h:"Empieza tu solicitud",
+    form_sub:"Dos minutos ahora, cinco cuando te mandemos la completa.",
+    l_name:"Nombre completo", l_phone:"Teléfono celular", l_email:"Correo electrónico", l_city:"Ciudad y estado",
+    l_truck:"¿Tienes tu propia troca?",
+    o_owns:"Sí, es mía", o_buying:"La estoy pagando / financiando", o_no:"Todavía no",
+    form_btn:"Enviar mis datos",
+    form_fine:"Te mandamos la solicitud por mensaje o correo. Nunca vendemos tus datos.",
+    done_h:"Listo — revisa tu correo",
+    done_p1:"Tu solicitud va en camino. Toma unos cinco minutos.",
+    done_p2:"¿No llega nada en unos minutos? Revisa la carpeta de spam, o contéstanos el mensaje.",
+    ft_tag:"Colocación de dueños de troca · Dallas–Fort Worth", ft_link:"Aplica para manejar",
+    err_req:"Danos tu nombre y un teléfono para poder contactarte.",
+    reqs:[
+      [1,"22 años o más"],
+      [1,"CDL Clase A vigente de tu estado"],
+      [1,"1 año de experiencia Clase A en los últimos 5 años"],
+      [1,"8 de esos meses dentro de los últimos 3 años"],
+      [1,"Tarjeta médica DOT vigente"],
+      [1,"Permiso legal para trabajar en EE.UU."],
+      [1,"Tu propio tractor (propio o financiado)"],
+      [0,"Sin DUI/DWI en los últimos 5 años"],
+      [0,"Sin multa por celular/texto en los últimos 6 meses"],
+      [0,"Sin examen antidoping positivo o rechazado en 10 años"]
+    ],
+    faq:[
+      ["¿Necesito mi propio trailer?","No. Es trabajo intermodal — la compañía pone el chasis y los contenedores. Tú pones el tractor."],
+      ["¿Tengo que ser ciudadano americano?","No. Necesitas permiso legal para trabajar en Estados Unidos. La ciudadanía no es requisito."],
+      ["Tengo un delito menor. ¿Estoy fuera?","No automáticamente. Los delitos menores se revisan caso por caso, igual que los delitos mayores no comerciales. Sé honesto con nosotros — de todos modos lo revisan, y una sorpresa después es lo que de verdad cuesta el puesto."],
+      ["¿Cuánto me cuesta?","Nada. Ni hoy ni después. La compañía nos paga cuando ya estás colocado y trabajando. Si alguien en este negocio te pide dinero para conseguirte trabajo, aléjate."],
+      ["¿Y las placas y el IFTA?","La compañía puede dártelos por una cuota semanal — las placas cuestan $50 por semana y el IFTA $10. Si prefieres usar los tuyos, también está bien. Tú decides en el contrato."],
+      ["¿Qué tan rápido puedo empezar?","La orientación normalmente es un miércoles y dura unas horas. Al terminarla puedes ser elegible para empezar hasta el día siguiente. Lo lento suelen ser los documentos, y ahí es justo donde nosotros empujamos."],
+      ["¿Y si mi inspección está vieja?","Necesitas una inspección federal con fecha dentro de los últimos 30 días cuando entregamos tu expediente. Si la tuya ya se venció, te avisamos antes de que sea un problema."],
+      ["¿Puedo trabajar bajo mi LLC?","Sí. Si la troca está a nombre de tu compañía, el contrato se hace a nombre de la compañía — te pedimos los datos del EIN cuando lleguemos a esa parte."]
+    ]
+  }
+};
+
+let lang = (navigator.language || 'en').toLowerCase().startsWith('es') ? 'es' : 'en';
+try { const s = localStorage.getItem('tt_lang'); if (s) lang = s; } catch (e) {}
+
+function paint(){
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const v = t[el.dataset.t];
+    if (v == null) return;
+    if (/<\/?[a-z]/i.test(v)) el.innerHTML = v; else el.textContent = v;
+  });
+  document.getElementById('reqs').innerHTML = t.reqs.map(([ok,txt])=>
+    `<div class="req"><span class="${ok?'tick':'x'}">${ok?'✓':'✕'}</span><span>${txt}</span></div>`).join('');
+  document.getElementById('faq').innerHTML = t.faq.map(([q,a])=>
+    `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
+  document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on', b.dataset.lang===lang));
+  try { localStorage.setItem('tt_lang', lang); } catch (e) {}
+}
+document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>{ lang=b.dataset.lang; paint(); });
+document.getElementById('yr').textContent = new Date().getFullYear();
+paint();
+
+// Where this lead came from, so the CRM can tell the sites apart.
+const params = new URLSearchParams(location.search);
+const SOURCE = params.get('src') || 'truckerandtrokeros.com';
+const RECRUITER = params.get('r') || '';
+const CARRIER = params.get('carrier') || 'evans_dal';
+
+document.getElementById('lead').onsubmit = async (e) => {
+  e.preventDefault();
+  const form = e.target, t = T[lang], err = document.getElementById('err');
+  const b = Object.fromEntries(new FormData(form));
+  if (!b.name || !b.phone) { err.textContent = t.err_req; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  b.source = SOURCE; if (RECRUITER) b.recruiter = RECRUITER;
+  b.interest = 'Owner-operator · truck: ' + (b.interest || 'unknown') + ' · lang: ' + lang;
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch('/api/apply/lead?carrier=' + encodeURIComponent(CARRIER),
+      { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(b) });
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.');
+    form.innerHTML = `<div class="done"><div class="big">✓</div>
+      <h3>${t.done_h}</h3><p>${t.done_p1}</p><p>${t.done_p2}</p></div>`;
+  } catch (ex) {
+    err.textContent = ex.message; err.style.display = 'block';
+    btn.disabled = false; btn.textContent = t.form_btn;
+  }
+};
+</script>
+</body>
+</html>
