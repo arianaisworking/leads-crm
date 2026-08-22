@@ -1509,17 +1509,48 @@ async function renderDrivers(m){
   await load();
 }
 
+// The board answers one question — whose move is it? Evans' fourteen internal
+// steps are still tracked precisely on each driver's file; here they collapse
+// into the six lanes a recruiter actually works from. Each card shows its exact
+// stage underneath, so nothing is hidden, just stacked sensibly.
+const DR_LANES=[
+  {key:"new",     label:"New",           hint:"Haven't applied yet",        who:"driver",  statuses:["New"]},
+  {key:"screened",label:"Screened",      hint:"Applied — your move",        who:"you",     statuses:["Screening","Pre-qualified"]},
+  {key:"driver",  label:"With driver",   hint:"They owe us paperwork",      who:"driver",  statuses:["Documents","Lease sent"]},
+  {key:"carrier", label:"With carrier",  hint:"Evans' side — chase Daphine",who:"carrier", statuses:["Application submitted","Clearinghouse","Experience verify","Pre-approved","Drug test"]},
+  {key:"orient",  label:"Orientation",   hint:"Signed & booked in",         who:"none",    statuses:["Lease signed","Orientation"]},
+  {key:"rolling", label:"Rolling",       hint:"Seated — billable",          who:"none",    statuses:["Rolling"]},
+  {key:"dead",    label:"Not qualified", hint:"",                           who:"none",    statuses:["Not qualified"]},
+];
+const laneFor=(status)=>DR_LANES.find(l=>l.statuses.includes(status||"New"))||DR_LANES[0];
+const WHO_COLOR={driver:"#8a5a00",you:"#c2185b",carrier:"#1d4ea8",none:"#5b6472"};
+
 async function renderDrPipeline(m){
-  m.innerHTML=head("The board","Pipeline")+`<p class="muted" style="margin:-8px 0 16px">Drag a driver between stages, or click to open their file.</p><div class="kanban" id="drkb"></div>`;
+  m.innerHTML=head("The board","Pipeline")
+    +`<p class="muted" style="margin:-8px 0 16px">Grouped by whose move it is. Drag to move a driver on, or click to open their file and set the exact stage.</p>
+      <div class="kanban" id="drkb"></div>`;
   await loadCarriers();
   let rows=[]; try{ const r=await drapi("/drivers"); rows=r.drivers||[]; }catch(e){}
   const kb=$("#drkb");
-  const shown=DR_STAGES.filter(s=>s!=="Not qualified"||rows.some(r=>r.status==="Not qualified"));
-  kb.innerHTML=shown.map(s=>{
-    const list=rows.filter(r=>(r.status||"New")===s);
-    return `<div class="col" data-status="${s}"><h3>${s} <span class="c">${list.length}</span></h3>
-      ${list.map(r=>`<div class="kcard" draggable="true" data-id="${r.id}">${avatar(r,true)}
-        <div><div class="name">${esc(r.name)}</div><div class="sub">${esc(r.carrier_name||"")}${r.screen_result?" · "+r.screen_points+"pt":""}</div></div></div>`).join("")}</div>`;
+  const shown=DR_LANES.filter(l=>l.key!=="dead"||rows.some(r=>laneFor(r.status).key==="dead"));
+  kb.innerHTML=shown.map(l=>{
+    const list=rows.filter(r=>laneFor(r.status).key===l.key);
+    return `<div class="col" data-lane="${l.key}">
+      <h3>${l.label} <span class="c">${list.length}</span></h3>
+      ${l.hint?`<div class="sub" style="margin:-4px 0 8px;font-size:11px;color:${WHO_COLOR[l.who]}">${l.hint}</div>`:""}
+      ${list.map(r=>{
+        // Anything with a clock running out earns a flag on the card itself.
+        const flags=[];
+        if(r.drug_test_due&&!r.drug_test_done_at) flags.push("drug test "+esc(r.drug_test_due));
+        if(r.carrier_app_clicked_at&&!r.confirmation_no) flags.push("no confirmation #");
+        if(!r.applied_at&&r.screen_result==null) flags.push("not applied");
+        return `<div class="kcard" draggable="true" data-id="${r.id}">${avatar(r,true)}
+          <div style="min-width:0">
+            <div class="name">${esc(r.name)}</div>
+            <div class="sub">${esc(r.status||"New")}${r.screen_result?" · "+r.screen_points+"pt":""}</div>
+            ${flags.length?`<div class="sub" style="color:#9b2c2c;font-weight:600">${esc(flags[0])}</div>`:""}
+          </div></div>`;}).join("")}
+    </div>`;
   }).join("");
   let dragId=null;
   kb.querySelectorAll(".kcard").forEach(c=>{
@@ -1532,7 +1563,12 @@ async function renderDrPipeline(m){
     col.addEventListener("drop",async e=>{
       e.preventDefault(); col.classList.remove("over");
       if(!dragId)return;
-      try{ await drapi("/drivers/"+dragId,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:col.dataset.status})}); toast("Moved to "+col.dataset.status); }
+      const lane=DR_LANES.find(l=>l.key===col.dataset.lane);
+      const cur=rows.find(r=>String(r.id)===String(dragId));
+      // Already in this lane? Leave the precise stage alone. Otherwise take the
+      // lane's first stage — the file is where you pick a finer one.
+      const next=(cur&&lane.statuses.includes(cur.status))?cur.status:lane.statuses[0];
+      try{ await drapi("/drivers/"+dragId,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:next})}); toast("Moved to "+next); }
       catch(err){ toast(err.message); }
       dragId=null; renderDrPipeline(m);
     });
