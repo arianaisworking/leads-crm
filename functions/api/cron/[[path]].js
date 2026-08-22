@@ -60,7 +60,8 @@ export async function onRequest(context) {
       body: (d, c, links) => `
         <p style="margin:0 0 14px;color:#3a4353">You started the carrier's application — nice work. It looks like it didn't get finished, and it's the piece everything else waits on.</p>
         <p style="margin:0 0 18px"><a href="${links.carrierApp}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Finish your application →</a></p>
-        <p style="margin:0;color:#5b6472;font-size:13.5px">If something in it tripped you up — employment gaps, dates you can't remember — tell us and we'll help you get through it. It's usually not the problem people think it is.</p>`,
+        <p style="margin:0 0 14px;color:#5b6472;font-size:13.5px">If something in it tripped you up — employment gaps, dates you can't remember — tell us and we'll help you get through it. It's usually not the problem people think it is.</p>
+        <p style="margin:0;color:#5b6472;font-size:13.5px">Already finished it and got a confirmation number? <a href="${links.lease}" style="color:#2f6fed">Let us know here</a> so we stop chasing you.</p>`,
     },
     {
       kind: 'lease_form',
@@ -85,6 +86,21 @@ export async function onRequest(context) {
         <ul style="margin:0 0 16px;padding-left:18px;color:#3a4353">${extra.missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>
         <p style="margin:0 0 18px"><a href="${links.lease}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Upload them here →</a></p>
         <p style="margin:0;color:#5b6472;font-size:13.5px">Photos from your phone are fine as long as they're readable.</p>`,
+    },
+    {
+      // They cleared the carrier's application but no drug test date has ever
+      // reached us — so the deadline clock below has nothing to count from and
+      // would never fire. Ask them for the date rather than assume there isn't one.
+      kind: 'drug_test_unscheduled',
+      sql: `SELECT l.* FROM leads l WHERE ${LIVE}
+              AND l.confirmation_no IS NOT NULL
+              AND l.drug_test_scheduled_at IS NULL AND l.drug_test_done_at IS NULL
+              AND date(COALESCE(l.carrier_app_clicked_at, l.carrier_app_sent_at, l.created_at)) <= date('now','-3 day')`,
+      subject: () => 'When is your drug test?',
+      body: (d, c, links) => `
+        <p style="margin:0 0 14px;color:#3a4353">Your application is in with ${c ? esc(c.name) : 'the carrier'} — the next step is the DOT drug test, and it's on a clock once you go.</p>
+        <p style="margin:0 0 18px"><a href="${links.lease}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Tell us your test date →</a></p>
+        <p style="margin:0;color:#5b6472;font-size:13.5px">Once we have the date we'll remind you before the window closes. Haven't been given a place to go yet? Reply and we'll chase it up with them.</p>`,
     },
     {
       kind: 'drug_test',

@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS driver_nudges (
   id          TEXT PRIMARY KEY,
   driver_id   INTEGER NOT NULL,
   kind        TEXT NOT NULL,          -- carrier_app_unopened | carrier_app_unfinished |
-                                      -- lease_form | docs_missing | drug_test |
+                                      -- lease_form | docs_missing |
+                                      -- drug_test_unscheduled | drug_test |
                                       -- inspection_stale | orientation_tomorrow
   channel     TEXT DEFAULT 'email',
   sent_to     TEXT,
