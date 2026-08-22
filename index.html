@@ -128,6 +128,38 @@
   .kcard .name{font-size:13px} .kcard .sub{margin-top:2px}
   .col.drop{outline:2px dashed var(--pink);outline-offset:-4px;background:var(--pink-wash)}
 
+  /* ---- Driver board. Its own styles: seven lanes need to scroll sideways
+     rather than squeeze, and the cards carry more than a name. ---- */
+  .dkb{display:flex;gap:12px;align-items:flex-start;overflow-x:auto;padding:2px 2px 14px;
+       scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .dkb::-webkit-scrollbar{height:9px}
+  .dkb::-webkit-scrollbar-thumb{background:rgba(27,22,32,.16);border-radius:20px}
+  .dkb::-webkit-scrollbar-track{background:transparent}
+  .dcol{flex:0 0 252px;scroll-snap-align:start;background:#f6f4f8;border:1px solid var(--line);
+        border-radius:14px;padding:0 0 10px;display:flex;flex-direction:column;max-height:74vh}
+  .dcol-h{position:sticky;top:0;z-index:2;background:#f6f4f8;border-radius:14px 14px 0 0;
+          padding:12px 13px 9px;border-bottom:1px solid var(--line-2)}
+  .dcol-t{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;color:var(--ink)}
+  .dcol-dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .dcol-n{margin-left:auto;font-size:11px;font-weight:800;color:var(--ink-soft);
+          background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px;min-width:24px;text-align:center}
+  .dcol-hint{font-size:10.5px;margin-top:3px;line-height:1.35}
+  .dcol-b{padding:10px 10px 0;overflow-y:auto;flex:1}
+  .dcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-bottom:8px;
+         cursor:grab;transition:border-color .12s,box-shadow .12s,transform .12s;
+         box-shadow:0 1px 2px rgba(27,22,32,.05);display:flex;gap:9px;align-items:flex-start}
+  .dcard:hover{border-color:var(--pink);box-shadow:0 4px 10px rgba(27,22,32,.09);transform:translateY(-1px)}
+  .dcard:active{cursor:grabbing}
+  .dcard .nm{font-size:13px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dcard .st{display:inline-block;margin-top:4px;font-size:10.5px;font-weight:600;color:var(--ink-soft);
+             background:var(--line-2);border-radius:20px;padding:1px 7px}
+  .dcard .fl{margin-top:5px;font-size:10.5px;font-weight:700;color:#9b2c2c;display:flex;gap:4px;align-items:center}
+  .dcol.drop{background:var(--pink-wash);border-color:var(--pink)}
+  .dcol.drop .dcol-h{background:var(--pink-wash)}
+  .dempty{border:1px dashed var(--line);border-radius:11px;padding:14px 10px;text-align:center;
+          font-size:11px;color:#a79ba2}
+  @media(max-width:640px){.dcol{flex-basis:82vw}}
+
   /* Empty */
   .empty{text-align:center;padding:60px 24px}
   .empty .mark{font-size:34px;margin-bottom:8px}
@@ -1527,41 +1559,48 @@ const WHO_COLOR={driver:"#8a5a00",you:"#c2185b",carrier:"#1d4ea8",none:"#5b6472"
 
 async function renderDrPipeline(m){
   m.innerHTML=head("The board","Pipeline")
-    +`<p class="muted" style="margin:-8px 0 16px">Grouped by whose move it is. Drag to move a driver on, or click to open their file and set the exact stage.</p>
-      <div class="kanban" id="drkb"></div>`;
+    +`<p class="muted" style="margin:-8px 0 14px">Grouped by whose move it is. Drag a card to move a driver on, or click to open their file — every step of the carrier's process is still tracked in there.</p>
+      <div class="dkb" id="drkb"></div>`;
   await loadCarriers();
   let rows=[]; try{ const r=await drapi("/drivers"); rows=r.drivers||[]; }catch(e){}
   const kb=$("#drkb");
   const shown=DR_LANES.filter(l=>l.key!=="dead"||rows.some(r=>laneFor(r.status).key==="dead"));
   kb.innerHTML=shown.map(l=>{
     const list=rows.filter(r=>laneFor(r.status).key===l.key);
-    return `<div class="col" data-lane="${l.key}">
-      <h3>${l.label} <span class="c">${list.length}</span></h3>
-      ${l.hint?`<div class="sub" style="margin:-4px 0 8px;font-size:11px;color:${WHO_COLOR[l.who]}">${l.hint}</div>`:""}
-      ${list.map(r=>{
-        // Anything with a clock running out earns a flag on the card itself.
-        const flags=[];
-        if(r.drug_test_due&&!r.drug_test_done_at) flags.push("drug test "+esc(r.drug_test_due));
-        if(r.carrier_app_clicked_at&&!r.confirmation_no) flags.push("no confirmation #");
-        if(!r.applied_at&&r.screen_result==null) flags.push("not applied");
-        return `<div class="kcard" draggable="true" data-id="${r.id}">${avatar(r,true)}
-          <div style="min-width:0">
-            <div class="name">${esc(r.name)}</div>
-            <div class="sub">${esc(r.status||"New")}${r.screen_result?" · "+r.screen_points+"pt":""}</div>
-            ${flags.length?`<div class="sub" style="color:#9b2c2c;font-weight:600">${esc(flags[0])}</div>`:""}
-          </div></div>`;}).join("")}
+    return `<div class="dcol" data-lane="${l.key}">
+      <div class="dcol-h">
+        <div class="dcol-t"><span class="dcol-dot" style="background:${WHO_COLOR[l.who]}"></span>${l.label}
+          <span class="dcol-n">${list.length}</span></div>
+        ${l.hint?`<div class="dcol-hint" style="color:${WHO_COLOR[l.who]}">${l.hint}</div>`:""}
+      </div>
+      <div class="dcol-b">
+      ${list.length?list.map(r=>{
+        // One flag per card — whichever clock is closest to costing a placement.
+        let flag="";
+        if(r.drug_test_due&&!r.drug_test_done_at) flag="⏱ drug test due "+esc(r.drug_test_due);
+        else if(r.carrier_app_clicked_at&&!r.confirmation_no) flag="⤴ no confirmation # yet";
+        else if(!r.applied_at&&r.screen_result==null) flag="✎ hasn't applied";
+        else if(r.docs_needed) flag="📎 "+r.docs_needed+" document"+(r.docs_needed===1?"":"s")+" missing";
+        return `<div class="dcard" draggable="true" data-id="${r.id}">${avatar(r,true)}
+          <div style="min-width:0;flex:1">
+            <div class="nm">${esc(r.name)}</div>
+            <span class="st">${esc(r.status||"New")}${r.screen_result==="review"?" · needs approval":""}</span>
+            ${flag?`<div class="fl">${flag}</div>`:""}
+          </div></div>`;}).join("")
+        :`<div class="dempty">Nothing here</div>`}
+      </div>
     </div>`;
   }).join("");
   let dragId=null;
-  kb.querySelectorAll(".kcard").forEach(c=>{
+  kb.querySelectorAll(".dcard").forEach(c=>{
     c.addEventListener("dragstart",()=>{dragId=c.dataset.id;});
     c.addEventListener("click",()=>openDriver(parseInt(c.dataset.id,10),()=>renderDrPipeline(m)));
   });
-  kb.querySelectorAll(".col").forEach(col=>{
-    col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("over");});
-    col.addEventListener("dragleave",()=>col.classList.remove("over"));
+  kb.querySelectorAll(".dcol").forEach(col=>{
+    col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("drop");});
+    col.addEventListener("dragleave",()=>col.classList.remove("drop"));
     col.addEventListener("drop",async e=>{
-      e.preventDefault(); col.classList.remove("over");
+      e.preventDefault(); col.classList.remove("drop");
       if(!dragId)return;
       const lane=DR_LANES.find(l=>l.key===col.dataset.lane);
       const cur=rows.find(r=>String(r.id)===String(dragId));
