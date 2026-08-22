@@ -125,3 +125,29 @@ export function leasePacketHtml(d, secureObj, carrier) {
 export async function openSecure(env, driver) {
   return await vaultOpen(env, driver.lease_secure);
 }
+
+// ---- The carrier's own application (e.g. Evans' Tenstreet IntelliApp).
+//
+// The stored apply_url carries the carrier's parameters, including the one that
+// pins the terminal (Tenstreet: cq_<id>=DAL). Those are left exactly as the
+// carrier gave them — routing a driver to the wrong terminal's queue is a real
+// cost. The ONLY thing rewritten is the source-attribution value, and only when
+// the recruiter has been issued a tag of their own.
+export function carrierApplyUrl(carrier, recruiter) {
+  if (!carrier || !carrier.apply_url) return null;
+  const tag = recruiter && recruiter.source_tag;
+  if (!tag) return carrier.apply_url;
+  try {
+    const u = new URL(carrier.apply_url);
+    u.searchParams.set(carrier.apply_source_param || 'uri_b', tag);
+    return u.toString();
+  } catch {
+    return carrier.apply_url;      // malformed URL: hand it over untouched
+  }
+}
+
+// Look up the recruiter who owns a driver, for attribution.
+export async function recruiterFor(db, driver) {
+  if (!driver || !driver.recruiter_id) return null;
+  return await db.prepare('SELECT * FROM recruiters WHERE id=?').bind(driver.recruiter_id).first();
+}

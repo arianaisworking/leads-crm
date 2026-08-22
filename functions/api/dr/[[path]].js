@@ -6,7 +6,8 @@
 import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '../../_lib/screening.js';
-import { seedDocs, ensurePlacement, leasePacketHtml, openSecure, secret as mkSecret } from '../../_lib/recruiting.js';
+import { seedDocs, ensurePlacement, leasePacketHtml, openSecure, secret as mkSecret,
+  carrierApplyUrl, recruiterFor } from '../../_lib/recruiting.js';
 import { redact } from '../../_lib/vault.js';
 
 function token() {
@@ -93,8 +94,8 @@ export async function onRequest(context) {
       const b = await request.json();
       const cols = ['name', 'terminal', 'mc_number', 'dot_number', 'scac', 'address', 'city', 'state', 'postcode',
         'contact_name', 'contact_email', 'contact_phone', 'haul_type', 'driver_type', 'needs_own_truck',
-        'needs_own_trailer', 'apply_url', 'orientation_info', 'fee_type', 'fee_amount', 'fee_trigger',
-        'terms', 'active', 'notes'];
+        'needs_own_trailer', 'apply_url', 'apply_source_param', 'orientation_info', 'fee_type',
+        'fee_amount', 'fee_trigger', 'terms', 'active', 'notes'];
       const sets = [], vals = [];
       for (const c of cols) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
       for (const jcol of ['qual_rules', 'doc_checklist'])
@@ -395,7 +396,15 @@ export async function onRequest(context) {
           OR (inspection_date IS NOT NULL AND started_at IS NULL AND date(inspection_date) <= date('now','-23 day'))
           OR (dot_medical_expires IS NOT NULL AND date(dot_medical_expires) <= date('now','+30 day'))
        ORDER BY drug_test_due LIMIT 50`).all();
-    return json({ ...(s || {}), alerts: alerts.results || [] });
+    // The quiet failure mode: they opened the carrier's application and never
+    // came back with a confirmation number. Nothing else surfaces these.
+    const stalled = await db.prepare(`SELECT id, name, carrier_app_sent_at, carrier_app_clicked_at, carrier_app_clicks
+        FROM leads
+       WHERE screen_result IN ('qualified','review') AND confirmation_no IS NULL AND started_at IS NULL
+         AND ((carrier_app_clicked_at IS NOT NULL AND date(carrier_app_clicked_at) <= date('now','-3 day'))
+           OR (carrier_app_sent_at IS NOT NULL AND carrier_app_clicked_at IS NULL AND date(carrier_app_sent_at) <= date('now','-2 day')))
+       ORDER BY carrier_app_sent_at LIMIT 50`).all();
+    return json({ ...(s || {}), alerts: alerts.results || [], stalled: stalled.results || [] });
   }
 
   // ---------- RECRUITERS + THE SPLIT ----------
@@ -412,14 +421,14 @@ export async function onRequest(context) {
       const b = await request.json();
       if (!b.name) return json({ error: 'name required' }, 400);
       const nid = b.id || mkSecret().slice(0, 8);
-      await db.prepare('INSERT INTO recruiters (id,name,email,share_pct,notes) VALUES (?,?,?,?,?)')
-        .bind(nid, b.name, b.email || null, b.share_pct != null ? Number(b.share_pct) : 50, b.notes || null).run();
+      await db.prepare('INSERT INTO recruiters (id,name,email,share_pct,source_tag,notes) VALUES (?,?,?,?,?,?)')
+        .bind(nid, b.name, b.email || null, b.share_pct != null ? Number(b.share_pct) : 50, b.source_tag || null, b.notes || null).run();
       return json({ ok: true, id: nid });
     }
     if (method === 'PATCH' && id) {
       const b = await request.json();
       const sets = [], vals = [];
-      for (const c of ['name', 'email', 'share_pct', 'active', 'notes']) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
+      for (const c of ['name', 'email', 'share_pct', 'source_tag', 'active', 'notes']) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
       if (!sets.length) return json({ error: 'nothing to update' }, 400);
       vals.push(id);
       await db.prepare(`UPDATE recruiters SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
@@ -485,6 +494,36 @@ export async function onRequest(context) {
     if (!r.ok && !r.skipped) return json({ error: 'Could not send the email. ' + (r.error || '') }, 502);
     await db.prepare("UPDATE leads SET onboarding_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(d.id).run();
     return json({ ok: true, emailed: !!r.ok, sent_to: d.email, url: link });
+  }
+
+  // ---------- THE CARRIER'S OWN APPLICATION (tracked hand-off) ----------
+  if (res === 'drivers' && sub === 'carrier-app' && method === 'POST') {
+    const d = await db.prepare('SELECT * FROM leads WHERE id=?').bind(int(id)).first();
+    if (!d) return json({ error: 'driver not found' }, 404);
+    const c = d.carrier_id ? await db.prepare('SELECT * FROM carriers WHERE id=?').bind(d.carrier_id).first() : null;
+    if (!c || !c.apply_url) return json({ error: 'This carrier has no application URL on file. Add one on the Carriers tab.' }, 400);
+    let t = d.lease_token;
+    if (!t) { t = mkSecret(); await db.prepare('UPDATE leads SET lease_token=? WHERE id=?').bind(t, d.id).run(); }
+    const origin = new URL(request.url).origin;
+    const tracked = `${origin}/api/apply/go?token=${t}`;
+    const rec = await recruiterFor(db, d);
+    let emailed = false;
+    if (d.email && !(await request.json().catch(() => ({}))).link_only) {
+      const first = (d.name || '').split(' ')[0];
+      const r = await sendEmail(env, {
+        to: d.email, replyTo: replyToEmail(env),
+        subject: `Your application with ${c.name}`,
+        html: emailShell("The carrier's application", `
+          <p style="margin:0 0 6px;font-size:16px">Hi${first ? ' ' + esc(first) : ''},</p>
+          <p style="margin:0 0 14px;color:#3a4353">Here's the application that goes to ${esc(c.name)}'s Safety team. It's about 20 minutes — have your employment history handy, since they verify it. When you're done you'll get a confirmation number; send it to us and we'll take it from there.</p>
+          <p style="margin:0 0 18px"><a href="${tracked}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Open the application →</a></p>
+          <p style="margin:0;color:#5b6472;font-size:13px">Any trouble with it, just reply — we'll walk you through it.</p>`, brandName(env)),
+      });
+      emailed = !!r.ok;
+    }
+    await db.prepare("UPDATE leads SET carrier_app_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(d.id).run();
+    return json({ ok: true, url: tracked, target: carrierApplyUrl(c, rec), emailed, sent_to: d.email || null,
+      attributed: !!(rec && rec.source_tag) });
   }
 
   // What the team may see of the lease form: everything except the vault.

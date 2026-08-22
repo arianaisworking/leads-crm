@@ -1428,6 +1428,14 @@ async function renderDrivers(m){
         if(a.dot_medical_expires)bits.push(`med card expires ${a.dot_medical_expires}`);
         return `<div class="sub" style="padding:2px 0"><a href="#" data-alert="${a.id}" style="font-weight:600">${esc(a.name)}</a> — ${esc(bits.join(" · "))}</div>`;}).join("")}
     </div>`:"";
+    const stalled=st.stalled||[];
+    if(stalled.length) $("#drAlerts").insertAdjacentHTML("beforeend",`<div class="card" style="margin-bottom:14px;padding:12px 16px;border-left:3px solid #2f6fed">
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px">⤴ Stuck on the carrier's application</div>
+      ${stalled.map(a=>`<div class="sub" style="padding:2px 0"><a href="#" data-alert="${a.id}" style="font-weight:600">${esc(a.name)}</a> — ${
+        a.carrier_app_clicked_at?`opened it ${esc((a.carrier_app_clicked_at||"").slice(0,10))}${a.carrier_app_clicks>1?` (${a.carrier_app_clicks} times)`:""}, no confirmation number yet`
+        :`sent ${esc((a.carrier_app_sent_at||"").slice(0,10))}, never opened`}</div>`).join("")}
+      <div class="sub" style="margin-top:6px;font-size:11.5px">These are the ones worth a phone call — half-finished applications don't finish themselves.</div>
+    </div>`);
     $("#drAlerts").querySelectorAll("[data-alert]").forEach(a=>a.onclick=(e)=>{e.preventDefault();openDriver(parseInt(a.dataset.alert,10),load);});
     draw();
   }
@@ -1540,6 +1548,10 @@ async function openCarrier(id,onSave){
       <div class="drow"><div class="field"><label>Haul type</label><input id="cHaul" value="${esc(c.haul_type||"")}" placeholder="intermodal"></div>
         <div class="field"><label>Driver type</label><select id="cDType">${["owner_operator","company","lease_purchase"].map(x=>`<option value="${x}" ${c.driver_type===x?"selected":""}>${x.replace(/_/g," ")}</option>`).join("")}</select></div></div>
       <div class="field"><label>Orientation details</label><input id="cOrient" value="${esc(c.orientation_info||"")}"></div>
+      <div class="field"><label>Their application URL</label><input id="cApply" value="${esc(c.apply_url||"")}" placeholder="https://intelliapp.driverapponline.com/c/…">
+        <p class="sub" style="margin:6px 0 0">Paste it exactly as the carrier gave it — any terminal parameter in there routes the driver to the right office. Only the source tag gets swapped, per recruiter.</p></div>
+      <div class="field"><label>Source parameter</label><input id="cSrcParam" value="${esc(c.apply_source_param||"uri_b")}" placeholder="uri_b">
+        <p class="sub" style="margin:6px 0 0">Which query parameter carries attribution on their platform. Tenstreet uses <b>uri_b</b>.</p></div>
       <div class="field" style="margin-top:6px"><label>What we earn</label>
         <div class="drow">
           <select id="cFeeType"><option value="flat" ${c.fee_type!=="percent"?"selected":""}>Flat $ per driver</option><option value="percent" ${c.fee_type==="percent"?"selected":""}>Percent</option></select>
@@ -1558,6 +1570,7 @@ async function openCarrier(id,onSave){
       dot_number:$("#cDot").value.trim()||null,scac:$("#cScac").value.trim()||null,contact_name:$("#cCName").value.trim()||null,
       contact_email:$("#cCEmail").value.trim()||null,contact_phone:$("#cCPhone").value.trim()||null,
       haul_type:$("#cHaul").value.trim()||null,driver_type:$("#cDType").value,orientation_info:$("#cOrient").value.trim()||null,
+      apply_url:$("#cApply").value.trim()||null,apply_source_param:$("#cSrcParam").value.trim()||"uri_b",
       fee_type:$("#cFeeType").value,fee_amount:$("#cFeeAmt").value?parseFloat($("#cFeeAmt").value):null,
       fee_trigger:$("#cFeeTrig").value,notes:$("#cNotes").value.trim()||null};
     if(!p.name){ $("#cMsg").textContent="Name is required."; return; }
@@ -1629,19 +1642,25 @@ async function openRecruiters(onSave){
     <div class="dhead">${avatar({name:"Split"})}<div><div class="name">The split</div><div class="sub">Who shares each placement fee</div></div></div>
     <div class="dbody">
       <p class="sub" style="margin:0 0 14px">Shares apply to placements opened from now on. Anything already earned keeps the split it was created with.</p>
-      <div id="rcList">${rs.map(r=>`<div class="drow" data-rc="${r.id}" style="gap:8px;margin-bottom:8px;align-items:center">
-        <input data-rf="name" value="${esc(r.name)}">
-        <input data-rf="email" value="${esc(r.email||"")}" placeholder="email">
-        <input data-rf="share_pct" type="number" step="1" value="${r.share_pct!=null?r.share_pct:""}" style="max-width:80px" title="% share">
+      <div id="rcList">${rs.map(r=>`<div data-rc="${r.id}" style="border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:9px">
+        <div class="drow" style="gap:8px;align-items:center">
+          <input data-rf="name" value="${esc(r.name)}">
+          <input data-rf="email" value="${esc(r.email||"")}" placeholder="email">
+          <input data-rf="share_pct" type="number" step="1" value="${r.share_pct!=null?r.share_pct:""}" style="max-width:78px" title="% share">
+        </div>
+        <input data-rf="source_tag" value="${esc(r.source_tag||"")}" placeholder="Carrier source tag (e.g. uri_b value)" style="margin-top:7px;font-size:12.5px">
       </div>`).join("")}</div>
       <button class="btn ghost sm" id="rcAdd" type="button">+ Add person</button>
+      <p class="sub" style="margin:10px 0 0;font-size:11.5px">The <b>source tag</b> is the code the carrier's application platform uses to credit whoever sent the driver. Ask the carrier for one each — without it your drivers look like walk-ins on their side, and getting paid relies on someone remembering.</p>
       <div class="dfoot"><button class="btn" id="rcSave">Save shares</button><span class="sub" id="rcMsg"></span></div>
     </div>`;
   d.classList.add("show"); $("#scrim").classList.add("show"); $("#scrim").onclick=closeDrawer;
   $("#rcAdd").onclick=()=>{
-    $("#rcList").insertAdjacentHTML("beforeend",`<div class="drow" data-rc="" style="gap:8px;margin-bottom:8px;align-items:center">
-      <input data-rf="name" placeholder="Name"><input data-rf="email" placeholder="email">
-      <input data-rf="share_pct" type="number" step="1" value="50" style="max-width:80px"></div>`);
+    $("#rcList").insertAdjacentHTML("beforeend",`<div data-rc="" style="border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:9px">
+      <div class="drow" style="gap:8px;align-items:center">
+        <input data-rf="name" placeholder="Name"><input data-rf="email" placeholder="email">
+        <input data-rf="share_pct" type="number" step="1" value="50" style="max-width:78px"></div>
+      <input data-rf="source_tag" placeholder="Carrier source tag" style="margin-top:7px;font-size:12.5px"></div>`);
   };
   $("#rcSave").onclick=async()=>{
     const rows=[...$("#rcList").querySelectorAll("[data-rc]")];
@@ -1649,7 +1668,7 @@ async function openRecruiters(onSave){
     try{
       for(const row of rows){
         const g=f=>{const e=row.querySelector(`[data-rf="${f}"]`);return e?e.value.trim():"";};
-        const body={name:g("name"),email:g("email")||null,share_pct:g("share_pct")?parseFloat(g("share_pct")):50};
+        const body={name:g("name"),email:g("email")||null,share_pct:g("share_pct")?parseFloat(g("share_pct")):50,source_tag:g("source_tag")||null};
         if(!body.name) continue;
         if(row.dataset.rc) await drapi("/recruiters/"+row.dataset.rc,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
         else await drapi("/recruiters",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
@@ -1697,10 +1716,11 @@ async function openDriver(id,onSave){
     const docsIn=!!docs.length&&docs.every(x=>x.status==="received"||x.kind==="lease_form");
     const st=[
       {label:"Application in", done:!!p.applied_at},
-      {label:"Lease form & documents sent", done:!!p.onboarding_sent_at},
+      {label:"Onboarding pack sent", done:!!p.onboarding_sent_at},
+      {label:"Carrier application opened", done:!!p.carrier_app_clicked_at},
+      {label:"Confirmation number", done:!!p.confirmation_no},
       {label:"Lease form returned", done:!!p.lease_info_at},
       {label:"Documents in", done:docsIn},
-      {label:"Submitted to carrier", done:!!p.submitted_at},
       {label:"Packet sent to carrier", done:!!p.packet_sent_at},
       {label:"Clearinghouse query accepted", done:!!p.clearinghouse_ok},
       {label:"Drug test complete", done:!!p.drug_test_done_at},
@@ -1729,11 +1749,18 @@ async function openDriver(id,onSave){
       action=`<p class="sub" style="margin:0 0 8px">This driver doesn't meet the carrier's standards. Nothing has been sent on.</p>
         <button class="btn ghost sm" id="dSubmit" type="button">Submit anyway…</button>`;
     } else if(!p.lease_info_at){
+      const capp=carrier&&carrier.apply_url;
       action=`<p class="sub" style="margin:0 0 8px">${p.onboarding_sent_at
-        ? `Lease form &amp; document list went out ${esc((p.onboarding_sent_at||"").slice(0,10))} — waiting on the driver.`
-        : "Send the driver their lease form and document list."}</p>
+        ? `Onboarding pack went out ${esc((p.onboarding_sent_at||"").slice(0,10))} — waiting on the driver.`
+        : "Send the driver their onboarding pack."}</p>
+        ${capp?`<div class="sub" style="margin:0 0 8px;padding:8px 10px;border-radius:9px;background:${p.carrier_app_clicked_at?"#e8f6ef":"#fdf6e3"};color:${p.carrier_app_clicked_at?"#137a52":"#8a5a00"}">
+          ${p.carrier_app_clicked_at
+            ? `✓ Opened the carrier's application ${esc((p.carrier_app_clicked_at||"").slice(0,10))}${p.carrier_app_clicks>1?" · "+p.carrier_app_clicks+" visits":""}${p.confirmation_no?"":" — no confirmation number yet"}`
+            : p.carrier_app_sent_at?`Carrier application sent ${esc((p.carrier_app_sent_at||"").slice(0,10))} — not opened yet`
+            :"Carrier application not sent yet"}</div>`:""}
         <div class="drow" style="gap:8px">
           <button class="btn" id="dSendLease" type="button">${p.onboarding_sent_at?"Resend to driver":"Send lease & documents →"}</button>
+          ${capp?`<button class="btn ghost" id="dCarrierApp" type="button">Send carrier application</button>`:""}
           <button class="btn ghost" id="dLeaseLink" type="button">Get link</button></div>
         <div id="dLeaseOut" class="sub" style="margin-top:8px"></div>`;
     } else if(missing.length){
@@ -1957,6 +1984,16 @@ async function openDriver(id,onSave){
         toast(r.emailed?("Lease form sent to "+r.sent_to):"Link ready (email not configured).");
         closeDrawer(); openDriver(id,onSave);
       }catch(e){ toast(e.message); sendLease.disabled=false; }
+    };
+    const capp=$("#dCarrierApp");
+    if(capp) capp.onclick=async()=>{
+      capp.disabled=true;
+      try{ const r=await drapi("/drivers/"+id+"/carrier-app",{method:"POST",headers:{"content-type":"application/json"},body:"{}"});
+        $("#dLeaseOut").innerHTML=`<input readonly value="${esc(r.url)}" onclick="this.select()" style="font-size:12px">`
+          +(r.attributed?``:`<div style="margin-top:6px;color:#8a5a00">No source tag set for this recruiter — the carrier can't tell this application came from you. Set one under Money → Edit shares.</div>`);
+        toast(r.emailed?("Carrier application sent to "+r.sent_to):"Tracked link ready.");
+      }catch(e){ toast(e.message); }
+      finally{ capp.disabled=false; }
     };
     const leaseLink=$("#dLeaseLink");
     if(leaseLink) leaseLink.onclick=async()=>{

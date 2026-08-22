@@ -7,7 +7,8 @@ Same codebase, its own Cloudflare Pages project and its own D1 database.
 onto a carrier's authority. Carriers are the payers; we earn a placement fee.
 
 ```
-Your website  ->  application  ->  screening  ->  lease form + documents
+Your website  ->  our application  ->  screening
+              ->  the carrier's own application (tracked)  +  lease form + documents
               ->  packet to the carrier  ->  orientation  ->  seated  ->  fee split
 ```
 
@@ -18,6 +19,7 @@ Each arrow after the first is automatic. See **The automation chain** below.
 ```
 schema-recruiting-extra.sql      drivers + carriers + docs + placements (run after schema-full.sql)
 migration-recruiting-002.sql     revenue split + the lease/document workflow
+migration-recruiting-003.sql     the carrier's own application (Tenstreet) + attribution
 functions/_lib/screening.js      the qualification engine — points chart + prohibitions
 functions/_lib/recruiting.js     doc checklists, placements + splits, the carrier packet
 functions/_lib/vault.js          AES-GCM for the lease form's sensitive fields
@@ -197,12 +199,62 @@ document.getElementById('drive').onsubmit = async (e) => {
 
 Repeat submissions update the existing driver instead of creating a duplicate.
 
+## The carrier's own application, and getting credit for it
+
+Evans' onboarding starts on **Tenstreet's IntelliApp**, not on our form — that's
+Step 1 of their driver welcome email, and it's what produces the confirmation
+number and triggers the Clearinghouse query. We screen first so nobody wastes a
+Safety review, then hand the driver through.
+
+The link Evans supplies looks like this:
+
+```
+https://intelliapp.driverapponline.com/c/evansdelivery?cq_1192228=DAL&uri_b=ia_evansdelivery_440136800
+                                       └ company      └ terminal (Dallas)  └ source attribution
+```
+
+Two rules the code follows:
+
+1. **The carrier's parameters are preserved exactly.** `cq_1192228=DAL` routes
+   the application to the Dallas terminal. Losing it drops the driver into the
+   wrong office's queue.
+2. **Only the source tag is rewritten**, and only when the recruiter has one.
+
+### Why the source tag matters
+
+`uri_b` is how Evans knows where an application came from. Send drivers through
+the generic link and our applications are indistinguishable from walk-ins —
+getting paid then depends on someone at the carrier remembering which ones were
+ours. **Ask the carrier for a source tag per recruiter** (their platform supports
+unlimited ones), then set it under **Money → Edit shares**. Every driver either
+of you sends is provably yours in their system, and the split reconciles itself.
+
+Until a tag is set, the CRM says so plainly when you send the link rather than
+pretending attribution is handled.
+
+### Sent, opened, confirmed — three different facts
+
+Drivers are handed a tracked redirect (`/api/apply/go?token=…`) that records the
+click and forwards to the carrier. That splits a step everyone else treats as
+one:
+
+- **sent** — the link went out
+- **opened** — they actually started it (with a visit count)
+- **confirmed** — a confirmation number came back
+
+The gap between *opened* and *confirmed* is where half-finished applications
+die, and nothing else surfaces it. The Drivers view carries a **Stuck on the
+carrier's application** queue: opened three or more days ago with no
+confirmation number, or sent two days ago and never opened. Those are the phone
+calls worth making.
+
 ## Extra deploy steps for the workflow
 
 On top of the base deploy above:
 
 ```bash
 npx wrangler d1 execute aiw-recruiting --remote --file=migration-recruiting-002.sql
+npx wrangler d1 execute aiw-recruiting --remote --file=migration-recruiting-003.sql
 ```
 
 | Binding / secret | Why |

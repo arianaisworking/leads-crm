@@ -134,6 +134,14 @@ function render(d){
 
   <div class="err" id="err"></div>
 
+  ${d.carrier_app?`<div class="sec" style="${d.carrier_app.started?"":"border-color:#2f6fed;box-shadow:0 0 0 3px rgba(47,111,237,.09)"}">
+    <h2>${d.carrier_app.started?"✓ ":""}The carrier's own application</h2>
+    <p class="note">${d.carrier_app.started
+      ? "You've opened this already. If you didn't finish it, pick up where you left off — nothing below replaces it."
+      : "Separate from this page, and it has to be done: it goes straight to their Safety team and gets you a confirmation number. Around 20 minutes — have your employment history to hand."}</p>
+    <a class="btn" href="${esc(d.carrier_app.url)}" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none">${d.carrier_app.started?"Reopen the carrier application ↗":"Open the carrier application ↗"}</a>
+  </div>`:""}
+
   <div class="sec">
     <h2>Your details</h2>
     <p class="note">Exactly as they should appear on the lease.</p>

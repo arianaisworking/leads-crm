@@ -20,7 +20,7 @@ import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, VIOLATIONS } from '../../_lib/screening.js';
 import { seal, vaultReady } from '../../_lib/vault.js';
-import { seedDocs, secret as mkSecret } from '../../_lib/recruiting.js';
+import { seedDocs, secret as mkSecret, carrierApplyUrl, recruiterFor } from '../../_lib/recruiting.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -137,13 +137,18 @@ export async function onRequest(context) {
     // If they clear screening, move them straight on: build the document
     // checklist and issue the lease-form link. This is the hand-off that used to
     // be a person remembering to send two attachments.
-    let leaseUrl = null;
+    let leaseUrl = null, carrierAppUrl = null;
     if (s.result !== 'disqualified' && carrier) {
       let lt = full.lease_token;
       if (!lt) { lt = token(); await db.prepare('UPDATE leads SET lease_token=? WHERE id=?').bind(lt, driverId).run(); }
       await seedDocs(db, full, carrier);
       leaseUrl = `${url.origin}/lease.html?token=${lt}`;
-      await db.prepare("UPDATE leads SET status=CASE WHEN status IN ('New','Screening') THEN 'Pre-qualified' ELSE status END, onboarding_sent_at=datetime('now') WHERE id=?").bind(driverId).run();
+      // Step 1 of the carrier's own process: their application platform. Sent
+      // through our tracked redirect so we know who actually started it.
+      if (carrier.apply_url) carrierAppUrl = `${url.origin}/api/apply/go?token=${lt}`;
+      await db.prepare(`UPDATE leads SET status=CASE WHEN status IN ('New','Screening') THEN 'Pre-qualified' ELSE status END,
+          onboarding_sent_at=datetime('now'), carrier_app_sent_at=CASE WHEN ? IS NULL THEN carrier_app_sent_at ELSE datetime('now') END
+        WHERE id=?`).bind(carrierAppUrl, driverId).run();
     }
 
     // Tell the team. Best-effort — never block the driver's submission on email.
@@ -175,9 +180,18 @@ export async function onRequest(context) {
       const msg = s.result === 'disqualified'
         ? `<p style="margin:0 0 14px;color:#3a4353">Thanks for taking the time to apply. Based on what you've told us, we don't have a seat that fits your record right now. Records change — if your situation changes, get back in touch and we'll take another look.</p>`
         : leaseUrl
-          ? `<p style="margin:0 0 14px;color:#3a4353">Good news${first ? ', ' + esc(first) : ''} — your application looks like a fit, so let's keep moving. The next step is your lease information and a short list of truck documents. It's all on one page, and you can upload photos straight from your phone.</p>
-             <p style="margin:0 0 18px"><a href="${leaseUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:11px;font-weight:700">Continue your onboarding →</a></p>
-             <p style="margin:0 0 14px;color:#5b6472;font-size:13.5px">You'll need: your truck registration, a photo of your ECM port, a federal inspection dated within the last 30 days, and a voided check. Do what you can now and come back to the same link for the rest.</p>`
+          ? `<p style="margin:0 0 14px;color:#3a4353">Good news${first ? ', ' + esc(first) : ''} — you look like a fit${carrier ? ' for ' + esc(carrier.name) : ''}, so let's keep moving. There are two steps, and you can start either one now.</p>
+             ${carrierAppUrl ? `<div style="border:1px solid #e3e8ef;border-radius:12px;padding:14px 16px;margin:0 0 12px">
+               <div style="font-weight:700;font-size:14px;margin-bottom:4px">Step 1 — the carrier's application</div>
+               <p style="margin:0 0 12px;color:#5b6472;font-size:13.5px">This one goes straight to their Safety team and gets you a confirmation number. Set aside about 20 minutes and have your employment history handy.</p>
+               <a href="${carrierAppUrl}" style="display:inline-block;background:#2f6fed;color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700">Open the carrier application →</a>
+             </div>` : ''}
+             <div style="border:1px solid #e3e8ef;border-radius:12px;padding:14px 16px;margin:0 0 14px">
+               <div style="font-weight:700;font-size:14px;margin-bottom:4px">Step ${carrierAppUrl ? '2' : '1'} — your lease info &amp; documents</div>
+               <p style="margin:0 0 12px;color:#5b6472;font-size:13.5px">Your details, your truck, and four documents you can photograph with your phone: truck registration, your ECM port, a federal inspection dated within the last 30 days, and a voided check.</p>
+               <a href="${leaseUrl}" style="display:inline-block;background:#fff;color:#2f6fed;border:1px solid #2f6fed;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700">Open your onboarding page →</a>
+             </div>
+             <p style="margin:0 0 14px;color:#5b6472;font-size:13.5px">Both links stay live, so you can finish in pieces. We'll chase the carrier on your behalf once these are in.</p>`
           : `<p style="margin:0 0 14px;color:#3a4353">Thanks${first ? ', ' + esc(first) : ''} — we've got your application and we're reviewing it now. We'll be in touch shortly.</p>`;
       context.waitUntil(sendEmail(env, {
         to: full.email, replyTo: replyToEmail(env),
@@ -268,8 +282,14 @@ export async function onRequest(context) {
     if (request.method === 'GET') {
       let L = {};
       try { L = d.lease_info ? JSON.parse(d.lease_info) : {}; } catch { L = {}; }
+      const rec = await recruiterFor(db, d);
       return json({ ok: true, done: !!d.lease_info_at,
         carrier: c && { name: c.name, terminal: c.terminal, orientation_info: c.orientation_info },
+        carrier_app: c && c.apply_url ? {
+          url: `${url.origin}/api/apply/go?token=${tok}`,
+          started: !!d.carrier_app_clicked_at,
+          confirmed: !!d.confirmation_no,
+        } : null,
         secure_enabled: vaultReady(env),
         prefill: {
           name: d.name, phone: d.phone, home_phone: d.home_phone, email: d.email, address: d.address,
@@ -331,6 +351,23 @@ export async function onRequest(context) {
       }));
       return json({ ok: true, saved: true });
     }
+  }
+
+  // ---------- TRACKED HAND-OFF TO THE CARRIER'S OWN APPLICATION ----------
+  // Redirects the driver to the carrier's platform (Evans -> Tenstreet) and
+  // records that they actually went. "Sent" and "started" are different facts,
+  // and the gap between them is where applications quietly die.
+  if (action === 'go' && request.method === 'GET') {
+    if (!tok) return json({ error: 'missing token' }, 400);
+    const d = await db.prepare('SELECT * FROM leads WHERE apply_token=? OR lease_token=?').bind(tok, tok).first();
+    if (!d) return json({ error: 'This link is invalid or has expired.' }, 404);
+    const c = d.carrier_id ? await db.prepare('SELECT * FROM carriers WHERE id=?').bind(d.carrier_id).first() : await firstCarrier(db);
+    const rec = await recruiterFor(db, d);
+    const target = carrierApplyUrl(c, rec);
+    if (!target) return json({ error: 'No carrier application is configured yet.' }, 404);
+    await db.prepare(`UPDATE leads SET carrier_app_clicked_at=COALESCE(carrier_app_clicked_at, datetime('now')),
+        carrier_app_clicks=COALESCE(carrier_app_clicks,0)+1, updated_at=datetime('now') WHERE id=?`).bind(d.id).run();
+    return new Response(null, { status: 302, headers: { location: target, 'cache-control': 'no-store' } });
   }
 
   // ---------- DOCUMENT UPLOAD (driver side) ----------
