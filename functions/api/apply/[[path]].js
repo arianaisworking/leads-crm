@@ -221,8 +221,16 @@ export async function onRequest(context) {
       }));
     }
 
-    // The driver is told it's received — never the internal verdict.
-    return json({ ok: true, received: true });
+    // Hand the next two steps back to the driver right now, while they still
+    // have the phone in their hand. Email is a reminder, not the delivery
+    // mechanism — a driver with no email address, or whose mail lands in spam,
+    // would otherwise reach a dead end here.
+    // Still no internal verdict: a disqualified driver gets no links, and is
+    // told kindly by email rather than on screen.
+    return json({ ok: true, received: true,
+      next: (leaseUrl || carrierAppUrl)
+        ? { carrier_app: carrierAppUrl, lease: leaseUrl, carrier: carrier ? carrier.name : null }
+        : null });
   }
 
   // ---------- WEBSITE FUNNEL ----------

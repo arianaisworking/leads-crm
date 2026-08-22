@@ -160,7 +160,17 @@ const T={
   err_req:"Please give us your name and a phone number or email so we can reach you.",
   err_open:"We couldn't open this application",
   done_h:"Application received", done_p1:"Thanks for taking the time. We're reviewing it now and we'll be in touch shortly.",
-  done_p2:"If it's a fit, next comes the carrier's Clearinghouse query, a drug test, and a short list of truck documents — we'll walk you through all of it."
+  done_p2:"If it's a fit, next comes the carrier's Clearinghouse query, a drug test, and a short list of truck documents — we'll walk you through all of it.",
+  nx_h:"You're through — here's what's next",
+  nx_p:"Do these now while you have a minute, or come back to them from the email we just sent. Both links stay live.",
+  nx_1:"Step 1 — the carrier's application",
+  nx_1p:"Goes straight to {carrier}'s Safety team and gets you a confirmation number. About 20 minutes — have your employment history handy.",
+  nx_1b:"Open the carrier application ↗",
+  nx_2:"Step 2 — your lease info & documents",
+  nx_2p:"Your details, your truck, and four documents you can photograph with your phone.",
+  nx_2b:"Open your onboarding page →",
+  nx_save:"Screenshot this page or bookmark it — these are your links.",
+  nx_conf:"When the carrier gives you a confirmation number, send it to us and we'll take it from there."
  },
  es:{
   badge:"Solicitud de conductor", h1:"Maneja con {carrier}", oo:"Dueño de troca (lease-on)",
@@ -222,7 +232,17 @@ const T={
   err_req:"Danos tu nombre y un teléfono o correo para poder contactarte.",
   err_open:"No pudimos abrir esta solicitud",
   done_h:"Solicitud recibida", done_p1:"Gracias por tomarte el tiempo. La estamos revisando y te contactamos muy pronto.",
-  done_p2:"Si es un buen ajuste, lo que sigue es la consulta al Clearinghouse de la compañía, un examen antidoping y una lista corta de documentos de la troca — te guiamos en todo."
+  done_p2:"Si es un buen ajuste, lo que sigue es la consulta al Clearinghouse de la compañía, un examen antidoping y una lista corta de documentos de la troca — te guiamos en todo.",
+  nx_h:"Pasaste — esto es lo que sigue",
+  nx_p:"Hazlos ahora que tienes un momento, o regresa a ellos desde el correo que te acabamos de mandar. Los dos enlaces se quedan activos.",
+  nx_1:"Paso 1 — la solicitud de la compañía",
+  nx_1p:"Va directo al departamento de seguridad de {carrier} y te da un número de confirmación. Unos 20 minutos — ten a la mano tu historial de trabajo.",
+  nx_1b:"Abrir la solicitud de la compañía ↗",
+  nx_2:"Paso 2 — tus datos del contrato y documentos",
+  nx_2p:"Tus datos, tu troca, y cuatro documentos que puedes fotografiar con el teléfono.",
+  nx_2b:"Abrir tu página →",
+  nx_save:"Toma captura de esta página o guárdala — estos son tus enlaces.",
+  nx_conf:"Cuando la compañía te dé un número de confirmación, mándanoslo y nosotros seguimos desde ahí."
  }
 };
 let lang=(navigator.language||"en").toLowerCase().startsWith("es")?"es":"en";
@@ -422,13 +442,36 @@ function render(){
   document.title=t("badge");
 }
 
-function done(){
-  $("#wrap").innerHTML=`<div class="top msg">
-    <div class="check">✓</div>
-    <h1 style="margin:0 0 8px;font-size:22px">${t("done_h")}</h1>
-    <p style="color:var(--soft);margin:0 0 6px">${t("done_p1")}</p>
-    <p style="color:var(--soft);margin:0;font-size:14px">${t("done_p2")}</p>
-  </div>`;
+function done(next){
+  // A driver who cleared screening gets their next two links here and now.
+  // Waiting on an email is how people fall out of the process.
+  if(next && (next.carrier_app || next.lease)){
+    const carrier=next.carrier||"";
+    $("#wrap").innerHTML=`<div class="top" style="text-align:center">
+        <div class="check">✓</div>
+        <h1 style="margin:0 0 8px;font-size:22px">${t("nx_h")}</h1>
+        <p style="color:var(--soft);margin:0">${t("nx_p")}</p>
+      </div>
+      ${next.carrier_app?`<div class="sec" style="border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,111,237,.09)">
+        <h2>${t("nx_1")}</h2>
+        <p class="note">${t("nx_1p",{carrier:esc(carrier)})}</p>
+        <a class="btn" href="${esc(next.carrier_app)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">${t("nx_1b")}</a>
+      </div>`:""}
+      ${next.lease?`<div class="sec">
+        <h2>${t("nx_2")}</h2>
+        <p class="note">${t("nx_2p")}</p>
+        <a class="btn" href="${esc(next.lease)}" style="display:block;text-align:center;text-decoration:none;background:#fff;color:var(--brand);border:1px solid var(--brand)">${t("nx_2b")}</a>
+      </div>`:""}
+      <div class="sec"><p class="note" style="margin:0 0 8px">${t("nx_save")}</p>
+        <p class="note" style="margin:0">${t("nx_conf")}</p></div>`;
+  } else {
+    $("#wrap").innerHTML=`<div class="top msg">
+      <div class="check">✓</div>
+      <h1 style="margin:0 0 8px;font-size:22px">${t("done_h")}</h1>
+      <p style="color:var(--soft);margin:0 0 6px">${t("done_p1")}</p>
+      <p style="color:var(--soft);margin:0;font-size:14px">${t("done_p2")}</p>
+    </div>`;
+  }
   $("#bar").style.display="none";
   window.scrollTo(0,0);
 }
@@ -445,7 +488,7 @@ async function submit(){
     const r=await fetch("/api/apply/submit?"+Q,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(A)});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.error||"Something went wrong. Please try again.");
-    done();
+    done(d.next);
   }catch(e){
     err.textContent=e.message; err.style.display="block"; window.scrollTo(0,0);
     btn.disabled=false; btn.textContent=t("submit");
