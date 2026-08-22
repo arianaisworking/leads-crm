@@ -313,10 +313,23 @@ Once a day the team gets a short digest of what only a human can move: drivers
 whose seating is unconfirmed, money ready to invoice, and anyone the emails have
 stopped working on — those are the phone calls.
 
+Two routes — the dashboard one needs no terminal, which matters on a Chromebook:
+
+**Dashboard:** Workers & Pages → Create → Worker, name it `aiw-recruiting-nudge`,
+paste `cron-worker-recruiting/worker.js`, Deploy. Then Settings → Triggers → add
+cron `0 9 * * *` and `0 16 * * *`; Settings → Variables and Secrets → add secret
+`CRON_KEY`. Leave `TICK_URL` unset — the worker already defaults to the right URL.
+
+**Terminal:**
 ```bash
 cd cron-worker-recruiting && npx wrangler deploy
 npx wrangler secret put CRON_KEY     # same value as the Pages CRON_KEY secret
 ```
+
+`CRON_KEY` must match the Pages project's byte for byte, or the endpoint returns
+401 and no nudge ever sends. The worker logs the outcome of every run, so
+Workers → `aiw-recruiting-nudge` → Logs tells you which it is: `nudge ok` with a
+JSON summary, or `nudge FAILED: HTTP 401`.
 
 Dry-run it any time without sending anything:
 
