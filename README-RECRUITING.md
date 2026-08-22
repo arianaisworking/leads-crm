@@ -65,9 +65,9 @@ from the API):
    | `RESEND_API_KEY` | your existing Resend key |
    | `LEASE_KEY` | `openssl rand -base64 32` — keep a copy somewhere safe |
    | `CRON_KEY` | any long random string |
-   | `FROM_EMAIL` | e.g. `Trucker & Trokeros <hello@truckersandtrokeros.com>` |
+   | `FROM_EMAIL` | e.g. `Truckers & Trokeros <recruiting@truckersandtrokeros.com>` |
    | `TEAM_EMAIL` | where team notifications land |
-   | `BRAND_NAME` | `Trucker & Trokeros` |
+   | `BRAND_NAME` | `Truckers & Trokeros` |
 4. **Redeploy** so the bindings take effect, then open the site and create your
    login (first visit bootstraps the first user).
 5. **Custom domain** → add `truckersandtrokeros.com` and `www` to this same
