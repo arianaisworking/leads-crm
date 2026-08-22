@@ -24,7 +24,7 @@ migration-recruiting-004.sql     invoicing the carrier + the seating question
 migration-recruiting-005.sql     follow-up nudges
 functions/api/cron/[[path]].js   the nudge pass (cron-key gated)
 cron-worker-recruiting/          Cloudflare Worker that pokes it twice a day
-drive.html                       truckerandtrokeros.com — the public site (EN/ES)
+drive.html                       truckersandtrokeros.com — the public site (EN/ES)
 functions/_lib/screening.js      the qualification engine — points chart + prohibitions
 functions/_lib/recruiting.js     doc checklists, placements + splits, the carrier packet
 functions/_lib/vault.js          AES-GCM for the lease form's sensitive fields
@@ -65,12 +65,12 @@ from the API):
    | `RESEND_API_KEY` | your existing Resend key |
    | `LEASE_KEY` | `openssl rand -base64 32` — keep a copy somewhere safe |
    | `CRON_KEY` | any long random string |
-   | `FROM_EMAIL` | e.g. `Trucker & Trokeros <hello@truckerandtrokeros.com>` |
+   | `FROM_EMAIL` | e.g. `Trucker & Trokeros <hello@truckersandtrokeros.com>` |
    | `TEAM_EMAIL` | where team notifications land |
    | `BRAND_NAME` | `Trucker & Trokeros` |
 4. **Redeploy** so the bindings take effect, then open the site and create your
    login (first visit bootstraps the first user).
-5. **Custom domain** → add `truckerandtrokeros.com` and `www` to this same
+5. **Custom domain** → add `truckersandtrokeros.com` and `www` to this same
    project. Middleware serves the public site at `/` for those hostnames.
 6. **Cron worker:** `cd cron-worker-recruiting && npx wrangler deploy`, then
    `npx wrangler secret put CRON_KEY` with the same value.
@@ -324,7 +324,7 @@ Dry-run it any time without sending anything:
 curl -H "x-cron-key: $CRON_KEY" "https://aiw-recruiting.pages.dev/api/cron/nudge?dry=1"
 ```
 
-## truckerandtrokeros.com
+## truckersandtrokeros.com
 
 `drive.html` is the public site: hero, why-us, the five-step process, real
 qualification requirements, eight FAQs and the lead form. It is **fully
@@ -339,7 +339,7 @@ and has their application emailed **before anyone reads the lead**.
 ### Hosting it
 
 The site shares this Pages project — no second deployment, no CORS. Add
-`truckerandtrokeros.com` (and `www`) as custom domains on the recruiting Pages
+`truckersandtrokeros.com` (and `www`) as custom domains on the recruiting Pages
 project. `functions/_middleware.js` serves `/drive.html` at `/` for those
 hostnames; the CRM stays on the pages.dev host and any admin domain. To add
 another site, add a line to `PUBLIC_SITES`.
@@ -348,12 +348,12 @@ Tracking parameters the site understands:
 
 | Param | Use |
 |---|---|
-| `?src=` | overrides the recorded source (default `truckerandtrokeros.com`) |
+| `?src=` | overrides the recorded source (default `truckersandtrokeros.com`) |
 | `?r=` | recruiter id, so leads land attributed — e.g. `?r=mystica` |
 | `?carrier=` | which carrier the lead is for (default `evans_dal`) |
 
 So Mystica's Facebook ad points at
-`https://truckerandtrokeros.com/?r=mystica&src=fb-ad-oct`, and every driver from
+`https://truckersandtrokeros.com/?r=mystica&src=fb-ad-oct`, and every driver from
 it shows up in the CRM tagged to her and to that ad.
 
 ### One thing to confirm before launch

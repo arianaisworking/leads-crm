@@ -9,4 +9,4 @@ crons = ["0 9 * * *", "0 16 * * *"]
 
 # Optional: uncomment and set if the app moves to a custom domain.
 # [vars]
-# TICK_URL = "https://truckerandtrokeros.com/api/cron/nudge"
+# TICK_URL = "https://truckersandtrokeros.com/api/cron/nudge"

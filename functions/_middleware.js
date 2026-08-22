@@ -11,7 +11,7 @@
 //
 // Client-role logins are confined to read-only reports for their own tenant.
 //
-// Public marketing hosts (truckerandtrokeros.com) share this deployment so the
+// Public marketing hosts (truckersandtrokeros.com) share this deployment so the
 // site's form can post to the same API with no CORS and no second project. On
 // those hostnames "/" serves the driver-facing site instead of the CRM shell —
 // the CRM stays reachable on the pages.dev host and any admin domain.
@@ -21,8 +21,8 @@ import { json } from './_lib/tenant.js';
 
 // hostname -> the page "/" should serve
 const PUBLIC_SITES = {
-  'truckerandtrokeros.com': '/drive.html',
-  'www.truckerandtrokeros.com': '/drive.html',
+  'truckersandtrokeros.com': '/drive.html',
+  'www.truckersandtrokeros.com': '/drive.html',
 };
 
 export async function onRequest(context) {
