@@ -7,7 +7,7 @@ import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '../../_lib/screening.js';
 import { seedDocs, ensurePlacement, leasePacketHtml, openSecure, secret as mkSecret,
-  carrierApplyUrl, recruiterFor } from '../../_lib/recruiting.js';
+  carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
 import { redact } from '../../_lib/vault.js';
 
 function token() {
@@ -29,10 +29,7 @@ const DRIVER_COLS = [
   'confirmation_no', 'clearinghouse_ok', 'experience_verified', 'preapproved_at',
   'drug_test_scheduled_at', 'drug_test_done_at', 'lease_sent_at', 'lease_signed_at',
   'startup_packet_at', 'orientation_at', 'started_at', 'lost_reason', 'next_touch',
-  'recruiter_id', 'gender', 'address', 'home_phone', 'truck_unit_no', 'truck_value',
-  'lienholder_address', 'lienholder_phone', 'lienholder_email', 'wants_maintenance',
-  'maintenance_weekly', 'maintenance_max', 'business_ein', 'business_owner',
-  'business_address', 'business_phone', 'business_email',
+  'recruiter_id', 'address',
 ];
 
 // Re-screen a driver against their carrier's rubric and persist the verdict.
@@ -541,10 +538,11 @@ export async function onRequest(context) {
 
   // What the team may see of the lease form: everything except the vault.
   if (res === 'drivers' && sub === 'lease' && method === 'GET') {
-    const d = await db.prepare('SELECT * FROM leads WHERE id=?').bind(int(id)).first();
+    const d = await db.prepare('SELECT id, lease_info_at, secure_purged_at FROM leads WHERE id=?').bind(int(id)).first();
     if (!d) return json({ error: 'driver not found' }, 404);
-    const sec = await openSecure(env, d);
-    return json({ ok: true, done: !!d.lease_info_at, secure: redact(sec), purged: !!d.secure_purged_at });
+    const x = await leaseRow(db, d.id);
+    const sec = await openSecure(env, x);
+    return json({ ok: true, done: !!d.lease_info_at, lease: x || null, secure: redact(sec), purged: !!d.secure_purged_at });
   }
 
   // ---------- SEND THE FULL PACKET TO THE CARRIER ----------
@@ -573,7 +571,8 @@ export async function onRequest(context) {
       if (days > 30) staleNote = `<div style="background:#fdecec;border:1px solid #f5c2c2;color:#9b2c2c;border-radius:10px;padding:10px 14px;margin:0 0 14px"><b>Note:</b> the federal inspection on file is dated ${esc(insp.doc_date)} (${days} days old). A fresh one is being obtained.</div>`;
     }
 
-    const sec = await openSecure(env, d);
+    const x = await leaseRow(db, driverId);
+    const sec = await openSecure(env, x);
     const origin = new URL(request.url).origin;
     const docRows = docs.map((x) => `<tr>
         <td style="padding:5px 12px 5px 0;font-size:13px">${esc(x.label || x.kind)}</td>
@@ -586,7 +585,7 @@ export async function onRequest(context) {
       html: emailShell('Driver lease packet', `
         <p style="margin:0 0 6px;font-size:16px">Hi${c.contact_name ? ' ' + esc(c.contact_name.split(' ')[0]) : ''}, here's the completed packet for <b>${esc(d.name || '')}</b>.</p>
         ${staleNote}
-        ${leasePacketHtml(d, sec, c)}
+        ${leasePacketHtml(d, x, sec, c)}
         <div style="margin:16px 0 0">
           <div style="font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#2f6fed;border-bottom:1px solid #e3e8ef;padding-bottom:5px;margin-bottom:8px">Documents</div>
           <table style="width:100%">${docRows}</table>
@@ -602,7 +601,8 @@ export async function onRequest(context) {
   // Destroy the sealed fields once the lease is signed — we have no further use
   // for them and no reason to keep holding them.
   if (res === 'drivers' && sub === 'purge-secure' && method === 'POST') {
-    await db.prepare("UPDATE leads SET lease_secure=NULL, secure_purged_at=datetime('now') WHERE id=?").bind(int(id)).run();
+    await db.prepare('UPDATE driver_lease SET lease_secure=NULL, updated_at=datetime(\'now\') WHERE driver_id=?').bind(int(id)).run();
+    await db.prepare("UPDATE leads SET secure_purged_at=datetime('now') WHERE id=?").bind(int(id)).run();
     return json({ ok: true });
   }
 

@@ -20,7 +20,7 @@ import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, VIOLATIONS } from '../../_lib/screening.js';
 import { seal, vaultReady } from '../../_lib/vault.js';
-import { seedDocs, secret as mkSecret, carrierApplyUrl, recruiterFor } from '../../_lib/recruiting.js';
+import { seedDocs, secret as mkSecret, carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -280,8 +280,7 @@ export async function onRequest(context) {
     const docsQ = await db.prepare('SELECT id, kind, label, status, doc_date, file_name FROM driver_docs WHERE driver_id=? ORDER BY created_at').bind(d.id).all();
 
     if (request.method === 'GET') {
-      let L = {};
-      try { L = d.lease_info ? JSON.parse(d.lease_info) : {}; } catch { L = {}; }
+      const X = (await leaseRow(db, d.id)) || {};
       const rec = await recruiterFor(db, d);
       return json({ ok: true, done: !!d.lease_info_at,
         carrier: c && { name: c.name, terminal: c.terminal, orientation_info: c.orientation_info },
@@ -292,18 +291,18 @@ export async function onRequest(context) {
         } : null,
         secure_enabled: vaultReady(env),
         prefill: {
-          name: d.name, phone: d.phone, home_phone: d.home_phone, email: d.email, address: d.address,
-          city: d.city, state: d.state, postcode: L.postcode || d.postcode, gender: d.gender, dob: d.dob,
+          name: d.name, phone: d.phone, home_phone: X.home_phone, email: d.email, address: d.address,
+          city: d.city, state: d.state, postcode: X.postcode || d.postcode, gender: X.gender, dob: d.dob,
           us_citizen: d.us_citizen, cdl_state: d.cdl_state, cdl_expires: d.cdl_expires,
           truck_year: d.truck_year, truck_make: d.truck_make, truck_color: d.truck_color,
           truck_plate: d.truck_plate, truck_plate_state: d.truck_plate_state, truck_vin: d.truck_vin,
-          truck_unit_no: d.truck_unit_no, truck_value: d.truck_value, lienholder: d.lienholder,
-          lienholder_address: d.lienholder_address, lienholder_phone: d.lienholder_phone, lienholder_email: d.lienholder_email,
+          truck_unit_no: X.truck_unit_no, truck_value: X.truck_value, lienholder: d.lienholder,
+          lienholder_address: X.lienholder_address, lienholder_phone: X.lienholder_phone, lienholder_email: X.lienholder_email,
           wants_carrier_plates: d.wants_carrier_plates, wants_ifta: d.wants_ifta,
-          wants_maintenance: d.wants_maintenance, maintenance_weekly: d.maintenance_weekly, maintenance_max: d.maintenance_max,
-          has_business: d.has_business, business_name: d.business_name, business_ein: d.business_ein,
-          business_owner: d.business_owner, business_address: d.business_address,
-          business_phone: d.business_phone, business_email: d.business_email,
+          wants_maintenance: X.wants_maintenance, maintenance_weekly: X.maintenance_weekly, maintenance_max: X.maintenance_max,
+          has_business: d.has_business, business_name: d.business_name, business_ein: X.business_ein,
+          business_owner: X.business_owner, business_address: X.business_address,
+          business_phone: X.business_phone, business_email: X.business_email,
         },
         docs: (docsQ.results || []).map((x) => ({ id: x.id, kind: x.kind, label: x.label, status: x.status, file_name: x.file_name, doc_date: x.doc_date })),
         uploads_enabled: !!env.DOCS });
@@ -311,16 +310,21 @@ export async function onRequest(context) {
 
     if (request.method === 'POST') {
       const b = await request.json().catch(() => ({}));
-      const plain = {}, PF = ['gender', 'address', 'city', 'state', 'home_phone', 'truck_year', 'truck_make',
-        'truck_color', 'truck_plate', 'truck_plate_state', 'truck_vin', 'truck_unit_no', 'truck_value',
-        'lienholder', 'lienholder_address', 'lienholder_phone', 'lienholder_email', 'maintenance_weekly',
-        'maintenance_max', 'business_name', 'business_ein', 'business_owner', 'business_address',
-        'business_phone', 'business_email'];
-      for (const f of PF) if (f in b) plain[f] = b[f] === '' ? null : b[f];
-      for (const f of ['us_citizen', 'wants_carrier_plates', 'wants_ifta', 'wants_maintenance', 'has_business'])
-        if (f in b) plain[f] = bit(b[f]);
+      // Fields that live on `leads` (queried elsewhere)...
+      const onLead = {}, LF = ['address', 'city', 'state', 'truck_year', 'truck_make', 'truck_color',
+        'truck_plate', 'truck_plate_state', 'truck_vin', 'lienholder', 'business_name'];
+      for (const f of LF) if (f in b) onLead[f] = b[f] === '' ? null : b[f];
+      for (const f of ['us_citizen', 'wants_carrier_plates', 'wants_ifta', 'has_business'])
+        if (f in b) onLead[f] = bit(b[f]);
+      // ...and the lease form's own fields, which live on `driver_lease`.
+      const onLease = {}, XF = ['gender', 'home_phone', 'postcode', 'truck_unit_no', 'truck_value',
+        'lienholder_address', 'lienholder_phone', 'lienholder_email', 'maintenance_weekly',
+        'maintenance_max', 'business_ein', 'business_owner', 'business_address', 'business_phone',
+        'business_email'];
+      for (const f of XF) if (f in b) onLease[f] = b[f] === '' ? null : b[f];
+      if ('wants_maintenance' in b) onLease.wants_maintenance = bit(b.wants_maintenance);
 
-      // The sensitive four go into the vault, never into a readable column.
+      // The sensitive fields go into the vault, never into a readable column.
       const secureIn = {};
       for (const f of ['ssn', 'dl_number', 'bank_name', 'account_name', 'routing', 'account', 'ein'])
         if (b[f]) secureIn[f] = String(b[f]).trim().slice(0, 60);
@@ -330,14 +334,19 @@ export async function onRequest(context) {
         sealed = await seal(env, secureIn);
       }
 
-      const cols = Object.keys(plain);
-      const sets = cols.map((c) => c + '=?');
-      const vals = cols.map((c) => plain[c]);
-      sets.push('lease_info=?'); vals.push(JSON.stringify({ postcode: b.postcode || null, submitted: true }));
-      if (sealed) { sets.push('lease_secure=?'); vals.push(sealed); }
-      sets.push("lease_info_at=datetime('now')", "updated_at=datetime('now')");
-      vals.push(d.id);
-      await db.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+      if (Object.keys(onLead).length) {
+        const cols = Object.keys(onLead);
+        await db.prepare(`UPDATE leads SET ${cols.map((c) => c + '=?').join(', ')}, updated_at=datetime('now') WHERE id=?`)
+          .bind(...cols.map((c) => onLead[c]), d.id).run();
+      }
+      onLease.lease_info = JSON.stringify({ submitted: true });
+      if (sealed) onLease.lease_secure = sealed;
+      // Upsert: the driver may come back and change an answer.
+      const xcols = Object.keys(onLease);
+      await db.prepare(`INSERT INTO driver_lease (driver_id, ${xcols.join(', ')}) VALUES (?${xcols.map(() => ', ?').join('')})
+        ON CONFLICT(driver_id) DO UPDATE SET ${xcols.map((c) => `${c}=excluded.${c}`).join(', ')}, updated_at=datetime('now')`)
+        .bind(d.id, ...xcols.map((c) => onLease[c])).run();
+      await db.prepare("UPDATE leads SET lease_info_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(d.id).run();
 
       // Electing the plate program adds the title and 2290 to their checklist.
       if (c) { const fresh = await db.prepare('SELECT * FROM leads WHERE id=?').bind(d.id).first(); await seedDocs(db, fresh, c); }

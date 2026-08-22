@@ -68,10 +68,11 @@ export async function writeSplits(db, placementId, fee) {
 // Mirrors the carrier's own paper form field-for-field so their office can read
 // it without translating anything. `secureObj` is the decrypted vault payload
 // and is ONLY ever passed in when building the packet the carrier receives.
-export function leasePacketHtml(d, secureObj, carrier) {
+export function leasePacketHtml(d, leaseRow, secureObj, carrier) {
   const S = secureObj || {};
+  const X = leaseRow || {};
   let L = {};
-  try { L = d.lease_info ? JSON.parse(d.lease_info) : {}; } catch { L = {}; }
+  try { L = X.lease_info ? JSON.parse(X.lease_info) : {}; } catch { L = {}; }
   const row = (k, v) => (v || v === 0)
     ? `<tr><td style="padding:5px 14px 5px 0;color:#5b6472;white-space:nowrap;font-size:13px">${esc(k)}</td><td style="padding:5px 0;font-weight:600;font-size:13px">${esc(v)}</td></tr>` : '';
   const yn = (v) => (v === 1 || v === true ? 'Yes' : v === 0 || v === false ? 'No' : '');
@@ -85,10 +86,10 @@ export function leasePacketHtml(d, secureObj, carrier) {
       <div style="color:#5b6472;font-size:12.5px;margin-bottom:16px">${esc(carrier ? carrier.name : '')}${carrier && carrier.terminal ? ' · ' + esc(carrier.terminal) : ''}${d.lease_info_at ? ' · completed ' + esc(String(d.lease_info_at).slice(0, 10)) : ''}</div>
 
       ${sec('Driver / Owner', `
-        ${row('Name', d.name)}${row('Gender', d.gender)}
+        ${row('Name', d.name)}${row('Gender', X.gender)}
         ${row('Address', d.address)}
-        ${row('City / State / Zip', [d.city, d.state, L.postcode].filter(Boolean).join(', '))}
-        ${row('Cell', d.phone)}${row('Home', d.home_phone)}
+        ${row('City / State / Zip', [d.city, d.state, X.postcode || L.postcode].filter(Boolean).join(', '))}
+        ${row('Cell', d.phone)}${row('Home', X.home_phone)}
         ${row('Email', d.email)}
         ${row('SSN', S.ssn)}
         ${row("Driver's licence", S.dl_number ? `${S.dl_number}${d.cdl_state ? ' (' + d.cdl_state + ')' : ''}${d.cdl_expires ? ' exp ' + d.cdl_expires : ''}` : '')}
@@ -99,31 +100,36 @@ export function leasePacketHtml(d, secureObj, carrier) {
       ${sec('Truck', `
         ${row('Year / Make / Color', [d.truck_year, d.truck_make, d.truck_color].filter(Boolean).join(' '))}
         ${row('Plate / State', [d.truck_plate, d.truck_plate_state].filter(Boolean).join(' · '))}
-        ${row('VIN', d.truck_vin)}${row('Unit #', d.truck_unit_no)}
-        ${row('Lienholder', d.lienholder)}${row('Value', d.truck_value != null ? '$' + Number(d.truck_value).toLocaleString('en-US') : '')}
-        ${row('Lienholder address', d.lienholder_address)}
-        ${row('Lienholder phone', d.lienholder_phone)}${row('Lienholder email', d.lienholder_email)}`)}
+        ${row('VIN', d.truck_vin)}${row('Unit #', X.truck_unit_no)}
+        ${row('Lienholder', d.lienholder)}${row('Value', X.truck_value != null ? '$' + Number(X.truck_value).toLocaleString('en-US') : '')}
+        ${row('Lienholder address', X.lienholder_address)}
+        ${row('Lienholder phone', X.lienholder_phone)}${row('Lienholder email', X.lienholder_email)}`)}
 
       ${sec('Programs', `
         ${row('Carrier plates', yn(d.wants_carrier_plates))}
         ${row('IFTA', yn(d.wants_ifta))}
-        ${row('Maintenance escrow', d.wants_maintenance ? `Yes${d.maintenance_weekly ? ' · $' + d.maintenance_weekly + '/week' : ''}${d.maintenance_max ? ' · max $' + d.maintenance_max : ''}` : yn(d.wants_maintenance))}`)}
+        ${row('Maintenance escrow', X.wants_maintenance ? `Yes${X.maintenance_weekly ? ' · $' + X.maintenance_weekly + '/week' : ''}${X.maintenance_max ? ' · max $' + X.maintenance_max : ''}` : yn(X.wants_maintenance))}`)}
 
       ${sec('Direct deposit', `
         ${row('Bank', S.bank_name)}${row('Account name', S.account_name)}
         ${row('Routing #', S.routing)}${row('Account #', S.account)}`)}
 
       ${d.has_business ? sec('Business (lease in the company name)', `
-        ${row('Business name', d.business_name)}${row('Fed ID #', d.business_ein || S.ein)}
-        ${row('Business owner', d.business_owner)}
-        ${row('Address', d.business_address)}
-        ${row('Phone', d.business_phone)}${row('Email', d.business_email)}`) : ''}
+        ${row('Business name', d.business_name)}${row('Fed ID #', X.business_ein || S.ein)}
+        ${row('Business owner', X.business_owner)}
+        ${row('Address', X.business_address)}
+        ${row('Phone', X.business_phone)}${row('Email', X.business_email)}`) : ''}
     </div>`;
 }
 
+// The driver's lease row, or null if they haven't returned the form yet.
+export async function leaseRow(db, driverId) {
+  return await db.prepare('SELECT * FROM driver_lease WHERE driver_id=?').bind(driverId).first();
+}
+
 // Decrypt the sealed fields for exactly one purpose: building the carrier packet.
-export async function openSecure(env, driver) {
-  return await vaultOpen(env, driver.lease_secure);
+export async function openSecure(env, leaseRowOrNull) {
+  return await vaultOpen(env, leaseRowOrNull && leaseRowOrNull.lease_secure);
 }
 
 // ---- The carrier's own application (e.g. Evans' Tenstreet IntelliApp).

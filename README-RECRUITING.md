@@ -37,27 +37,43 @@ index.html                       PROFILE==="recruiting" swaps in Drivers/Pipelin
 
 ## Deploy
 
-1. **Create the database**
+**Already provisioned** (done for you — nothing to re-run):
 
-   ```bash
-   npx wrangler d1 create aiw-recruiting
-   npx wrangler d1 execute aiw-recruiting --remote --file=schema-full.sql
-   npx wrangler d1 execute aiw-recruiting --remote --file=schema-recruiting-extra.sql
-   ```
+| Resource | Value |
+|---|---|
+| D1 database | `aiw-recruiting` · `a6e13b06-0829-4d5a-afeb-7faf63666609` |
+| Migrations | schema-full + recruiting-extra + 002–005, all applied |
+| Seeded | Evans Delivery (Dallas/DND) with rubric, doc checklist, $1,000 on seated, IntelliApp link |
+| Recruiters | Ariana and Mystica, 50/50 |
+| R2 bucket | `aiw-recruiting-docs` |
 
-   The second file seeds Evans Delivery (Dallas/DND) with their real
-   qualification rubric, so screening works the moment you deploy.
+**Still to do in the Cloudflare dashboard** (a Pages project can't be created
+from the API):
 
-2. **Create the Pages project** — connect the same repo, no build command,
-   output directory `/`. Point it at `aiw-recruiting.pages.dev`; the front end
-   switches profile on that hostname.
+1. **Workers & Pages → Create → Pages → Connect to Git** → the `leads-crm` repo.
+   - Build command: *none*. Output directory: `/`.
+   - **Production branch: `claude/trucker-division-aiw-crm-i96spb`** — the trucker
+     code is not on `main`, so leaving this at `main` deploys the wrong app.
+   - Project name `aiw-recruiting`, so it lands on `aiw-recruiting.pages.dev`.
+2. **Settings → Bindings:**
+   - D1 → variable `DB` → database `aiw-recruiting`
+   - R2 → variable `DOCS` → bucket `aiw-recruiting-docs`
+3. **Settings → Variables and Secrets:**
 
-3. **Bind the database** — Settings → Bindings → D1 → variable name `DB`
-   → database `aiw-recruiting`. Redeploy.
-
-4. **Secrets** — `RESEND_API_KEY` (submission + application emails),
-   `FROM_EMAIL`, `TEAM_EMAIL`, optionally `BRAND_NAME`. Everything still
-   functions without them; email just no-ops.
+   | Name | Value |
+   |---|---|
+   | `RESEND_API_KEY` | your existing Resend key |
+   | `LEASE_KEY` | `openssl rand -base64 32` — keep a copy somewhere safe |
+   | `CRON_KEY` | any long random string |
+   | `FROM_EMAIL` | e.g. `Trucker & Trokeros <hello@truckerandtrokeros.com>` |
+   | `TEAM_EMAIL` | where team notifications land |
+   | `BRAND_NAME` | `Trucker & Trokeros` |
+4. **Redeploy** so the bindings take effect, then open the site and create your
+   login (first visit bootstraps the first user).
+5. **Custom domain** → add `truckerandtrokeros.com` and `www` to this same
+   project. Middleware serves the public site at `/` for those hostnames.
+6. **Cron worker:** `cd cron-worker-recruiting && npx wrangler deploy`, then
+   `npx wrangler secret put CRON_KEY` with the same value.
 
 ## The screening engine
 
@@ -257,16 +273,15 @@ calls worth making.
 
 On top of the base deploy above:
 
-```bash
-npx wrangler d1 execute aiw-recruiting --remote --file=migration-recruiting-002.sql
-npx wrangler d1 execute aiw-recruiting --remote --file=migration-recruiting-003.sql
-```
+All migrations are already applied to the live database (see **Deploy**). The
+files are kept for rebuilding from scratch.
 
 | Binding / secret | Why |
 |---|---|
-| `DOCS` (R2 bucket) | driver document uploads — without it the lease page tells drivers to email documents instead |
+| `DOCS` (R2 → `aiw-recruiting-docs`) | driver document uploads — without it the lease page tells drivers to email documents instead |
 | `LEASE_KEY` | `openssl rand -base64 32` — enables the encrypted lease fields |
 | `RESEND_API_KEY` | every automated email in the chain |
+| `CRON_KEY` | gates the nudge endpoint |
 
 Losing `LEASE_KEY` makes existing sealed fields unrecoverable — drivers would
 have to re-enter them. Keep a copy somewhere safe.
@@ -348,3 +363,15 @@ because the driver is by then applying to a specific carrier. If Daphine is
 happy being named publicly it's worth doing — drivers trust a named carrier more
 than "our partner carrier" — but that's her call, not ours. Ask before adding it
 to the marketing page.
+
+
+## A note on the `leads` table
+
+D1 caps a table at **100 columns**, and `leads` is at **93**. The lease form's
+own fields therefore live in `driver_lease` (one row per driver), not on
+`leads` — which is the right shape anyway, since they only exist for drivers who
+reach the lease stage and it keeps the encrypted blob in its own table.
+
+**Any new driver field belongs on `driver_lease`** unless a `WHERE` clause needs
+it. Only workflow state the nudge and stats passes filter on — tokens,
+milestone timestamps — earns a column on `leads`.
