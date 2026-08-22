@@ -21,7 +21,11 @@ export async function seedDocs(db, driver, carrier) {
   const have = new Set((existing.results || []).map((r) => r.kind));
   let n = 0;
   for (const item of list) {
+    // `if` — only when the driver opted in (e.g. the carrier's plate program).
     if (item.if && !driver[item.if]) continue;
+    // `if_no` — only when they explicitly answered no. An unanswered question
+    // must not conjure a document demand out of nothing.
+    if (item.if_no && driver[item.if_no] !== 0) continue;
     if (have.has(item.kind)) continue;
     await db.prepare('INSERT INTO driver_docs (id, driver_id, kind, label, status) VALUES (?,?,?,?,?)')
       .bind(rid('dd'), driver.id, item.kind, item.label || item.kind, 'needed').run();
