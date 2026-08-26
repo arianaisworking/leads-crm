@@ -162,12 +162,14 @@ export async function onRequest(context) {
         const b = await request.json();
         if (!b.name) return err("name is required");
         const r = await db.prepare(`
-          INSERT INTO leads (name, trade, phone, email, website, address, city, state, postcode, status)
-          VALUES (?,?,?,?,?,?,?,?,?,?)
+          INSERT INTO leads (name, trade, phone, email, website, address, city, state, postcode, status, revenue_purpose, category, affiliate_code, affiliate_commission, affiliate_since)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `).bind(
           b.name, b.trade || null, b.phone || null, b.email || null, b.website || null,
           b.address || null, b.city || null, b.state || null, b.postcode || null,
-          STATUSES.includes(b.status) ? b.status : "New"
+          STATUSES.includes(b.status) ? b.status : "New",
+          b.revenue_purpose || null, b.category || null, b.affiliate_code || null, b.affiliate_commission ?? null,
+          b.revenue_purpose === 'stem_cell_affiliate' ? (b.affiliate_since || new Date().toISOString().slice(0, 10)) : null
         ).run();
         const row = await db.prepare("SELECT * FROM leads WHERE id = ?").bind(r.meta.last_row_id).first();
         return json(row, 201);
@@ -199,7 +201,7 @@ export async function onRequest(context) {
       // PATCH /api/leads/:id  (update editable fields)
       if (parts.length === 2 && method === "PATCH") {
         const b = await request.json();
-        const allowed = ["status", "last_contacted", "next_touch", "phone", "email", "website", "trade", "revenue_purpose", "affiliate_code", "affiliate_commission", "affiliate_since"];
+        const allowed = ["status", "last_contacted", "next_touch", "phone", "email", "website", "trade", "revenue_purpose", "category", "affiliate_code", "affiliate_commission", "affiliate_since"];
         const sets = [];
         const bind = [];
         for (const k of allowed) {

@@ -700,6 +700,8 @@ async function openLead(id){
       </div>
       <div class="field"><label>Phone</label><input id="dPhone" value="${esc(lead.phone||"")}" placeholder="Add phone"></div>
       <div class="field"><label>Email</label><input id="dEmail" value="${esc(lead.email||"")}" placeholder="Add email"></div>
+      <div class="field"><label>Category / type</label><input id="dCategory" value="${esc(lead.category||"")}" list="dCatList" placeholder="e.g. Gym, Stem cell referral partner">
+        <datalist id="dCatList"><option>Gym</option><option>Aesthetic shop</option><option>Med spa</option><option>Stem cell referral partner</option><option>Brand</option><option>Owner</option><option>Salon</option><option>Wellness center</option></datalist></div>
       <div class="field"><label>Revenue purpose</label><select id="dRevenue">${[["","— not set —"],["lead_revival","Lead revival"],["back_office","Back office"],["virtual_assistance","Virtual assistance"],["stem_cell_affiliate","Stem cell affiliate"]].map(([v,l])=>`<option value="${v}" ${(lead.revenue_purpose||"")===v?"selected":""}>${l}</option>`).join("")}</select></div>
       <div id="dAffWrap" style="${lead.revenue_purpose==="stem_cell_affiliate"?"":"display:none"}">
         <div class="drow"><div class="field"><label>Affiliate code</label><input id="dAffCode" value="${esc(lead.affiliate_code||"")}" placeholder="AFFCODE"></div>
@@ -722,7 +724,7 @@ async function openLead(id){
   };
   $("#dSave").onclick=async()=>{
     const rev=dRev.value||null;
-    const body={status:$("#dStatus").value,next_touch:$("#dNext").value||null,phone:$("#dPhone").value||null,email:$("#dEmail").value||null,revenue_purpose:rev};
+    const body={status:$("#dStatus").value,next_touch:$("#dNext").value||null,phone:$("#dPhone").value||null,email:$("#dEmail").value||null,category:$("#dCategory").value.trim()||null,revenue_purpose:rev};
     if(rev==="stem_cell_affiliate"){
       body.affiliate_code=$("#dAffCode").value.trim().toUpperCase()||null;
       body.affiliate_commission=$("#dAffComm").value?parseFloat($("#dAffComm").value):null;
@@ -768,6 +770,11 @@ function openAdd(){
         <div class="field"><label>Trade</label><select id="aTrade"><option value="">—</option>${TRADES.map(t=>`<option>${t}</option>`).join("")}</select></div>
         <div class="field"><label>State</label><select id="aState"><option value="">—</option>${STATES.map(s=>`<option>${s}</option>`).join("")}</select></div>
       </div>
+      <div class="drow">
+        <div class="field"><label>Category / type</label><input id="aCategory" list="catList" placeholder="e.g. Gym, Stem cell referral partner">
+          <datalist id="catList"><option>Gym</option><option>Aesthetic shop</option><option>Med spa</option><option>Stem cell referral partner</option><option>Brand</option><option>Owner</option><option>Salon</option><option>Wellness center</option></datalist></div>
+        <div class="field"><label>Revenue purpose</label><select id="aRevenue">${[["","— not set —"],["lead_revival","Lead revival"],["back_office","Back office"],["virtual_assistance","Virtual assistance"],["stem_cell_affiliate","Stem cell affiliate"]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></div>
+      </div>
       <div class="field"><label>City</label><input id="aCity"></div>
       <div class="field"><label>Phone</label><input id="aPhone"></div>
       <div class="field"><label>Email</label><input id="aEmail"></div>
@@ -779,7 +786,8 @@ function openAdd(){
     const name=$("#aName").value.trim(); if(!name){$("#aName").focus();return;}
     await api("/leads",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
       name,trade:$("#aTrade").value||null,state:$("#aState").value||null,city:$("#aCity").value||null,
-      phone:$("#aPhone").value||null,email:$("#aEmail").value||null,website:$("#aWebsite").value||null})});
+      phone:$("#aPhone").value||null,email:$("#aEmail").value||null,website:$("#aWebsite").value||null,
+      category:$("#aCategory").value.trim()||null,revenue_purpose:$("#aRevenue").value||null})});
     closeDrawer(); render();
   };
 }
