@@ -135,6 +135,8 @@ export async function onRequest(context) {
         const state = url.searchParams.get("state");
         const q = url.searchParams.get("q");
         const due = url.searchParams.get("due"); // "1" => next_touch due
+        const revenue = url.searchParams.get("revenue"); // revenue_purpose filter
+        if (revenue) { wh.push("revenue_purpose = ?"); bind.push(revenue); }
         const minReviews = parseInt(url.searchParams.get("min_reviews"), 10);
         const sort = url.searchParams.get("sort"); // "reviews" | "rating" | default recency
         if (status) { wh.push("status = ?"); bind.push(status); }
@@ -197,7 +199,7 @@ export async function onRequest(context) {
       // PATCH /api/leads/:id  (update editable fields)
       if (parts.length === 2 && method === "PATCH") {
         const b = await request.json();
-        const allowed = ["status", "last_contacted", "next_touch", "phone", "email", "website", "trade"];
+        const allowed = ["status", "last_contacted", "next_touch", "phone", "email", "website", "trade", "revenue_purpose", "affiliate_code", "affiliate_commission", "affiliate_since"];
         const sets = [];
         const bind = [];
         for (const k of allowed) {

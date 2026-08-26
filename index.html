@@ -356,6 +356,7 @@
       <button data-view="pipeline"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span> Pipeline</button>
       <button data-view="clients"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 6M16.5 13.5a5.5 5.5 0 0 1 4 5.5"/></svg></span> Clients <span class="ct" id="ct-clients">0</span></button>
       <button data-view="nurture"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7-1.3C19 11.5 12 20 12 20Z"/></svg></span> Nurture <span class="ct" id="ct-nurture">0</span></button>
+      <button data-view="stemcell"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><circle cx="6" cy="7" r="1.8"/><circle cx="18" cy="7" r="1.8"/><circle cx="6" cy="17" r="1.8"/><circle cx="18" cy="17" r="1.8"/><path d="M10 11 7.5 8.5M14 11l2.5-2.5M10 13l-2.5 2.5M14 13l2.5 2.5"/></svg></span> Stem Cell <span class="ct" id="ct-stemcell">0</span></button>
       <button data-view="conversations"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span> Conversations <span class="ct" id="ct-convos">0</span></button>
       <button data-view="automations"><span class="ic"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg></span> Automations</button>
       <button data-view="finder"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></span> Find Leads</button>
@@ -554,6 +555,7 @@ async function render(){
   if(state.view==="nurture") return renderList(m,"Nurture","Follow up","Follow-ups due today or overdue.",{due:"1"});
   if(state.view==="conversations") return renderConversations(m);
   if(state.view==="automations") return renderAutomations(m);
+  if(state.view==="stemcell") return renderStemCell(m);
   if(state.view==="billing") return renderBilling(m);
   if(state.view==="finder") return renderFinder(m);
 }
@@ -698,6 +700,11 @@ async function openLead(id){
       </div>
       <div class="field"><label>Phone</label><input id="dPhone" value="${esc(lead.phone||"")}" placeholder="Add phone"></div>
       <div class="field"><label>Email</label><input id="dEmail" value="${esc(lead.email||"")}" placeholder="Add email"></div>
+      <div class="field"><label>Revenue purpose</label><select id="dRevenue">${[["","— not set —"],["lead_revival","Lead revival"],["back_office","Back office"],["virtual_assistance","Virtual assistance"],["stem_cell_affiliate","Stem cell affiliate"]].map(([v,l])=>`<option value="${v}" ${(lead.revenue_purpose||"")===v?"selected":""}>${l}</option>`).join("")}</select></div>
+      <div id="dAffWrap" style="${lead.revenue_purpose==="stem_cell_affiliate"?"":"display:none"}">
+        <div class="drow"><div class="field"><label>Affiliate code</label><input id="dAffCode" value="${esc(lead.affiliate_code||"")}" placeholder="AFFCODE"></div>
+          <div class="field"><label>Commission %</label><input type="number" id="dAffComm" value="${esc(lead.affiliate_commission||"")}" placeholder="20"></div></div>
+      </div>
       <div class="field"><label>Website</label><div class="val">${lead.website?`<a href="${esc(lead.website)}" target="_blank" rel="noopener">${esc(lead.website.replace(/^https?:\/\//,""))}</a>`:'<span class="sub">—</span>'}</div></div>
       <div class="field"><label>Address</label><div class="val sub">${esc([lead.address,lead.city,lead.state,lead.postcode].filter(Boolean).join(", ")||"—")}</div></div>
       <button class="btn" id="dSave">Save changes</button>
@@ -707,8 +714,20 @@ async function openLead(id){
       <button class="del" id="dDelete">Delete this lead</button>
     </div>`;
   $("#scrim").classList.add("show"); d.classList.add("show");
+  const dRev=$("#dRevenue");
+  dRev.onchange=()=>{
+    const aff=dRev.value==="stem_cell_affiliate";
+    $("#dAffWrap").style.display=aff?"":"none";
+    if(aff && !$("#dAffCode").value){ $("#dAffCode").value=(lead.name||"AFF").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)||"AFF"; }
+  };
   $("#dSave").onclick=async()=>{
-    const body={status:$("#dStatus").value,next_touch:$("#dNext").value||null,phone:$("#dPhone").value||null,email:$("#dEmail").value||null};
+    const rev=dRev.value||null;
+    const body={status:$("#dStatus").value,next_touch:$("#dNext").value||null,phone:$("#dPhone").value||null,email:$("#dEmail").value||null,revenue_purpose:rev};
+    if(rev==="stem_cell_affiliate"){
+      body.affiliate_code=$("#dAffCode").value.trim().toUpperCase()||null;
+      body.affiliate_commission=$("#dAffComm").value?parseFloat($("#dAffComm").value):null;
+      if(!lead.affiliate_since) body.affiliate_since=new Date().toISOString().slice(0,10);
+    }
     await api("/leads/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
     closeDrawer(); render();
   };
@@ -979,6 +998,27 @@ async function renderConversations(m){
   async function doHandoff(id){ try{ await act("/handoff/"+id,{}); toast("Flagged for a human."); await loadInbox(); }catch(e){ alert(e.message); } }
 
   await loadInbox();
+}
+
+async function renderStemCell(m){
+  m.innerHTML=head("Referrals","Stem Cell Affiliates",`<button class="btn ghost" id="scRefresh">↻ Refresh</button>`)
+    +`<p class="muted" style="margin:-8px 0 16px">Partners, gyms &amp; owners who refer patients to MXN Cells for commission. Mark any lead's <b>Revenue purpose → Stem cell affiliate</b> to push them here and give them a code.</p><div id="scWrap"><p class="muted">Loading…</p></div>`;
+  const rb=$("#scRefresh"); if(rb) rb.onclick=()=>renderStemCell(m);
+  let rows=[]; try{ rows=await api("/leads?revenue=stem_cell_affiliate"); }catch(e){}
+  const ct=$("#ct-stemcell"); if(ct) ct.textContent=rows.length;
+  if(!rows.length){ $("#scWrap").innerHTML=`<div class="cv-card"><p class="muted" style="margin:0">No stem cell affiliates yet. Open any lead in your Database → set <b>Revenue purpose → Stem cell affiliate</b> → give them a referral code.</p></div>`; return; }
+  $("#scWrap").innerHTML=`<div class="cv-card"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px;min-width:580px">
+    <thead><tr>${["Affiliate","Code","Commission","Referrals","Since",""].map((h,i)=>`<th style="text-align:${i===3?"right":"left"};padding:7px 8px;color:var(--ink-soft);font-weight:600">${h}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r=>`<tr style="border-top:1px solid var(--line)">
+      <td style="padding:9px 8px;font-weight:600">${esc(r.name)}${r.email?`<div class="sub" style="font-weight:400">${esc(r.email)}</div>`:""}</td>
+      <td style="padding:9px 8px"><code style="background:var(--pink-wash);color:var(--pink-deep);padding:2px 8px;border-radius:6px">${esc(r.affiliate_code||"—")}</code></td>
+      <td style="padding:9px 8px">${r.affiliate_commission?esc(r.affiliate_commission)+"%":"—"}</td>
+      <td style="padding:9px 8px;text-align:right">0</td>
+      <td style="padding:9px 8px;color:var(--ink-soft)">${esc(r.affiliate_since||"—")}</td>
+      <td style="padding:9px 8px;text-align:right"><button class="btn ghost sm" data-lead="${r.id}">Open</button></td>
+    </tr>`).join("")}</tbody></table></div>
+    <p class="muted" style="margin:12px 0 0;font-size:12px">Per-affiliate referral &amp; commission tracking (and payout emails) coming next — for now this holds your affiliates and their codes.</p></div>`;
+  $("#scWrap").querySelectorAll("[data-lead]").forEach(b=>b.onclick=()=>openLead(parseInt(b.dataset.lead,10)));
 }
 
 async function renderBilling(m){
