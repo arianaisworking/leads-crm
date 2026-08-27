@@ -581,11 +581,14 @@ async function renderDatabase(m){
         <select id="fTrade"><option value="">All verticals</option>${GROUPS.map(g=>`<optgroup label="${g}">${VERTICALS.filter(v=>v.group===g).map(v=>`<option value="${v.key}" ${state.fTrade===v.key?"selected":""}>${v.label}</option>`).join("")}</optgroup>`).join("")}</select>
         <select id="fState"><option value="">All states</option>${STATES.map(s=>`<option ${state.fState===s?"selected":""}>${s}</option>`).join("")}</select>
         <select id="fStatus"><option value="">All statuses</option>${STATUSES.map(s=>`<option ${state.fStatus===s?"selected":""}>${s}</option>`).join("")}</select>
+        <select id="fRevenue"><option value="">All revenue</option>${[["lead_revival","Lead revival"],["back_office","Back office"],["virtual_assistance","Virtual assistance"],["stem_cell_affiliate","Stem cell affiliate"]].map(([v,l])=>`<option value="${v}" ${state.fRevenue===v?"selected":""}>${l}</option>`).join("")}</select>
+        <select id="fCategory"><option value="">All categories</option>${["Gym","Aesthetic shop","Med spa","Stem cell referral partner","Brand","Owner","Salon","Wellness center"].map(v=>`<option ${state.fCategory===v?"selected":""}>${v}</option>`).join("")}</select>
         <select id="fReviews"><option value="">Any reviews</option>${[25,50,100,250,500].map(n=>`<option value="${n}" ${String(state.fReviews)===String(n)?"selected":""}>${n}+ reviews</option>`).join("")}</select>
         <select id="fSort"><option value="">Newest first</option><option value="reviews" ${state.fSort==="reviews"?"selected":""}>Most reviews</option><option value="rating" ${state.fSort==="rating"?"selected":""}>Highest rated</option></select>
       </div><div id="tbl"></div>`;
   const draw=async()=>{
     const p={}; if(state.q)p.q=state.q; if(state.fTrade)p.trade=state.fTrade; if(state.fState)p.state=state.fState; if(state.fStatus)p.status=state.fStatus;
+    if(state.fRevenue)p.revenue=state.fRevenue; if(state.fCategory)p.category=state.fCategory;
     if(state.fReviews)p.min_reviews=state.fReviews; if(state.fSort)p.sort=state.fSort;
     await loadLeads(p);
     $("#tbl").innerHTML=leadTable(state.leads,"✦","Nothing here yet","Head to <b>Find Leads</b> and pull in some skilled-trades businesses to get started.");
@@ -595,6 +598,8 @@ async function renderDatabase(m){
   $("#fTrade").onchange=(e)=>{state.fTrade=e.target.value;draw()};
   $("#fState").onchange=(e)=>{state.fState=e.target.value;draw()};
   $("#fStatus").onchange=(e)=>{state.fStatus=e.target.value;draw()};
+  $("#fRevenue").onchange=(e)=>{state.fRevenue=e.target.value;draw()};
+  $("#fCategory").onchange=(e)=>{state.fCategory=e.target.value;draw()};
   $("#fReviews").onchange=(e)=>{state.fReviews=e.target.value;draw()};
   $("#fSort").onchange=(e)=>{state.fSort=e.target.value;draw()};
   $("#addBtn").onclick=openAdd;
@@ -608,7 +613,7 @@ function leadTable(rows,mark,eh,ep){
       <th>Business</th><th>Location</th><th>Contact</th><th>Reviews</th><th>Status</th><th>Next touch</th>
     </tr></thead><tbody>${rows.map(r=>`
       <tr data-id="${r.id}">
-        <td><div class="biz">${avatar(r)}<div><div class="name">${esc(r.name)}</div><div class="sub trade">${esc(vLabel(r.trade))}${signalBadges(r.signals)}</div></div></div></td>
+        <td><div class="biz">${avatar(r)}<div><div class="name">${esc(r.name)}</div><div class="sub trade">${esc(r.category||vLabel(r.trade))}${r.revenue_purpose==="stem_cell_affiliate"?` · 🧬 affiliate`:""}${signalBadges(r.signals)}</div></div></div></td>
         <td>${esc([r.city,r.state].filter(Boolean).join(", ")||"—")}</td>
         <td>${esc(r.phone||r.email||"—")}</td>
         <td class="sub">${r.reviews!=null?`${r.rating!=null?"⭐ "+r.rating+" · ":""}${r.reviews}`:"—"}</td>

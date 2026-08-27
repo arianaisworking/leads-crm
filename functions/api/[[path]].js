@@ -137,6 +137,8 @@ export async function onRequest(context) {
         const due = url.searchParams.get("due"); // "1" => next_touch due
         const revenue = url.searchParams.get("revenue"); // revenue_purpose filter
         if (revenue) { wh.push("revenue_purpose = ?"); bind.push(revenue); }
+        const category = url.searchParams.get("category");
+        if (category) { wh.push("category = ?"); bind.push(category); }
         const minReviews = parseInt(url.searchParams.get("min_reviews"), 10);
         const sort = url.searchParams.get("sort"); // "reviews" | "rating" | default recency
         if (status) { wh.push("status = ?"); bind.push(status); }
