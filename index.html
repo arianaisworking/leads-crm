@@ -1031,7 +1031,61 @@ async function renderStemCell(m){
       <td style="padding:9px 8px;text-align:right"><button class="btn ghost sm" data-lead="${r.id}">Open</button></td>
     </tr>`).join("")}</tbody></table></div>
     <p class="muted" style="margin:12px 0 0;font-size:12px">Per-affiliate referral &amp; commission tracking (and payout emails) coming next — for now this holds your affiliates and their codes.</p></div>`;
-  $("#scWrap").querySelectorAll("[data-lead]").forEach(b=>b.onclick=()=>openLead(parseInt(b.dataset.lead,10)));
+  $("#scWrap").querySelectorAll("[data-lead]").forEach(b=>b.onclick=()=>renderAffiliate(m, rows.find(r=>String(r.id)===b.dataset.lead)));
+}
+
+async function renderAffiliate(m, aff){
+  if(!aff) return renderStemCell(m);
+  const money=n=>"$"+(Math.round((n||0)*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const ST=[["referred","Referred"],["consulted","Consulted"],["converted","Converted (owed)"],["paid","Paid out"]];
+  m.innerHTML=head("Stem Cell Affiliate",esc(aff.name),`<button class="btn ghost" id="afBack">← All affiliates</button>`)+`<div id="afWrap"><p class="muted">Loading…</p></div>`;
+  $("#afBack").onclick=()=>renderStemCell(m);
+  async function load(){
+    let refs=[]; try{ refs=await api("/leads/"+aff.id+"/referrals"); }catch(e){}
+    const owed=refs.filter(r=>r.status==="converted").reduce((a,r)=>a+(r.commission||0),0);
+    const paid=refs.filter(r=>r.status==="paid").reduce((a,r)=>a+(r.commission||0),0);
+    const converted=refs.filter(r=>r.status==="converted"||r.status==="paid").length;
+    $("#afWrap").innerHTML=`
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="cv-card" style="flex:1;min-width:120px"><div style="font-size:24px;font-weight:800">${refs.length}</div><div class="muted">Referrals</div></div>
+        <div class="cv-card" style="flex:1;min-width:120px"><div style="font-size:24px;font-weight:800">${converted}</div><div class="muted">Converted</div></div>
+        <div class="cv-card" style="flex:1;min-width:120px"><div style="font-size:24px;font-weight:800;color:var(--pink)">${money(owed)}</div><div class="muted">Commission owed</div></div>
+        <div class="cv-card" style="flex:1;min-width:120px"><div style="font-size:24px;font-weight:800;color:var(--client)">${money(paid)}</div><div class="muted">Paid out</div></div>
+      </div>
+      <div class="cv-card" style="margin-bottom:14px"><h4>Affiliate profile</h4>
+        <div class="cv-kv"><span>Contact</span><b>${esc(aff.email||aff.phone||"—")}</b></div>
+        <div class="cv-kv"><span>Category</span><b>${esc(aff.category||"—")}</b></div>
+        <div class="cv-kv"><span>Commission rate</span><b><input type="number" id="afRate" value="${esc(aff.affiliate_commission||"")}" style="width:64px"> %</b></div>
+        <button class="btn ghost sm" id="afRateSave" style="margin-top:8px">Save rate</button>
+        <span class="muted" style="font-size:12px;margin-left:8px">Commission = the plan value they convert × this %.</span>
+      </div>
+      <div class="cv-card"><h4>Add a referral <span class="cs-hint" style="text-transform:none;letter-spacing:0">— a person this affiliate sent you</span></h4>
+        <div class="drow"><input id="afNewName" placeholder="Referred person's name *"><input id="afNewPhone" placeholder="Phone"></div>
+        <div class="drow" style="margin-top:8px"><input id="afNewEmail" placeholder="Email"><input id="afNewNotes" placeholder="Notes (optional)"></div>
+        <button class="btn" id="afAdd" style="margin-top:10px">Add referral</button></div>
+      <div class="cv-card" style="margin-top:14px"><h4>Referrals</h4>
+        ${refs.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:700px">
+          <thead><tr>${["Person","Status","Plan","Plan value","Commission",""].map(h=>`<th style="text-align:left;padding:6px 8px;color:var(--ink-soft);font-weight:600">${h}</th>`).join("")}</tr></thead>
+          <tbody>${refs.map(r=>`<tr style="border-top:1px solid var(--line)" data-r="${r.id}">
+            <td style="padding:8px"><div style="font-weight:600">${esc(r.name)}</div><div class="sub">${esc(r.email||r.phone||"")}</div></td>
+            <td style="padding:8px"><select class="rStatus">${ST.map(([v,l])=>`<option value="${v}" ${r.status===v?"selected":""}>${l}</option>`).join("")}</select></td>
+            <td style="padding:8px"><input class="rPlan" value="${esc(r.plan||"")}" placeholder="e.g. 3-IV package" style="width:130px"></td>
+            <td style="padding:8px"><input class="rVal" type="number" value="${esc(r.plan_value||"")}" placeholder="0" style="width:90px"></td>
+            <td style="padding:8px;font-weight:700;color:var(--pink)">${r.commission!=null?money(r.commission):"—"}</td>
+            <td style="padding:8px;white-space:nowrap"><button class="btn ghost sm rSave">Save</button> <button class="rDel" title="Delete" style="border:0;background:none;cursor:pointer;color:var(--dead);font-size:15px">✕</button></td>
+          </tr>`).join("")}</tbody></table></div>
+        <p class="muted" style="margin:10px 0 0;font-size:12px">Move a referral to <b>Converted</b> once they pay a deposit and enter the plan value — commission calculates automatically. Mark <b>Paid out</b> after you pay the affiliate.</p>`:`<p class="muted" style="margin:0">No referrals yet — add the people this affiliate sends you above.</p>`}
+      </div>`;
+    $("#afRateSave").onclick=async()=>{ const v=$("#afRate").value?parseFloat($("#afRate").value):null;
+      try{ await api("/leads/"+aff.id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({affiliate_commission:v})}); aff.affiliate_commission=v; toast("Rate saved."); }catch(e){ alert(e.message); } };
+    $("#afAdd").onclick=async()=>{ const name=$("#afNewName").value.trim(); if(!name){$("#afNewName").focus();return;}
+      try{ await api("/leads/"+aff.id+"/referrals",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name,phone:$("#afNewPhone").value||null,email:$("#afNewEmail").value||null,notes:$("#afNewNotes").value||null})}); toast("Referral added."); load(); }catch(e){ alert(e.message); } };
+    $("#afWrap").querySelectorAll("tr[data-r]").forEach(tr=>{ const rid=tr.dataset.r;
+      tr.querySelector(".rSave").onclick=async()=>{ try{ await api("/referrals/"+rid,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:tr.querySelector(".rStatus").value,plan:tr.querySelector(".rPlan").value||null,plan_value:tr.querySelector(".rVal").value||null})}); toast("Saved."); load(); }catch(e){ alert(e.message); } };
+      tr.querySelector(".rDel").onclick=async()=>{ if(!confirm("Delete this referral?"))return; try{ await api("/referrals/"+rid,{method:"DELETE"}); load(); }catch(e){ alert(e.message); } };
+    });
+  }
+  await load();
 }
 
 async function renderBilling(m){

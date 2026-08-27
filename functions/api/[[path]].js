@@ -200,6 +200,24 @@ export async function onRequest(context) {
         }
       }
 
+      // GET /api/leads/:id/referrals  |  POST /api/leads/:id/referrals   (stem-cell affiliate referrals)
+      if (parts.length === 3 && parts[2] === "referrals") {
+        if (method === "GET") {
+          const { results } = await db.prepare(
+            "SELECT * FROM stem_referrals WHERE affiliate_id = ? ORDER BY created_at DESC").bind(id).all();
+          return json(results || []);
+        }
+        if (method === "POST") {
+          const b = await request.json();
+          if (!b.name) return err("referral name is required");
+          const rid = "sr_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+          await db.prepare("INSERT INTO stem_referrals (id, affiliate_id, name, phone, email, notes, status) VALUES (?,?,?,?,?,?, 'referred')")
+            .bind(rid, id, b.name, b.phone || null, b.email || null, b.notes || null).run();
+          const row = await db.prepare("SELECT * FROM stem_referrals WHERE id = ?").bind(rid).first();
+          return json(row, 201);
+        }
+      }
+
       // PATCH /api/leads/:id  (update editable fields)
       if (parts.length === 2 && method === "PATCH") {
         const b = await request.json();
@@ -225,6 +243,38 @@ export async function onRequest(context) {
       if (parts.length === 2 && method === "DELETE") {
         await db.prepare("DELETE FROM notes WHERE lead_id = ?").bind(id).run();
         await db.prepare("DELETE FROM leads WHERE id = ?").bind(id).run();
+        return json({ ok: true });
+      }
+    }
+
+    // PATCH/DELETE /api/referrals/:rid  (update a stem-cell referral; commission auto-computes)
+    if (parts[0] === "referrals" && parts.length === 2) {
+      const rid = parts[1];
+      if (method === "PATCH") {
+        const b = await request.json();
+        const ref = await db.prepare("SELECT * FROM stem_referrals WHERE id = ?").bind(rid).first();
+        if (!ref) return err("referral not found", 404);
+        const sets = [], bind = [];
+        if ("status" in b) {
+          sets.push("status = ?"); bind.push(b.status);
+          if (b.status === "converted" && !ref.converted_at) sets.push("converted_at = datetime('now')");
+          if (b.status === "paid" && !ref.paid_at) sets.push("paid_at = datetime('now')");
+        }
+        for (const k of ["name", "phone", "email", "plan", "notes"]) if (k in b) { sets.push(`${k} = ?`); bind.push(b[k] || null); }
+        let planValue = ref.plan_value;
+        if ("plan_value" in b) { planValue = (b.plan_value === "" || b.plan_value == null) ? null : Number(b.plan_value); sets.push("plan_value = ?"); bind.push(planValue); }
+        // commission = plan value × the affiliate's commission %
+        const aff = await db.prepare("SELECT affiliate_commission FROM leads WHERE id = ?").bind(ref.affiliate_id).first();
+        const pct = aff && aff.affiliate_commission ? Number(aff.affiliate_commission) : 0;
+        const commission = (planValue != null) ? Math.round(planValue * pct) / 100 : null;
+        sets.push("commission = ?"); bind.push(commission);
+        bind.push(rid);
+        await db.prepare(`UPDATE stem_referrals SET ${sets.join(", ")} WHERE id = ?`).bind(...bind).run();
+        const row = await db.prepare("SELECT * FROM stem_referrals WHERE id = ?").bind(rid).first();
+        return json(row);
+      }
+      if (method === "DELETE") {
+        await db.prepare("DELETE FROM stem_referrals WHERE id = ?").bind(rid).run();
         return json({ ok: true });
       }
     }
