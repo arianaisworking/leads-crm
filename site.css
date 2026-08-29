@@ -1,0 +1,92 @@
+/* site.css — shared chrome for the content pages on truckersandtrokeros.com
+   (privacy, terms, referrals, carriers, 404).
+
+   drive.html keeps its own styles on purpose: it's the marketing landing page
+   with a bespoke hero and card grid, and it's already live and tested. These
+   pages are the other kind — header, prose, footer — and they all want the
+   same shell. Tokens below mirror drive.html exactly so the two never drift
+   apart visually. */
+
+:root{
+  --ink:#101720; --ink-2:#1c2733; --soft:#5d6b7a; --line:#e2e8ef; --bg:#fff; --wash:#f5f7fa;
+  --brand:#e8590c; --brand-dark:#c04a08; --brand-wash:#fff3ec; --deep:#0d1620; --ok:#1f9d6b;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3{line-height:1.2;margin:0}
+a{color:var(--brand-dark)}
+
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.narrow{max-width:760px}
+
+/* header — same bar as the landing page so the site feels like one place */
+header{position:sticky;top:0;z-index:40;background:rgba(13,22,32,.94);backdrop-filter:blur(8px);color:#fff}
+header a{color:inherit}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em;text-decoration:none}
+.logo svg{flex:none}
+.lang{display:flex;gap:2px;background:rgba(255,255,255,.12);border-radius:9px;padding:3px}
+.lang button{border:0;background:transparent;color:#c3cedb;font:inherit;font-size:13px;font-weight:700;
+  padding:5px 11px;border-radius:7px;cursor:pointer;min-height:44px}
+.lang button.on{background:#fff;color:var(--deep)}
+.hd .cta{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 18px;
+  font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;text-decoration:none;white-space:nowrap;min-height:44px;
+  display:inline-flex;align-items:center}
+.hd .cta:hover{background:var(--brand-dark)}
+
+/* page head */
+.phead{background:var(--wash);border-bottom:1px solid var(--line);padding:44px 0 38px}
+.phead h1{font-size:clamp(29px,4.6vw,42px);font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
+.phead p{color:var(--soft);font-size:17.5px;margin:0;max-width:620px}
+.eyebrow{color:var(--brand);font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:11px}
+
+/* prose */
+.prose{padding:46px 0 60px}
+.prose h2{font-size:23px;font-weight:800;letter-spacing:-.01em;margin:38px 0 10px;scroll-margin-top:74px}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:17.5px;font-weight:700;margin:24px 0 6px}
+.prose p{margin:0 0 14px;color:var(--ink-2)}
+.prose ul{margin:0 0 16px;padding-left:20px;color:var(--ink-2)}
+.prose li{margin-bottom:7px}
+.prose strong{color:var(--ink)}
+.prose .upd{color:var(--soft);font-size:14.5px;margin-bottom:30px}
+
+/* a callout for the parts people actually need to notice */
+.call{background:var(--brand-wash);border:1px solid #ffd9c2;border-radius:14px;padding:16px 19px;
+  margin:0 0 22px;color:#7c3908;font-size:15.5px}
+.call p{color:inherit;margin:0 0 9px}
+.call p:last-child{margin:0}
+.call.plain{background:var(--wash);border-color:var(--line);color:var(--ink-2)}
+
+/* table for the data-we-hold summary */
+.tbl{width:100%;border-collapse:collapse;margin:0 0 22px;font-size:15.5px}
+.tbl th,.tbl td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-size:12.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--soft);
+  border-bottom:1.5px solid var(--line)}
+.tbl td:first-child{font-weight:700;white-space:nowrap}
+@media(max-width:640px){
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl thead{display:none}
+  .tbl tr{border-bottom:1px solid var(--line);padding:12px 0}
+  .tbl td{border:0;padding:2px 0}
+  .tbl td:first-child{white-space:normal;font-size:16px}
+  .tbl td[data-l]:before{content:attr(data-l);display:block;font-size:11.5px;font-weight:800;
+    letter-spacing:.05em;text-transform:uppercase;color:var(--soft);margin-top:7px}
+}
+
+.btn{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:14px 28px;font:inherit;
+  font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;
+  justify-content:center;min-height:48px}
+.btn:hover{background:var(--brand-dark)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+
+footer{background:#080f16;color:#7d8b9a;padding:34px 0;font-size:13.5px}
+.ft{display:flex;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;align-items:center}
+.ftlinks{display:flex;gap:18px;flex-wrap:wrap}
+footer a{color:#a9b7c5;text-decoration:none}
+footer a:hover{color:#fff}
+
+input,select,textarea,button{font-size:16px}
