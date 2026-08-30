@@ -1,28 +1,23 @@
 -- ============================================================
--- aiw-recruiting : migration 007 — carrier enquiries
+-- aiw-recruiting : migration 007 — carriers we're still chasing
 -- Run after migration-recruiting-006.sql.
 --
--- Enquiries from the carriers page. Deliberately its own table rather than a
--- row in `leads`: a carrier is not a driver, nothing in the screening or
--- nudge logic should ever pick one up, and losing one costs far more than
--- losing a driver lead — one carrier is a whole revenue line.
+-- A carrier has a lifecycle: someone we're pitching, then someone who pays us.
+-- Both belong in `carriers` — same company, same contact details, one record
+-- that gains qualification rules and a fee when they sign. A second table for
+-- prospects would mean copying the row across at the exact moment things get
+-- busy, which is when data gets lost.
+--
+-- `status` marks which half of the life they're in. `active` stays the guard
+-- on the recruiting side: a prospect is active=0, so firstCarrier() can never
+-- assign a driver to a company that hasn't agreed to anything.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS carrier_inquiries (
-  id            TEXT PRIMARY KEY,
-  company       TEXT NOT NULL,
-  contact_name  TEXT,
-  email         TEXT,
-  phone         TEXT,
-  dot_number    TEXT,
-  terminal      TEXT,          -- where they need drivers
-  driver_type   TEXT,          -- owner_operator | company | both | unsure
-  need          TEXT,          -- how many drivers, how soon, in their words
-  status        TEXT DEFAULT 'new',   -- new | talking | won | lost
-  source        TEXT,
-  notes         TEXT,
-  created_at    TEXT DEFAULT (datetime('now')),
-  updated_at    TEXT DEFAULT (datetime('now'))
-);
+ALTER TABLE carriers ADD COLUMN status TEXT DEFAULT 'partner';   -- prospect | partner
+ALTER TABLE carriers ADD COLUMN website TEXT;
+ALTER TABLE carriers ADD COLUMN need TEXT;      -- what they said they're short of
 
-CREATE INDEX IF NOT EXISTS idx_carrier_inquiries_status ON carrier_inquiries (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_carriers_status ON carriers (status, active);
+
+-- Everything already in the table is a real partner.
+UPDATE carriers SET status = 'partner' WHERE status IS NULL;

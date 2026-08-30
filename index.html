@@ -1618,7 +1618,29 @@ async function renderCarriers(m){
   m.innerHTML=head("Who pays us","Carriers",`<button class="btn ghost" id="carAdd">+ Add carrier</button>`)+`<div id="carList"></div>`;
   async function load(){
     await loadCarriers();
-    $("#carList").innerHTML=DR_CARRIERS.length?DR_CARRIERS.map(c=>{
+    // Partners first, then the ones we're still chasing. A prospect has no
+    // qualification rules and hasn't agreed to a fee, so it gets none of the
+    // recruiting furniture -- above all no application link, which would send
+    // drivers at a company that hasn't signed anything.
+    const parts=DR_CARRIERS.filter(c=>c.status!=="prospect"), pros=DR_CARRIERS.filter(c=>c.status==="prospect");
+    const groupHead=(t,n)=>`<div class="sub" style="font-weight:800;letter-spacing:.05em;text-transform:uppercase;font-size:11.5px;margin:18px 0 9px">${t} · ${n}</div>`;
+    const prospectCard=(c)=>`<div class="card" style="margin-bottom:10px;padding:15px 18px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div><div style="font-weight:700;font-size:15.5px">${esc(c.name)}
+            <span style="background:#fff3ec;color:#c04a08;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:20px;margin-left:7px;vertical-align:2px">Prospect</span></div>
+            <div class="sub" style="margin-top:3px">${[c.contact_name?esc(c.contact_name):"",c.contact_email?esc(c.contact_email):"",c.contact_phone?esc(c.contact_phone):""].filter(Boolean).join(" · ")||"No contact details"}</div>
+            ${c.terminal?`<div class="sub" style="margin-top:3px">${esc(c.terminal)}</div>`:""}
+            ${c.need?`<div class="sub" style="margin-top:5px;color:var(--ink)">${esc(c.need)}</div>`:""}
+          </div>
+          <button class="btn ghost sm" data-edit="${c.id}" type="button">Open</button>
+        </div></div>`;
+
+    $("#carList").innerHTML=DR_CARRIERS.length?(
+      (parts.length?groupHead("Partners",parts.length):"")+partsHtml(parts)+
+      (pros.length?groupHead("Prospects",pros.length)+pros.map(prospectCard).join(""):"")
+    ):`<div class="card"><div class="empty"><div class="mark">🏢</div><h3>No carriers yet</h3><p>Add the carrier you're recruiting for — their qualification rules drive every driver's screening.</p></div></div>`;
+
+    function partsHtml(list){ return list.map(c=>{
       const applyUrl=location.origin+"/apply.html?carrier="+encodeURIComponent(c.id);
       const fee=c.fee_amount!=null?(c.fee_type==="percent"?c.fee_amount+"%":drMoney(c.fee_amount)):"not set";
       return `<div class="card" style="margin-bottom:14px;padding:18px 20px">
@@ -1643,7 +1665,7 @@ async function renderCarriers(m){
           ${c.orientation_info?`<div class="sub" style="margin-top:10px"><b>Orientation:</b> ${esc(c.orientation_info)}</div>`:""}
           <div style="margin-top:10px"><button class="btn ghost sm" data-edit="${c.id}" type="button">Edit carrier &amp; fee</button></div>
         </div></div>`;
-    }).join(""):`<div class="card"><div class="empty"><div class="mark">🏢</div><h3>No carriers yet</h3><p>Add the carrier you're recruiting for — their qualification rules drive every driver's screening.</p></div></div>`;
+    }).join(""); }
     $("#carList").querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{navigator.clipboard.writeText(b.dataset.copy);toast("Application link copied.");});
     $("#carList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openCarrier(b.dataset.edit,load));
   }

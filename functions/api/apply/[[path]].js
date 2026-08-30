@@ -314,12 +314,16 @@ export async function onRequest(context) {
     if (!company || !(email || phone)) {
       return cors(json({ error: 'Company name and an email or phone number are required.' }, 400));
     }
-    const id = rid('ci');
-    await db.prepare(`INSERT INTO carrier_inquiries
-        (id, company, contact_name, email, phone, dot_number, terminal, driver_type, need, source)
-        VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(
+    // A website enquiry becomes a prospect row in `carriers` -- same table the
+    // signed partners live in, so it never has to be copied across when they
+    // sign. active=0 keeps it out of firstCarrier() and every screening path.
+    const id = rid('ca');
+    await db.prepare(`INSERT INTO carriers
+        (id, name, contact_name, contact_email, contact_phone, dot_number, terminal,
+         driver_type, need, status, active, notes)
+        VALUES (?,?,?,?,?,?,?,?,?,'prospect',0,?)`).bind(
       id, company, t(b.contact_name, 200), email, phone, t(b.dot_number, 40), t(b.terminal, 200),
-      t(b.driver_type, 40), t(b.need, 1000), t(b.source, 120) || 'carriers page').run();
+      t(b.driver_type, 40), t(b.need, 1000), 'Came in through ' + (t(b.source, 120) || 'the carriers page')).run();
 
     const row = (k, v) => v ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6472">${esc(k)}</td><td style="font-weight:600">${esc(v)}</td></tr>` : '';
     context.waitUntil(sendEmail(env, {
