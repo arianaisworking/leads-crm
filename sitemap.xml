@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://truckersandtrokeros.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es"/>
+    <changefreq>weekly</changefreq><priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/es</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es"/>
+    <changefreq>weekly</changefreq><priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/privacy"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/privacy"/>
+    <changefreq>yearly</changefreq><priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/es/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/privacy"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/privacy"/>
+    <changefreq>yearly</changefreq><priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/terms"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/terms"/>
+    <changefreq>yearly</changefreq><priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/es/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/terms"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/terms"/>
+    <changefreq>yearly</changefreq><priority>0.3</priority>
+  </url>
+</urlset>

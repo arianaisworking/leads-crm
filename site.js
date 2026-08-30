@@ -78,7 +78,9 @@ function paintPage() {
   document.querySelectorAll('[data-t]').forEach((el) => {
     const v = t[el.dataset.t];
     if (v == null) return;
-    if (/<\/?[a-z]/i.test(v)) el.innerHTML = v; else el.textContent = v;
+    // Entities count as markup too. "Truckers &amp; Trokeros" carries no tag,
+    // and textContent would print the &amp; literally.
+    if (/<\/?[a-z]|&[a-z]+;|&#\d+;/i.test(v)) el.innerHTML = v; else el.textContent = v;
   });
   // Sections that are lists rather than single strings: [data-list="key"].
   document.querySelectorAll('[data-list]').forEach((el) => {

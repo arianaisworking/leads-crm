@@ -342,7 +342,7 @@
 <footer>
   <div class="wrap ft">
     <div>© <span id="yr"></span> Truckers &amp; Trokeros · <span data-t="ft_tag"></span></div>
-    <div style="display:flex;gap:18px;flex-wrap:wrap"><a id="fttel" href="#" data-tel hidden></a><a href="#apply" data-t="ft_link">Apply to drive</a></div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap"><a id="fttel" href="#" data-tel hidden></a><a id="ftpriv" href="/privacy" data-t="ft_privacy"></a><a id="ftterms" href="/terms" data-t="ft_terms"></a><a href="#apply" data-t="ft_link">Apply to drive</a></div>
   </div>
 </footer>
 
@@ -422,6 +422,7 @@ const T = {
     c_h:"Rather just talk to someone?",
     c_p:"Call or message us. We'll answer your questions straight, in English or Spanish, with no pressure to apply.",
     wa_msg:"Hi — I saw truckersandtrokeros.com and I'd like to know more about driving as an owner-operator.",
+    ft_privacy:"Privacy", ft_terms:"Terms",
     form_h:"Start your application",
     form_sub:"Two minutes now, five when we send the full one.",
     l_name:"Full name", l_phone:"Cell phone", l_email:"Email", l_city:"City & state",
@@ -534,6 +535,7 @@ const T = {
     c_h:"¿Prefieres hablar con alguien?",
     c_p:"Llámanos o mándanos un mensaje. Te contestamos claro, en español o en inglés, sin presionarte para que apliques.",
     wa_msg:"Hola — vi truckersandtrokeros.com y quiero saber más sobre trabajar como dueño de troca.",
+    ft_privacy:"Privacidad", ft_terms:"Términos",
     form_h:"Empieza tu solicitud",
     form_sub:"Dos minutos ahora, cinco cuando te mandemos la completa.",
     l_name:"Nombre completo", l_phone:"Teléfono celular", l_email:"Correo electrónico", l_city:"Ciudad y estado",
@@ -650,6 +652,10 @@ function paint(){
   }
   const canon = document.querySelector('link[rel=canonical]');
   if (canon) canon.href = 'https://truckersandtrokeros.com' + (lang === 'es' ? '/es' : '/');
+  const pfx = lang === 'es' ? '/es' : '';
+  const fp = document.getElementById('ftpriv'), ftm = document.getElementById('ftterms');
+  if (fp) fp.href = pfx + '/privacy';
+  if (ftm) ftm.href = pfx + '/terms';
   if (typeof paintContact === 'function') paintContact();
 }
 document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>{ lang=b.dataset.lang; paint(); });

@@ -37,8 +37,14 @@ export async function onRequest(context) {
   // English for a Spanish speaker is a link that gets closed. Same page either
   // way — the page reads the path and paints itself in that language.
   const site = PUBLIC_SITES[url.hostname.toLowerCase()];
-  if (site && (path === '/' || path === '/index.html' || path === '/es' || path === '/es/')) {
-    return next(new Request(new URL(site, url), request));
+  if (site) {
+    // Clean URLs, each with a Spanish twin: /privacy and /es/privacy both serve
+    // privacy.html, which reads the path to decide which language to paint.
+    const PAGES = { '': site, 'privacy': '/privacy.html', 'terms': '/terms.html' };
+    const seg = path.replace(/^\/es(?=\/|$)/, '').replace(/^\/|\/$/g, '');
+    if (path === '/index.html' || Object.prototype.hasOwnProperty.call(PAGES, seg)) {
+      return next(new Request(new URL(PAGES[path === '/index.html' ? '' : seg], url), request));
+    }
   }
 
   if (!path.startsWith('/api/')) return next();

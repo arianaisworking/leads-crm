@@ -1,0 +1,12 @@
+# truckersandtrokeros.com
+User-agent: *
+Allow: /
+
+# The CRM and the driver-facing APIs are not for crawlers. The team API is
+# already behind a session; this just keeps the noise out of the logs.
+Disallow: /api/
+Disallow: /index.html
+Disallow: /apply.html
+Disallow: /lease.html
+
+Sitemap: https://truckersandtrokeros.com/sitemap.xml
