@@ -1,0 +1,45 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "A — Highway", "x": 0, "y": 0, "w": 390, "h": 1240 },
+    { "file": "Dispatch.dc.html", "title": "B — Dispatch", "x": 570, "y": 0, "w": 390, "h": 1180 },
+    { "file": "DobleVia.dc.html", "title": "C — Doble Vía", "x": 1140, "y": 0, "w": 390, "h": 1240 }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -210,
+      "w": 480,
+      "text": "Three directions, same real copy and real numbers.\nAll at phone width — drivers are the primary audience.\n\nWhat's fixed in all three: no system fonts, no emoji,\nno gradient hero, no uniform card grid."
+    },
+    {
+      "id": "note-a",
+      "x": 0,
+      "y": 1290,
+      "w": 390,
+      "text": "A — HIGHWAY\nOverpass (descended from US highway signage) + Public Sans.\nType IS the graphic. Flat black/white, one orange, thick rules.\n\nFor: legible at arm's length in a cab; reads official, which\nis its own kind of credible to a safety director.\nAgainst: institutional. Least warm of the three — weakest\nwhere trust is personal."
+    },
+    {
+      "id": "note-b",
+      "x": 570,
+      "y": 1230,
+      "w": 390,
+      "text": "B — DISPATCH\nArchivo + IBM Plex Mono. Bills of lading, dispatch sheets.\nLabelled rows, monospace figures, a document header.\n\nFor: strongest for carriers — looks like an operation with\nreal systems, which is exactly what we're selling them.\nAgainst: dense. Hardest to skim on a phone in sunlight,\nand the coldest read for a driver."
+    },
+    {
+      "id": "note-c",
+      "x": 1140,
+      "y": 1290,
+      "w": 390,
+      "text": "C — DOBLE VÍA\nBricolage Grotesque + Instrument Sans. One bold orange field.\nSpanish and English stacked by construction, not a toggle.\n\nFor: strongest for the trokero audience — where the barrier\nis trust, not information. Unmistakable in a group chat.\nAgainst: least corporate to a safety director, and it wants\nreal photography to carry it."
+    },
+    {
+      "id": "next",
+      "x": 1620,
+      "y": 0,
+      "w": 300,
+      "text": "Pick one and I'll build it into the live site.\n\nOr mix: A's hero with C's bilingual treatment is a\nreal option — the type pairings are the part that\ndoesn't mix.\n\nSend the graphics whenever; every direction has\nroom for photography, C most of all."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}
