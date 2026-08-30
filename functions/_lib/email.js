@@ -9,6 +9,9 @@
 //   FROM_EMAIL      optional  — default "AIW Patients <patients@arianaisworking.com>"
 //                               (must be a Resend-verified domain)
 //   TEAM_EMAIL      optional  — where team notifications go (default below)
+//   RECRUITING_TEAM_EMAIL
+//                   optional  — overrides TEAM_EMAIL for the driver-recruiting
+//                               division only (e.g. recruiting@truckersandtrokeros.com)
 
 export function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -26,6 +29,14 @@ export function fromEmail(env) {
 
 export function teamEmail(env) {
   return env.TEAM_EMAIL || 'arianaisworking@gmail.com';
+}
+
+// The divisions share one Pages project, so they share TEAM_EMAIL -- pointing
+// that at the recruiting address would quietly redirect the doctor-patient
+// intake notices there too. This lets recruiting have its own destination
+// without touching anything else; unset, it behaves exactly as before.
+export function recruitingTeamEmail(env) {
+  return env.RECRUITING_TEAM_EMAIL || teamEmail(env);
 }
 
 // Where replies to our outbound mail should land. We want doctors/patients to

@@ -17,7 +17,7 @@
 // directly with the carrier — we have no business holding them.
 
 import { json } from '../../_lib/tenant.js';
-import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
+import { sendEmail, emailShell, recruitingTeamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '../../_lib/screening.js';
 import { seal, vaultReady } from '../../_lib/vault.js';
 import { seedDocs, secret as mkSecret, carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
@@ -164,7 +164,7 @@ export async function onRequest(context) {
     ].filter(([, v]) => v).map(([k, v]) => `<tr><td style="padding:3px 12px 3px 0;color:#5b6472">${esc(k)}</td><td style="padding:3px 0;font-weight:600">${esc(v)}</td></tr>`).join('');
     const tone = s.result === 'qualified' ? ['#e9f7f0', '#b7e4cd', '#136c47'] : s.result === 'review' ? ['#fff6e5', '#f5d9a0', '#8a5a00'] : ['#fdecec', '#f5c2c2', '#9b2c2c'];
     context.waitUntil(sendEmail(env, {
-      to: teamEmail(env),
+      to: recruitingTeamEmail(env),
       subject: `${s.result === 'qualified' ? '✅' : s.result === 'review' ? '⚠️' : '⛔'} Driver application — ${full.name}`,
       html: emailShell('New driver application', `
         <div style="background:${tone[0]};border:1px solid ${tone[1]};color:${tone[2]};border-radius:10px;padding:10px 14px;margin:0 0 14px"><b>${esc(screenSummary(s))}</b></div>
@@ -286,7 +286,7 @@ export async function onRequest(context) {
       emailed = !!r.ok;
     }
     context.waitUntil(sendEmail(env, {
-      to: teamEmail(env),
+      to: recruitingTeamEmail(env),
       subject: `New driver lead — ${name}`,
       html: emailShell('New driver lead', `
         <p style="margin:0 0 10px;font-size:16px"><b>${esc(name)}</b></p>
@@ -402,7 +402,7 @@ export async function onRequest(context) {
       if (c) { const fresh = await db.prepare('SELECT * FROM leads WHERE id=?').bind(d.id).first(); await seedDocs(db, fresh, c); }
 
       context.waitUntil(sendEmail(env, {
-        to: teamEmail(env),
+        to: recruitingTeamEmail(env),
         subject: `Lease form returned — ${d.name}`,
         html: emailShell('Lease form returned', `
           <p style="margin:0 0 10px;font-size:16px"><b>${esc(d.name)}</b> completed their lease information${sealed ? ' including direct deposit details' : ''}.</p>

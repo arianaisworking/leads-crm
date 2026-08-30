@@ -11,7 +11,7 @@
 // the same thing.
 
 import { json } from '../../_lib/tenant.js';
-import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
+import { sendEmail, emailShell, recruitingTeamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { rid } from '../../_lib/recruiting.js';
 
 const MIN_GAP_DAYS = 3;   // never repeat the same nudge inside this window
@@ -198,7 +198,7 @@ export async function onRequest(context) {
       const money = (v) => '$' + Number(v || 0).toLocaleString('en-US');
       if (us.length || mx.length || (billable && billable.n)) {
         const r = await sendEmail(env, {
-          to: teamEmail(env),
+          to: recruitingTeamEmail(env),
           subject: `Recruiting — ${us.length} to confirm, ${(billable && billable.n) || 0} to invoice`,
           html: emailShell('What needs you today', `
             ${billable && billable.n ? `<div style="background:#e9f7f0;border:1px solid #b7e4cd;color:#136c47;border-radius:10px;padding:11px 14px;margin:0 0 14px"><b>${money(billable.amount)}</b> ready to invoice — ${billable.n} seated driver${billable.n === 1 ? '' : 's'}.</div>` : ''}
@@ -207,7 +207,7 @@ export async function onRequest(context) {
             <p style="margin:10px 0 0;color:#5b6472;font-size:13px">Open the CRM to work these.</p>`, brandName(env)),
         });
         await db.prepare('INSERT INTO driver_nudges (id, driver_id, kind, channel, sent_to, ok) VALUES (?,?,?,?,?,?)')
-          .bind(rid('ng'), 0, 'team_digest', 'email', teamEmail(env), r.ok ? 1 : 0).run();
+          .bind(rid('ng'), 0, 'team_digest', 'email', recruitingTeamEmail(env), r.ok ? 1 : 0).run();
         digest = { unseated: us.length, billable: (billable && billable.n) || 0, stuck: mx.length, ok: !!r.ok };
       }
     }
