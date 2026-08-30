@@ -9,6 +9,7 @@ import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '
 import { seedDocs, ensurePlacement, leasePacketHtml, openSecure, secret as mkSecret,
   carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
 import { redact } from '../../_lib/vault.js';
+import { draftRules } from '../../_lib/brain.js';
 
 function token() {
   const b = crypto.getRandomValues(new Uint8Array(18));
@@ -65,6 +66,28 @@ export async function onRequest(context) {
     if (method === 'GET' && id) {
       const c = await db.prepare('SELECT * FROM carriers WHERE id=?').bind(id).first();
       return json({ carrier: c || null });
+    }
+
+    // Read a carrier's criteria document and DRAFT a rule set. Deliberately
+    // returns the draft rather than saving it: a screening rule decides whether
+    // a real person is told they qualify, so a human approves it first.
+    if (method === 'POST' && id && sub === 'brain') {
+      const c = await db.prepare('SELECT id,name FROM carriers WHERE id=?').bind(id).first();
+      if (!c) return json({ error: 'No such carrier.' }, 404);
+      const b = await request.json().catch(() => ({}));
+      const text = typeof b.text === 'string' ? b.text.trim() : '';
+      const pdf = typeof b.pdf === 'string' ? b.pdf : '';
+      if (!text && !pdf) return json({ error: 'Paste the criteria, or attach the PDF.' }, 400);
+      if (text.length > 200000) return json({ error: 'That document is too long to send in one piece.' }, 400);
+
+      const r = await draftRules(env, pdf ? { pdfBase64: pdf } : { text }, c.name);
+      if (!r.ok) return json({ error: r.error }, 502);
+
+      // Show what would change, so the reviewer sees a diff and not a wall of JSON.
+      const current = await db.prepare('SELECT qual_rules FROM carriers WHERE id=?').bind(id).first();
+      let existing = null;
+      try { existing = current && current.qual_rules ? JSON.parse(current.qual_rules) : null; } catch { existing = null; }
+      return json({ ok: true, draft: r.draft, existing, usage: r.usage });
     }
     if (method === 'POST' && !id) {
       const b = await request.json();

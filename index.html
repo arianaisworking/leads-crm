@@ -1705,11 +1705,77 @@ async function openCarrier(id,onSave){
       <div class="drow"><div class="field"><label>Billing email <span class="sub" style="font-weight:400">· if not the recruiting contact</span></label><input id="cBillEmail" value="${esc(c.billing_email||"")}"></div>
         <div class="field"><label>Payment terms</label><input id="cTerms" value="${esc(c.payment_terms||"Net 15")}"></div></div>
       <div class="field"><label>Notes</label><textarea id="cNotes" rows="3">${esc(c.notes||"")}</textarea></div>
+
+      ${id?`<div class="field" style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px">
+        <label>Their qualification criteria</label>
+        <p class="sub" style="margin:2px 0 10px">Paste the document, or attach the PDF. We read it and draft the screening rules — <b>you approve them before any driver is screened against them.</b></p>
+        <textarea id="cBrainText" rows="4" placeholder="Paste their criteria here…"></textarea>
+        <div class="drow" style="gap:8px;align-items:center;margin-top:8px">
+          <input type="file" id="cBrainPdf" accept="application/pdf" style="font-size:13px">
+          <button class="btn ghost sm" id="cBrainGo" type="button">Read it</button>
+          <span class="sub" id="cBrainMsg"></span>
+        </div>
+        <div id="cBrainOut" style="margin-top:12px"></div>
+      </div>`:""}
+
       <div class="dfoot"><button class="btn" id="cSave">Save carrier</button>
         ${id?`<button class="btn ghost" id="cDel">Delete</button>`:""}
         <span class="sub" id="cMsg"></span></div>
     </div>`;
   d.classList.add("show"); $("#scrim").classList.add("show"); $("#scrim").onclick=closeDrawer;
+
+  // ---- Reading a carrier's criteria into a rule set.
+  // The draft is never applied on its own: every field is shown with the
+  // current value beside it, and nothing reaches a driver until Save.
+  let BRAIN=null;
+  if(id && $("#cBrainGo")) $("#cBrainGo").onclick=async()=>{
+    const msg=$("#cBrainMsg"), out=$("#cBrainOut"), btn=$("#cBrainGo");
+    const text=$("#cBrainText").value.trim(), file=$("#cBrainPdf").files[0];
+    if(!text && !file){ msg.textContent="Paste the criteria or attach the PDF first."; return; }
+    btn.disabled=true; msg.textContent="Reading… this takes a moment."; out.innerHTML="";
+    try{
+      const body={};
+      if(file){
+        if(file.size>20*1024*1024) throw new Error("That PDF is over 20MB — send the text instead.");
+        body.pdf=await new Promise((res,rej)=>{const fr=new FileReader();
+          fr.onload=()=>res(String(fr.result).split(",")[1]); fr.onerror=()=>rej(new Error("Couldn't read that file.")); fr.readAsDataURL(file);});
+      } else body.text=text;
+      const r=await drapi("/carriers/"+id+"/brain",{method:"POST",body:JSON.stringify(body)});
+      BRAIN=r.draft;
+      const cur=r.existing||{};
+      const rows=[];
+      const walk=(obj,pre="")=>{ for(const k of Object.keys(obj||{})){ const v=obj[k];
+        if(v && typeof v==="object" && !Array.isArray(v)){ walk(v,pre+k+"."); continue; }
+        const now=pre.split(".").filter(Boolean).reduce((a,x)=>a&&a[x],cur);
+        const was=now?now[k]:undefined;
+        const shown=Array.isArray(v)?v.join(", "):String(v);
+        const changed=JSON.stringify(was)!==JSON.stringify(v);
+        rows.push(`<tr><td style="padding:4px 12px 4px 0;color:var(--muted);white-space:nowrap">${esc(pre+k)}</td>
+          <td style="padding:4px 0;font-weight:${changed?"700":"400"}">${esc(shown)}</td>
+          <td style="padding:4px 0 4px 12px;color:var(--muted);font-size:12px">${was===undefined?"new":changed?"was "+esc(String(was)):"same"}</td></tr>`);}};
+      walk(BRAIN.rules);
+      out.innerHTML=`
+        <div class="card" style="padding:14px 16px">
+          <div style="font-weight:700;margin-bottom:8px">Drafted rules — review before saving</div>
+          <table style="width:100%;font-size:13px">${rows.join("")}</table>
+          ${BRAIN.documents&&BRAIN.documents.length?`<div style="margin-top:12px"><b style="font-size:13px">Documents they require</b>
+            <ul style="margin:6px 0 0;padding-left:18px;font-size:13px">${BRAIN.documents.map(x=>`<li>${esc(x.label||x.kind)}${x.note?` <span class="sub">— ${esc(x.note)}</span>`:""}</li>`).join("")}</ul></div>`:""}
+          ${BRAIN.unknowns&&BRAIN.unknowns.length?`<div style="margin-top:12px;background:#fff3ec;border:1px solid #ffd9c2;border-radius:9px;padding:10px 12px">
+            <b style="font-size:13px;color:#7c3908">Their document doesn't say:</b>
+            <ul style="margin:5px 0 0;padding-left:18px;font-size:13px;color:#7c3908">${BRAIN.unknowns.map(u=>`<li>${esc(u)}</li>`).join("")}</ul>
+            <div style="font-size:12px;color:#7c3908;margin-top:6px">These fall back to sensible defaults. Ask the carrier before you rely on them.</div></div>`:""}
+          ${BRAIN.notes?`<div class="sub" style="margin-top:10px">${esc(BRAIN.notes)}</div>`:""}
+          <div style="margin-top:12px"><button class="btn sm" id="cBrainApply" type="button">Use these rules</button>
+            <span class="sub" style="margin-left:8px">Fills the carrier's rule set. Still needs Save.</span></div>
+        </div>`;
+      msg.textContent="";
+      $("#cBrainApply").onclick=()=>{ c.qual_rules=JSON.stringify(BRAIN.rules);
+        if(BRAIN.documents&&BRAIN.documents.length) c.doc_checklist=JSON.stringify(BRAIN.documents.map(x=>({kind:x.kind,label:x.label})));
+        msg.textContent="Applied — press Save carrier to keep it."; $("#cBrainApply").disabled=true; };
+    }catch(e){ msg.textContent=e.message||"That didn't work."; }
+    btn.disabled=false;
+  };
+
   $("#cSave").onclick=async()=>{
     const p={name:$("#cName").value.trim(),terminal:$("#cTerm").value.trim()||null,mc_number:$("#cMc").value.trim()||null,
       dot_number:$("#cDot").value.trim()||null,scac:$("#cScac").value.trim()||null,contact_name:$("#cCName").value.trim()||null,
@@ -1719,6 +1785,10 @@ async function openCarrier(id,onSave){
       fee_type:$("#cFeeType").value,fee_amount:$("#cFeeAmt").value?parseFloat($("#cFeeAmt").value):null,
       fee_trigger:$("#cFeeTrig").value,notes:$("#cNotes").value.trim()||null,
       billing_email:$("#cBillEmail").value.trim()||null,payment_terms:$("#cTerms").value.trim()||null};
+    // Rules applied from a criteria document ride along with the save. Without
+    // this the "Use these rules" button sets them locally and Save drops them.
+    if(c.qual_rules) p.qual_rules=c.qual_rules;
+    if(c.doc_checklist) p.doc_checklist=c.doc_checklist;
     if(!p.name){ $("#cMsg").textContent="Name is required."; return; }
     try{
       if(id) await drapi("/carriers/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(p)});
