@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Recruiting for Carriers — Truckers &amp; Trokeros</title>
+<meta name="description" content="We recruit owner-operators for carriers in Dallas–Fort Worth. We screen against your standards before a driver reaches your application. Commission only — you pay when a driver is seated.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://truckersandtrokeros.com/carriers">
+<meta name="theme-color" content="#0d1620">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://truckersandtrokeros.com/carriers">
+<meta property="og:title" content="Driver Recruiting for Carriers">
+<meta property="og:description" content="Send us your standards. We screen against them before a driver ever reaches your application. Commission only.">
+<meta property="og:image" content="https://truckersandtrokeros.com/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<style>
+  /* This page talks to carriers, not drivers — one column, denser, no
+     language toggle. It borrows site.css and adds only what it needs. */
+  .chero{background:linear-gradient(165deg,#0d1620 0%,#16242f 55%,#1d3040 100%);color:#fff;
+    padding:58px 0 62px;position:relative;overflow:hidden}
+  .chero:after{content:"";position:absolute;right:-90px;bottom:-90px;width:430px;height:430px;
+    border-radius:50%;background:radial-gradient(circle,rgba(232,89,12,.2),transparent 68%)}
+  .chero .in{position:relative;z-index:2;max-width:700px}
+  .chero .kick{display:inline-block;background:rgba(232,89,12,.18);color:#ffb185;
+    border:1px solid rgba(232,89,12,.35);font-size:12.5px;font-weight:700;letter-spacing:.05em;
+    text-transform:uppercase;padding:6px 13px;border-radius:20px;margin-bottom:18px}
+  .chero h1{font-size:clamp(31px,5vw,47px);font-weight:800;letter-spacing:-.02em;margin-bottom:15px}
+  .chero h1 em{font-style:normal;color:#ff8f4d}
+  .chero p{font-size:18.5px;color:#b9c6d4;margin:0 0 26px}
+  .chero .btn{background:var(--brand);color:#fff}
+  .chero .btn:hover{background:var(--brand-dark)}
+
+  .facts{display:flex;gap:26px;flex-wrap:wrap;margin-top:28px;color:#93a3b4;font-size:14.5px}
+  .facts b{color:#fff;display:block;font-size:19px;font-weight:800;margin-bottom:1px}
+
+  .band{padding:56px 0}
+  .band.alt{background:var(--wash);border-block:1px solid var(--line)}
+  .band h2{font-size:clamp(24px,3.4vw,33px);font-weight:800;letter-spacing:-.015em;margin-bottom:12px}
+  .band .lede{color:var(--soft);font-size:17.5px;max-width:62ch;margin:0 0 32px}
+
+  .flow{display:grid;gap:2px;max-width:820px}
+  .fstep{display:grid;grid-template-columns:38px 1fr;gap:16px;background:#fff;
+    border:1px solid var(--line);padding:18px 20px}
+  .fstep:first-child{border-radius:12px 12px 0 0}
+  .fstep:last-child{border-radius:0 0 12px 12px}
+  .fstep + .fstep{border-top:0}
+  .fstep .n{width:30px;height:30px;border-radius:50%;background:var(--deep);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+  .fstep h3{font-size:17px;font-weight:700;margin-bottom:4px}
+  .fstep p{margin:0;color:var(--ink-2);font-size:15.5px}
+
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;max-width:900px}
+  .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+  .band.alt .box{background:#fff}
+  .box h3{font-size:16.5px;font-weight:700;margin-bottom:6px}
+  .box p{margin:0;color:var(--ink-2);font-size:15px}
+
+  .price{background:var(--deep);color:#fff;border-radius:16px;padding:30px 32px;max-width:820px}
+  .price h2{color:#fff;margin-bottom:10px}
+  .price p{color:#b9c6d4;font-size:17px;margin:0 0 20px;max-width:56ch}
+  .plist{display:grid;gap:11px;margin:0;padding:0;list-style:none}
+  .plist li{display:flex;gap:11px;color:#d5dee7;font-size:15.5px}
+  .plist .tick{color:#4ade80;font-weight:800;flex:none}
+
+  form.cform{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;max-width:640px}
+  form.cform h3{font-size:19px;font-weight:800;margin:0 0 4px}
+  form.cform .sub{color:var(--soft);font-size:14.5px;margin:0 0 20px}
+  .f{margin-bottom:14px}
+  .f label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
+  .f input,.f select,.f textarea{width:100%;padding:12px 13px;border:1px solid var(--line);
+    border-radius:11px;font:inherit;font-size:16px;min-height:48px;background:#fff;color:var(--ink)}
+  .f textarea{min-height:96px;resize:vertical}
+  .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--brand);
+    box-shadow:0 0 0 3px rgba(232,89,12,.13)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  form.cform .btn{width:100%;justify-content:center;margin-top:6px}
+  .fine{color:var(--soft);font-size:12.5px;margin:13px 0 0;text-align:center}
+  .hp{position:absolute;left:-9999px}
+  .err{background:#fdecec;border:1px solid #f5c2c2;color:#9b2c2c;border-radius:10px;
+    padding:10px 12px;font-size:14px;margin-bottom:12px;display:none}
+  .done{text-align:center;padding:26px 6px}
+  .done .big{width:58px;height:58px;border-radius:50%;background:var(--ok);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:29px;margin:0 auto 15px}
+  .done h3{font-size:20px;margin-bottom:8px}
+  .done p{color:var(--soft);font-size:15px;margin:0}
+</style>
+</head>
+<body>
+<header id="hdr"></header>
+
+<div class="chero">
+  <div class="wrap"><div class="in">
+    <span class="kick">For carriers &amp; recruiting teams</span>
+    <h1>Let us do your driver recruiting. <em>You pay when they're seated.</em></h1>
+    <p>We recruit owner-operators across Dallas–Fort Worth, screen them against your own qualification standards before they ever reach your application, and stay on them through onboarding until they're working.</p>
+    <a class="btn" href="#talk">Talk to us</a>
+    <div class="facts">
+      <div><b>$0</b><span>until a driver is seated</span></div>
+      <div><b>Bilingual</b><span>English and Spanish</span></div>
+      <div><b>1099</b><span>commission only, no retainer</span></div>
+    </div>
+  </div></div>
+</div>
+
+<div class="band">
+  <div class="wrap">
+    <div class="eyebrow">The problem</div>
+    <h2>Your safety team is reading files that were never going to pass</h2>
+    <p class="lede">Most recruiters send everything and let you sort it out. Every unqualified application is your staff's time — pulling an MVR, reading an employment history, writing the rejection. The driver loses an hour too, and tells other drivers about it.</p>
+    <div class="grid2">
+      <div class="box">
+        <h3>We screen first, against your rules</h3>
+        <p>Send us your qualification criteria — the same document you'd hand a new recruiter. We load it into our system and every driver is checked against it before anything reaches you: age, CDL class and state, experience windows, violation points with the right lookback periods, accidents, drug and alcohol history.</p>
+      </div>
+      <div class="box">
+        <h3>Drivers hear back the same day</h3>
+        <p>Qualified, needs review, or not a fit — with the reason. Drivers who don't qualify are told honestly instead of being left waiting, which is how a recruiter keeps a reputation worth having in a market this small.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="band alt">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>From your standards to a seated driver</h2>
+    <p class="lede">You do two things: send us your criteria, and tell us when someone starts. We do the rest.</p>
+    <div class="flow">
+      <div class="fstep"><div class="n">1</div><div>
+        <h3>You send your qualification criteria</h3>
+        <p>Whatever form it's already in. Points tables, lookback periods, endorsements, truck requirements, your document checklist. We turn it into rules our system screens against — no new process on your side.</p>
+      </div></div>
+      <div class="fstep"><div class="n">2</div><div>
+        <h3>We recruit and pre-screen</h3>
+        <p>Our own marketing, our own site, in both languages. Every applicant is scored against your standards before we send them anywhere.</p>
+      </div></div>
+      <div class="fstep"><div class="n">3</div><div>
+        <h3>Qualified drivers reach your application</h3>
+        <p>We hand them your application link with your source tracking intact, so attribution in your system stays clean. Then we chase them until it's submitted and they have a confirmation number.</p>
+      </div></div>
+      <div class="fstep"><div class="n">4</div><div>
+        <h3>We chase the paperwork and the clocks</h3>
+        <p>Clearinghouse consent, the drug-test window, the inspection that has to be dated within 30 days, the lease form, every document on your list. Our system tracks each deadline per driver and follows up automatically until it's done.</p>
+      </div></div>
+      <div class="fstep"><div class="n">5</div><div>
+        <h3>You tell us they started</h3>
+        <p>That's when we invoice. Not before.</p>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<div class="band">
+  <div class="wrap">
+    <div class="eyebrow">Why it's faster</div>
+    <h2>We run our own software, not a spreadsheet</h2>
+    <p class="lede">Most small recruiting shops run on a shared inbox and a spreadsheet, which is why files go quiet for a week. Ours is purpose-built for this, and it's the reason we can promise speed and mean it.</p>
+    <div class="grid2">
+      <div class="box">
+        <h3>Your rules, as data</h3>
+        <p>Each carrier's criteria live as their own rule set — points thresholds, lookback windows, experience minimums, document checklist. Adding a carrier is configuration, not a rewrite, so we can be screening against your standards the same week you send them.</p>
+      </div>
+      <div class="box">
+        <h3>Nothing waits on someone remembering</h3>
+        <p>Every driver's outstanding step has a deadline attached, and follow-ups fire on their own — twice a day, rate-limited so nobody gets hounded. A file stalls only if the driver has genuinely gone quiet, and then we call.</p>
+      </div>
+      <div class="box">
+        <h3>One packet, complete</h3>
+        <p>When a driver's file is ready, you get it in one piece: their details, their lease information, and every document, checked against your list. If something's missing we know before you do.</p>
+      </div>
+      <div class="box">
+        <h3>Sensitive data handled properly</h3>
+        <p>Social security numbers, licence numbers and bank details are encrypted at rest and destroyed once the lease is signed. We publish exactly what we hold and for how long.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="band alt">
+  <div class="wrap">
+    <div class="price">
+      <h2>What it costs</h2>
+      <p>A placement fee per driver, agreed with you up front, invoiced only once that driver is seated and working. We're 1099 contractors — no retainer, no monthly minimum, no fee for applications that don't work out.</p>
+      <ul class="plist">
+        <li><span class="tick">✓</span><span>Nothing until a driver you approved is actually working</span></li>
+        <li><span class="tick">✓</span><span>No charge for screening, chasing documents, or drivers who wash out</span></li>
+        <li><span class="tick">✓</span><span>You keep your own standards and your own final say — we never decide who you hire</span></li>
+        <li><span class="tick">✓</span><span>Cancel whenever you like; there's nothing to get out of</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="band" id="talk">
+  <div class="wrap">
+    <div class="eyebrow">Start here</div>
+    <h2>Tell us what you're short of</h2>
+    <p class="lede">Send this and we'll get back to you the same day, usually with questions about your criteria. If we're not the right fit for your lanes we'll say so rather than waste your time.</p>
+    <form class="cform" id="cform" novalidate>
+      <h3>Carrier enquiry</h3>
+      <p class="sub">Two minutes. Goes straight to Ariana and Mystica — not a queue.</p>
+      <div class="err" id="err"></div>
+      <div class="f"><label for="company">Company name</label><input id="company" name="company" autocomplete="organization" required></div>
+      <div class="two">
+        <div class="f"><label for="contact_name">Your name</label><input id="contact_name" name="contact_name" autocomplete="name"></div>
+        <div class="f"><label for="dot_number">DOT number</label><input id="dot_number" name="dot_number" inputmode="numeric"></div>
+      </div>
+      <div class="two">
+        <div class="f"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email"></div>
+        <div class="f"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel"></div>
+      </div>
+      <div class="f"><label for="terminal">Where do you need drivers?</label><input id="terminal" name="terminal" placeholder="City, state, or terminal"></div>
+      <div class="f"><label for="driver_type">What are you hiring?</label>
+        <select id="driver_type" name="driver_type">
+          <option value="owner_operator">Owner-operators</option>
+          <option value="company">Company drivers</option>
+          <option value="both">Both</option>
+          <option value="unsure">Still working that out</option>
+        </select>
+      </div>
+      <div class="f"><label for="need">How many drivers, and how soon?</label>
+        <textarea id="need" name="need" placeholder="Anything useful — lanes, endorsements you need, what's gone wrong with recruiting so far."></textarea>
+      </div>
+      <input class="hp" name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn" type="submit" id="sub">Send</button>
+      <p class="fine">We'll only use this to get back to you about recruiting.</p>
+    </form>
+  </div>
+</div>
+
+<footer id="ftr"></footer>
+
+<script src="/site.js"></script>
+<script>
+// Carriers are US businesses and Daphine's team reads English, so this page
+// doesn't carry the driver site's language toggle. It still uses the shared
+// chrome, so the header and footer stay identical across the site.
+const T = { en: {}, es: {} };
+const PAGE_CTA = { label: 'Talk to us', href: '#talk' };
+paintPage();
+document.querySelectorAll('.lang').forEach((el) => { el.style.display = 'none'; });
+
+document.getElementById('cform').onsubmit = async (e) => {
+  e.preventDefault();
+  const form = e.target, err = document.getElementById('err');
+  const b = Object.fromEntries(new FormData(form));
+  if (!b.company || !(b.email || b.phone)) {
+    err.textContent = 'We need your company name and either an email or a phone number.';
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+  b.source = new URLSearchParams(location.search).get('src') || 'carriers page';
+  const btn = document.getElementById('sub');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch('/api/apply/carrier-inquiry', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.');
+    form.innerHTML = '<div class="done"><div class="big">✓</div>' +
+      '<h3>Got it — thank you</h3>' +
+      '<p>We\'ll come back to you today. If it\'s urgent, reply to the email we send and it reaches us directly.</p></div>';
+  } catch (ex) {
+    err.textContent = ex.message; err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Send';
+  }
+};
+</script>
+</body>
+</html>

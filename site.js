@@ -47,12 +47,17 @@ function langPath(l) {
 
 function chrome(t) {
   const home = langPath(lang) === '/' ? '/' : (lang === 'es' ? '/es' : '/');
+  // A page can claim the header button. The carriers page needs it to say
+  // "Talk to us" and stay on the page — pointing a carrier at the driver
+  // application is the wrong door.
+  const cta = (typeof PAGE_CTA !== 'undefined' && PAGE_CTA)
+    ? PAGE_CTA : { label: t.nav_cta, href: home + '#apply' };
   document.getElementById('hdr').innerHTML =
     `<div class="wrap hd">
        <a class="logo" href="${home}">${LOGO_SVG}<span>Truckers <span style="color:#ff8f4d">&amp;</span> Trokeros</span></a>
        <div style="display:flex;align-items:center;gap:12px">
          <div class="lang"><button data-lang="en">EN</button><button data-lang="es">ES</button></div>
-         <a class="cta" href="${home}#apply">${t.nav_cta}</a>
+         <a class="cta" href="${cta.href}">${cta.label}</a>
        </div>
      </div>`;
   document.getElementById('ftr').innerHTML =

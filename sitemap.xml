@@ -37,4 +37,8 @@
     <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/terms"/>
     <changefreq>yearly</changefreq><priority>0.3</priority>
   </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/carriers</loc>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
 </urlset>

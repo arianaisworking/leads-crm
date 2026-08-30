@@ -40,7 +40,7 @@ export async function onRequest(context) {
   if (site) {
     // Clean URLs, each with a Spanish twin: /privacy and /es/privacy both serve
     // privacy.html, which reads the path to decide which language to paint.
-    const PAGES = { '': site, 'privacy': '/privacy.html', 'terms': '/terms.html' };
+    const PAGES = { '': site, 'privacy': '/privacy.html', 'terms': '/terms.html', 'carriers': '/carriers.html' };
     const seg = path.replace(/^\/es(?=\/|$)/, '').replace(/^\/|\/$/g, '');
     if (path === '/index.html' || Object.prototype.hasOwnProperty.call(PAGES, seg)) {
       return next(new Request(new URL(PAGES[path === '/index.html' ? '' : seg], url), request));

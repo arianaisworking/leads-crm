@@ -20,7 +20,7 @@ import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, recruitingTeamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '../../_lib/screening.js';
 import { seal, vaultReady } from '../../_lib/vault.js';
-import { seedDocs, secret as mkSecret, carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
+import { seedDocs, secret as mkSecret, carrierApplyUrl, recruiterFor, leaseRow, rid } from '../../_lib/recruiting.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -298,6 +298,43 @@ export async function onRequest(context) {
         <p style="margin:12px 0 0;color:#5b6472;font-size:13px">${emailed ? 'Their application has been emailed to them automatically.' : 'No email on file — send them the application link from the CRM.'}</p>`, brandName(env)),
     }));
     return cors(json({ ok: true, application_sent: emailed, url: link }));
+  }
+
+  // ---- A carrier asking us to recruit for them. Same public surface as the
+  // driver form (CORS + honeypot), but it lands in its own table: a carrier
+  // must never be picked up by the driver screening or the nudge rules.
+  if (action === 'carrier-inquiry') {
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (request.method !== 'POST') return cors(json({ error: 'method not allowed' }, 405));
+    const b = await request.json().catch(() => ({}));
+    if (b._hp) return cors(json({ ok: true }));
+    const t = (v, n) => String(v || '').trim().slice(0, n) || null;
+    const company = t(b.company, 200);
+    const email = t(b.email, 200), phone = t(b.phone, 40);
+    if (!company || !(email || phone)) {
+      return cors(json({ error: 'Company name and an email or phone number are required.' }, 400));
+    }
+    const id = rid('ci');
+    await db.prepare(`INSERT INTO carrier_inquiries
+        (id, company, contact_name, email, phone, dot_number, terminal, driver_type, need, source)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(
+      id, company, t(b.contact_name, 200), email, phone, t(b.dot_number, 40), t(b.terminal, 200),
+      t(b.driver_type, 40), t(b.need, 1000), t(b.source, 120) || 'carriers page').run();
+
+    const row = (k, v) => v ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6472">${esc(k)}</td><td style="font-weight:600">${esc(v)}</td></tr>` : '';
+    context.waitUntil(sendEmail(env, {
+      to: recruitingTeamEmail(env), replyTo: email || undefined,
+      subject: `Carrier enquiry — ${company}`,
+      html: emailShell('A carrier wants to talk', `
+        <p style="margin:0 0 10px;font-size:16px"><b>${esc(company)}</b></p>
+        <table style="font-size:14px">
+          ${row('Contact', b.contact_name)}${row('Email', email)}${row('Phone', phone)}
+          ${row('DOT #', b.dot_number)}${row('Terminal', b.terminal)}${row('Driver type', b.driver_type)}
+        </table>
+        ${b.need ? `<p style="margin:12px 0 0;color:#3a4353"><b>What they need:</b><br>${esc(String(b.need).slice(0, 1000))}</p>` : ''}
+        <p style="margin:14px 0 0;color:#5b6472;font-size:13px">Reply straight to this email to reach them.</p>`, brandName(env)),
+    }));
+    return cors(json({ ok: true }));
   }
 
   // ---------- THE LEASE FORM + DOCUMENT RETURN ----------
