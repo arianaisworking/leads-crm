@@ -42,7 +42,17 @@ function basePath() {
   return p.replace(/^\/es(?=\/|$)/, '') || '/';
 }
 
+// A page can declare itself single-language with `const PAGE_LANG = 'en'`.
+// The carriers page is English by choice — its body copy has no Spanish twin —
+// so /es/carriers must not paint a Spanish header over an English page, or
+// claim /es/carriers as its canonical URL.
+function onlyLang() {
+  return (typeof PAGE_LANG !== 'undefined' && PAGE_LANG) || null;
+}
+
 function pickLang() {
+  const fixed = onlyLang();
+  if (fixed) return fixed;
   let l = (navigator.language || 'en').toLowerCase().startsWith('es') ? 'es' : 'en';
   try { const s = localStorage.getItem('tt_lang'); if (s) l = s; } catch (e) {}
   if (/^\/es(\/|$)/.test(location.pathname)) l = 'es';
@@ -79,7 +89,7 @@ function chrome(t) {
        <a class="logo" href="${L('/')}">${LOGO}</a>
        <nav class="nav" id="nav">${navHtml}</nav>
        <div class="hdr-right">
-         <div class="lang"><button data-lang="en">EN</button><button data-lang="es">ES</button></div>
+         ${onlyLang() ? '' : `<div class="lang"><button data-lang="en">EN</button><button data-lang="es">ES</button></div>`}
          ${hasCta ? `<a class="cta" href="${cta.href}">${cta.label}</a>` : ''}
          <button class="navtoggle" id="navtoggle" aria-label="${t.menu}" aria-expanded="false">
            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
@@ -110,6 +120,12 @@ function chrome(t) {
 }
 
 function paintPage() {
+  // `lang` was picked when this file loaded, before the page's own PAGE_LANG
+  // existed. A single-language page overrides it here, on every paint — a
+  // reader whose stored choice is Spanish must not get a Spanish header
+  // bolted onto an English page.
+  const fixed = onlyLang();
+  if (fixed) lang = fixed;
   const t = Object.assign({}, CHROME[lang], (typeof T !== 'undefined' && T[lang]) || {});
   document.documentElement.lang = lang;
   chrome(t);
@@ -146,6 +162,9 @@ function paintPage() {
   const desc = document.querySelector('meta[name=description]');
   if (desc && t.desc) desc.content = t.desc;
 
+  // Only a page that actually has both languages gets to move the address bar,
+  // rewrite its canonical, or remember the reader's choice.
+  if (onlyLang()) return;
   try { localStorage.setItem('tt_lang', lang); } catch (e) {}
   const want = langPath(lang);
   if (history.replaceState && !location.pathname.endsWith('.html') && location.pathname !== want) {

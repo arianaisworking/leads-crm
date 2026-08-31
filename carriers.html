@@ -7,6 +7,7 @@
 <meta name="description" content="We recruit owner-operators for carriers in Dallas–Fort Worth. We screen against your standards before a driver reaches your application. Commission only — you pay when a driver is seated.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://truckersandtrokeros.com/carriers">
+<link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/carriers">
 <meta name="theme-color" content="#0b0b0c">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://truckersandtrokeros.com/carriers">
@@ -251,9 +252,9 @@
 // doesn't carry the driver site's language toggle. It still uses the shared
 // chrome, so the header and footer stay identical across the site.
 const T = { en: {}, es: {} };
+const PAGE_LANG = 'en';
 const PAGE_CTA = { label: 'Talk to us', href: '#talk' };
 paintPage();
-document.querySelectorAll('.lang').forEach((el) => { el.style.display = 'none'; });
 
 document.getElementById('cform').onsubmit = async (e) => {
   e.preventDefault();
