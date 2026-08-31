@@ -49,6 +49,7 @@ header a{color:inherit}
 .logo .mark:before{left:0;width:43%;background:rgba(255,255,255,.9)}
 .logo .mark:after{right:0;width:43%;background:var(--red)}
 .logo .amp{color:var(--red-soft)}
+.hdr-left{display:flex;align-items:center;gap:20px}
 .navL{flex:none}
 /* Three groups on the right, each spaced for what it is: the nav items breathe
    together, then a wider gap before the language picker and the CTA, so the
@@ -73,6 +74,7 @@ header a{color:inherit}
 .navsheet a.on{color:var(--red-soft)}
 @media(max-width:1150px){
   .logo{position:static;transform:none}
+  .hdr-left{gap:0}
   .nav{display:none}
   .navtoggle{display:flex}
 }

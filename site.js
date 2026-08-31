@@ -114,14 +114,15 @@ function chrome(t) {
 
   document.getElementById('hdr').innerHTML =
     `<div class="wrap hd">
-       <nav class="nav navL">${navLeft}</nav>
-       <a class="logo" href="${L('/')}">${LOGO}</a>
-       <div class="hdr-right">
-         <nav class="nav navR">${navRight}${ct.phone
-           ? `<a class="tel" href="tel:${ct.phone}" aria-label="${t.call_aria}">${t.call}</a>` : ''}</nav>
+       <div class="hdr-left">
          ${onlyLang() ? '' : `<span class="lang"><select id="langsel" aria-label="${t.lang_label}">${LANGS
            .map((l) => `<option value="${l}"${l === lang ? ' selected' : ''}>${LANG_LABEL[l]}</option>`)
            .join('')}</select></span>`}
+         <nav class="nav navL">${navLeft}</nav>
+       </div>
+       <a class="logo" href="${L('/')}">${LOGO}</a>
+       <div class="hdr-right">
+         <nav class="nav navR">${navRight}</nav>
          ${hasCta ? `<a class="cta" href="${cta.href}">${cta.label}</a>` : ''}
          <button class="navtoggle" id="navtoggle" aria-label="${t.menu}" aria-expanded="false">
            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
