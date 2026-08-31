@@ -45,21 +45,18 @@ const CHROME = {
     nav_cta: 'Apply now', ft_tag: 'Owner-operator placement, nationwide',
     ft_apply: 'Apply to drive', ft_privacy: 'Privacy', ft_terms: 'Terms',
     ft_refer: 'Refer a driver', ft_join: 'Recruit with us',
-    strip_a: 'Owner-operators wanted', strip_b: 'English · Español · Punjabi',
     menu: 'Menu', call: 'Contact', call_aria: 'Contact us', lang_label: 'Language',
   },
   es: {
     nav_cta: 'Aplica ya', ft_tag: 'Colocación de dueños de troca en todo el país',
     ft_apply: 'Aplica para manejar', ft_privacy: 'Privacidad', ft_terms: 'Términos',
     ft_refer: 'Recomienda a un chofer', ft_join: 'Recluta con nosotros',
-    strip_a: 'Buscamos dueños de troca', strip_b: 'English · Español · Punjabi',
     menu: 'Menú', call: 'Contacto', call_aria: 'Contáctanos', lang_label: 'Idioma',
   },
   pa: {
     nav_cta: 'Hun apply karo', ft_tag: 'Owner-operator placement, poore desh vich',
     ft_apply: 'Drive layi apply karo', ft_privacy: 'Privacy', ft_terms: 'Sharta',
     ft_refer: 'Kise driver nu bhejo', ft_join: 'Sade naal bharti karo',
-    strip_a: 'Owner-operator chahide han', strip_b: 'English · Español · Punjabi',
     menu: 'Menu', call: 'Sampark', call_aria: 'Sade naal sampark karo', lang_label: 'Bhasha',
   },
 };
@@ -114,9 +111,6 @@ function chrome(t) {
   const cta = (typeof PAGE_CTA !== 'undefined' && PAGE_CTA)
     ? PAGE_CTA : { label: t.nav_cta, href: L('/drivers') };
 
-  const strip = document.getElementById('strip');
-  if (strip) strip.innerHTML =
-    `<b>${t.strip_a}</b><span class="dot">&#9679;</span><span>${t.strip_b}</span>`;
 
   document.getElementById('hdr').innerHTML =
     `<div class="wrap hd">
@@ -125,9 +119,9 @@ function chrome(t) {
        <div class="hdr-right">
          <nav class="nav navR">${navRight}${ct.phone
            ? `<a class="tel" href="tel:${ct.phone}" aria-label="${t.call_aria}">${t.call}</a>` : ''}</nav>
-         ${onlyLang() ? '' : `<label class="lang"><span class="vh">${t.lang_label}</span><select id="langsel">${LANGS
+         ${onlyLang() ? '' : `<span class="lang"><select id="langsel" aria-label="${t.lang_label}">${LANGS
            .map((l) => `<option value="${l}"${l === lang ? ' selected' : ''}>${LANG_LABEL[l]}</option>`)
-           .join('')}</select></label>`}
+           .join('')}</select></span>`}
          ${hasCta ? `<a class="cta" href="${cta.href}">${cta.label}</a>` : ''}
          <button class="navtoggle" id="navtoggle" aria-label="${t.menu}" aria-expanded="false">
            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>

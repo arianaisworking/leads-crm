@@ -29,12 +29,6 @@ img{max-width:100%;display:block}
 .wrap{max-width:1120px;margin:0 auto;padding:0 18px}
 .narrow{max-width:780px}
 
-/* announcement strip */
-.strip{background:var(--ink);color:#a9abb0;font-size:12.5px;font-weight:500;text-align:center;
-  padding:7px 18px;letter-spacing:.02em;border-bottom:1px solid var(--line-d)}
-.strip b{color:#fff;font-weight:600}
-.strip .dot{color:var(--red-soft);margin:0 8px}
-
 /* header */
 header{position:sticky;top:0;z-index:60;background:var(--nav);color:#fff;border-bottom:1px solid var(--line-d)}
 header a{color:inherit}
@@ -56,10 +50,13 @@ header a{color:inherit}
 .logo .mark:after{right:0;width:43%;background:var(--red)}
 .logo .amp{color:var(--red-soft)}
 .navL{flex:none}
-.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+/* Three groups on the right, each spaced for what it is: the nav items breathe
+   together, then a wider gap before the language picker and the CTA, so the
+   row reads as nav | language | action rather than one crowded run of things. */
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:20px}
 
 /* primary nav — desktop inline, phone in a sheet under the bar */
-.nav{display:flex;gap:22px;align-items:center}
+.nav{display:flex;gap:26px;align-items:center}
 .nav a{text-decoration:none;color:#c6c8cc;font-weight:600;font-size:14.5px;padding:6px 0;
   border-bottom:2px solid transparent}
 .nav a:hover{color:#fff}
@@ -90,7 +87,6 @@ header a{color:inherit}
 
 /* A select, not a button per language: fixed width whatever the label says,
    native on a phone, and it still fits when a fourth language turns up. */
-.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .lang{display:inline-flex;align-items:center}
 /* 16px is not a style choice: iOS zooms the whole page when a control smaller
    than that takes focus, and a driver who taps the language picker should not
@@ -115,7 +111,7 @@ header a{color:inherit}
    header push the page sideways. */
 @media(max-width:560px){
   .hd{gap:8px}
-  .hdr-right{gap:6px}
+  .hdr-right{gap:8px}
   .lang select{padding:0 20px 0 7px;background-position:right 5px center}
 }
 @media(max-width:620px){
