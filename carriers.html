@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/site.css">
+<script src="/contact.js"></script>
 <style>
   /* This page talks to carriers, not drivers — one column, denser, no language
      toggle. Same black-and-red system as the rest of the site; it adds only the
@@ -244,6 +245,7 @@
   </div>
 </div>
 
+<nav class="callbar" id="callbar" hidden></nav>
 <footer id="ftr"></footer>
 
 <script src="/site.js"></script>
@@ -254,6 +256,7 @@
 const T = { en: {}, es: {} };
 const PAGE_LANG = 'en';
 const PAGE_CTA = { label: 'Talk to us', href: '#talk' };
+if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
 paintPage();
 
 document.getElementById('cform').onsubmit = async (e) => {

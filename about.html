@@ -21,6 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/site.css">
+<script src="/contact.js"></script>
 <style>
   /* Who we are. Short — nobody reads an about page for long. The photograph
      carries the human part; the text is here to answer three questions:
@@ -142,6 +143,7 @@
   </div>
 </section>
 
+<nav class="callbar" id="callbar" hidden></nav>
 <footer id="ftr"></footer>
 
 <script src="/site.js"></script>
@@ -237,6 +239,7 @@ const T = {
   }
 };
 const PAGE_CTA = null;
+if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
 paintPage();
 </script>
 </body>

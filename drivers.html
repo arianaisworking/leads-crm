@@ -21,6 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/site.css">
+<script src="/contact.js"></script>
 <style>
   /* The application page. One job: get the short form filled in. Everything
      else on the page exists to answer the doubt that stops someone finishing
@@ -314,6 +315,7 @@
   </div>
 </section>
 
+<nav class="callbar" id="callbar" hidden></nav>
 <footer id="ftr"></footer>
 
 <script src="/site.js"></script>
@@ -457,6 +459,7 @@ const T = {
   }
 };
 const PAGE_CTA = false;
+if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
 
 // Three blocks are data, not markup: the requirement ticks, the fee rows and
 // the FAQ. They repaint with the language like everything else.
