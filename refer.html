@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refer a driver · Truckers &amp; Trokeros</title>
+<meta name="description" content="Know a driver looking for work? Send them our way. We will look after them, and there is something in it for you.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://truckersandtrokeros.com/refer">
+<link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/refer">
+<link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/refer">
+<link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/refer">
+<link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/refer">
+<meta name="theme-color" content="#0b0b0c">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://truckersandtrokeros.com/refer">
+<meta property="og:title" content="Refer a driver">
+<meta property="og:description" content="Know a driver looking for work? Send them our way.">
+<meta property="og:image" content="https://truckersandtrokeros.com/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script src="/contact.js"></script>
+</head>
+<body>
+<div class="strip" id="strip"></div>
+<header id="hdr"></header>
+
+<div class="phead">
+  <div class="tex"><img src="/img/streaks.jpg" alt="" width="1500" height="750"></div>
+  <div class="wrap">
+    <span class="eyebrow" data-t="eyebrow">Refer a driver</span>
+    <h1 data-t="h1">Know someone looking?</h1>
+    <p data-t="sub">Send us their name and number. We will treat them the way we would treat you, and tell them who sent us.</p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap narrow">
+    <form class="formcard" id="ref" novalidate>
+      <div class="err" id="err"></div>
+      <h2 class="fh" data-t="f1">About you</h2>
+      <div class="two">
+        <div class="f"><label data-t="l_you">Your name</label><input name="referrer_name" autocomplete="name" required></div>
+        <div class="f"><label data-t="l_yourphone">Your phone</label><input name="referrer_phone" type="tel" autocomplete="tel" required></div>
+      </div>
+      <div class="f"><label data-t="l_youremail">Your email (optional)</label><input name="referrer_email" type="email" autocomplete="email"></div>
+
+      <h2 class="fh" data-t="f2">About the driver</h2>
+      <div class="two">
+        <div class="f"><label data-t="l_name">Their name</label><input name="driver_name" required></div>
+        <div class="f"><label data-t="l_phone">Their phone</label><input name="driver_phone" type="tel" required></div>
+      </div>
+      <div class="f"><label data-t="l_note">Anything we should know (optional)</label><textarea name="note" rows="3"></textarea></div>
+
+      <input class="hp" name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn" type="submit" data-t="btn">Send the referral</button>
+      <p class="fine" data-t="fine">We will call them, not spam them. Ask us about the referral fee when we speak.</p>
+    </form>
+  </div>
+</section>
+
+<nav class="callbar" id="callbar" hidden></nav>
+<footer id="ftr"></footer>
+
+<script src="/site.js"></script>
+<script>
+const T = {
+  en: {
+    title:"Refer a driver · Truckers & Trokeros",
+    desc:"Know a driver looking for work? Send them our way. We will look after them, and there is something in it for you.",
+    eyebrow:"Refer a driver",
+    h1:"Know someone looking?",
+    sub:"Send us their name and number. We will treat them the way we would treat you, and tell them who sent us.",
+    f1:"About you", f2:"About the driver",
+    l_you:"Your name", l_yourphone:"Your phone", l_youremail:"Your email (optional)",
+    l_name:"Their name", l_phone:"Their phone",
+    l_note:"Anything we should know (optional)",
+    btn:"Send the referral",
+    fine:"We will call them, not spam them. Ask us about the referral fee when we speak.",
+    done_h:"Got it, thank you",
+    done_p:"We will reach out to them today. If they end up placed, we will be in touch with you about the fee.",
+    err_you:"We need your name and your phone number.",
+    err_them:"We need their name and phone number."
+  },
+  es: {
+    title:"Recomienda a un chofer · Truckers & Trokeros",
+    desc:"¿Conoces a un chofer buscando trabajo? Mándanoslo. Lo vamos a atender bien, y hay algo para ti.",
+    eyebrow:"Recomienda a un chofer",
+    h1:"¿Conoces a alguien buscando?",
+    sub:"Mándanos su nombre y su teléfono. Lo vamos a tratar como te trataríamos a ti, y le decimos quién nos lo mandó.",
+    f1:"Sobre ti", f2:"Sobre el chofer",
+    l_you:"Tu nombre", l_yourphone:"Tu teléfono", l_youremail:"Tu correo (opcional)",
+    l_name:"Su nombre", l_phone:"Su teléfono",
+    l_note:"Algo que debamos saber (opcional)",
+    btn:"Manda la recomendación",
+    fine:"Le vamos a llamar, no a molestar. Pregúntanos por la comisión de recomendación cuando hablemos.",
+    done_h:"Listo, gracias",
+    done_p:"Lo contactamos hoy. Si queda colocado, te buscamos para lo de la comisión.",
+    err_you:"Danos tu nombre y tu teléfono.",
+    err_them:"Danos su nombre y su teléfono."
+  },
+  pa: {
+    title:"Kise driver nu bhejo · Truckers & Trokeros",
+    desc:"Koi driver kamm labh riha hai? Sanu bhejo. Asi ohna da khyaal rakhaange, te tuhade layi vi kujh hai.",
+    eyebrow:"Kise driver nu bhejo",
+    h1:"Kise nu jaande ho jo kamm labh riha hai?",
+    sub:"Sanu ohna da naam te number bhejo. Asi ohna naal ohi salook karaange jo tuhade naal karde, te ohna nu dassaange kis ne bhejeya.",
+    f1:"Tuhade baare", f2:"Driver de baare",
+    l_you:"Tuhada naam", l_yourphone:"Tuhada phone", l_youremail:"Tuhadi email (marzi naal)",
+    l_name:"Ohna da naam", l_phone:"Ohna da phone",
+    l_note:"Kujh hor jo sanu pata hona chahida (marzi naal)",
+    btn:"Referral bhejo",
+    fine:"Asi ohna nu phone karaange, tang nahi karaange. Gall hovan te referral fee baare puch lena.",
+    done_h:"Mil gaya, dhanvaad",
+    done_p:"Asi ajj hi ohna naal sampark karaange. Je oh kamm te lagg gaye taan fee baare tuhade naal gall karaange.",
+    err_you:"Sanu apna naam te phone number dio.",
+    err_them:"Sanu ohna da naam te phone number dio."
+  }
+};
+const PAGE_CTA = null;
+if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
+paintPage();
+
+document.getElementById('ref').onsubmit = async (e) => {
+  e.preventDefault();
+  const form = e.target, err = document.getElementById('err');
+  const t = Object.assign({}, T.en, T[document.documentElement.lang] || {});
+  const b = Object.fromEntries(new FormData(form));
+  const fail = (m) => { err.textContent = m; err.style.display = 'block'; };
+  if (!b.referrer_name || !b.referrer_phone) return fail(t.err_you);
+  if (!b.driver_name || !b.driver_phone) return fail(t.err_them);
+  err.style.display = 'none';
+  b.source = new URLSearchParams(location.search).get('src') || 'referral page';
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch('/api/apply/referral', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.');
+    form.innerHTML = `<div class="done"><div class="big">&#10003;</div>
+      <h2>${t.done_h}</h2><p>${t.done_p}</p></div>`;
+  } catch (ex) {
+    fail(ex.message); btn.disabled = false; btn.textContent = t.btn;
+  }
+};
+</script>
+</body>
+</html>

@@ -22,13 +22,13 @@ const LOGO = '<span class="mark">Truckers <span class="amp">&amp;</span> Trokero
 // hasn't been translated yet shows English text rather than an empty element.
 // That's what lets Punjabi be added a page at a time instead of all at once.
 const LANGS = ['en', 'es', 'pa'];
-const LANG_LABEL = { en: 'EN', es: 'ES', pa: 'ਪੰਜਾਬੀ' };
+const LANG_LABEL = { en: 'EN', es: 'ES', pa: 'PA' };
 
 const NAV = [
-  { base: '/', en: 'Home', es: 'Inicio', pa: 'ਹੋਮ' },
-  { base: '/drivers', en: 'For drivers', es: 'Para choferes', pa: 'ਡਰਾਈਵਰਾਂ ਲਈ' },
-  { base: '/carriers', en: 'For carriers', es: 'Para compañías', pa: 'ਕੰਪਨੀਆਂ ਲਈ' },
-  { base: '/about', en: 'About', es: 'Nosotros', pa: 'ਸਾਡੇ ਬਾਰੇ' },
+  { base: '/', en: 'Home', es: 'Inicio', pa: 'Home' },
+  { base: '/drivers', en: 'For drivers', es: 'Para choferes', pa: 'Drivers layi' },
+  { base: '/carriers', en: 'For carriers', es: 'Para compañías', pa: 'Companies layi' },
+  { base: '/about', en: 'About', es: 'Nosotros', pa: 'Sade baare' },
 ];
 
 // /contact.js, if the page loaded it. Everything below degrades to nothing
@@ -44,20 +44,23 @@ const CHROME = {
   en: {
     nav_cta: 'Apply now', ft_tag: 'Owner-operator placement, nationwide',
     ft_apply: 'Apply to drive', ft_privacy: 'Privacy', ft_terms: 'Terms',
-    strip_a: 'Owner-operators wanted', strip_b: 'English · Español · ਪੰਜਾਬੀ',
+    ft_refer: 'Refer a driver', ft_join: 'Recruit with us',
+    strip_a: 'Owner-operators wanted', strip_b: 'English · Español · Punjabi',
     menu: 'Menu', call: 'Contact', call_aria: 'Contact us', lang_label: 'Language',
   },
   es: {
     nav_cta: 'Aplica ya', ft_tag: 'Colocación de dueños de troca en todo el país',
     ft_apply: 'Aplica para manejar', ft_privacy: 'Privacidad', ft_terms: 'Términos',
-    strip_a: 'Buscamos dueños de troca', strip_b: 'English · Español · ਪੰਜਾਬੀ',
+    ft_refer: 'Recomienda a un chofer', ft_join: 'Recluta con nosotros',
+    strip_a: 'Buscamos dueños de troca', strip_b: 'English · Español · Punjabi',
     menu: 'Menú', call: 'Contacto', call_aria: 'Contáctanos', lang_label: 'Idioma',
   },
   pa: {
-    nav_cta: 'ਹੁਣੇ ਅਪਲਾਈ ਕਰੋ', ft_tag: 'ਪੂਰੇ ਦੇਸ਼ ਵਿੱਚ ਓਨਰ-ਓਪਰੇਟਰ ਪਲੇਸਮੈਂਟ',
-    ft_apply: 'ਡਰਾਈਵ ਕਰਨ ਲਈ ਅਪਲਾਈ ਕਰੋ', ft_privacy: 'ਪਰਾਈਵੇਸੀ', ft_terms: 'ਸ਼ਰਤਾਂ',
-    strip_a: 'ਓਨਰ-ਓਪਰੇਟਰ ਚਾਹੀਦੇ ਹਨ', strip_b: 'English · Español · ਪੰਜਾਬੀ',
-    menu: 'ਮੀਨੂ', call: 'ਸੰਪਰਕ', call_aria: 'ਸਾਡੇ ਨਾਲ ਸੰਪਰਕ ਕਰੋ', lang_label: 'ਭਾਸ਼ਾ',
+    nav_cta: 'Hun apply karo', ft_tag: 'Owner-operator placement, poore desh vich',
+    ft_apply: 'Drive layi apply karo', ft_privacy: 'Privacy', ft_terms: 'Sharta',
+    ft_refer: 'Kise driver nu bhejo', ft_join: 'Sade naal bharti karo',
+    strip_a: 'Owner-operator chahide han', strip_b: 'English · Español · Punjabi',
+    menu: 'Menu', call: 'Sampark', call_aria: 'Sade naal sampark karo', lang_label: 'Bhasha',
   },
 };
 
@@ -140,6 +143,8 @@ function chrome(t) {
        <div class="ftlinks">
          ${ct.phone ? `<a class="ftnum" href="tel:${ct.phone}">${ct.display}</a>` : ''}
          ${NAV.map((n) => `<a href="${L(n.base)}">${n[lang]}</a>`).join('')}
+         <a href="${L('/refer')}">${t.ft_refer}</a>
+         <a href="${L('/join')}">${t.ft_join}</a>
          <a href="${L('/privacy')}">${t.ft_privacy}</a>
          <a href="${L('/terms')}">${t.ft_terms}</a>
        </div>

@@ -8,6 +8,12 @@
 //   POST /api/apply/submit?carrier=<id>   -> creates the driver record, then the same
 //   POST /api/apply/lead                  -> website funnel: drops a driver in and
 //                                            emails them the application (CORS open)
+//   POST /api/apply/carrier-inquiry       -> a carrier asking us to recruit; lands in
+//                                            `carriers` as a prospect (active=0)
+//   POST /api/apply/referral              -> a driver sending us a driver; creates the
+//                                            lead and a `referrals` row for the fee
+//   POST /api/apply/recruiter             -> someone applying to recruit with us; lands
+//                                            in `recruiters` as an applicant (active=0)
 //   GET  /api/apply/lease?token=...       -> the lease form + what documents are missing
 //   POST /api/apply/lease?token=...       -> saves it; sensitive fields are sealed
 //   POST /api/apply/upload?token=...&kind= -> driver uploads a required document
@@ -337,6 +343,99 @@ export async function onRequest(context) {
         </table>
         ${b.need ? `<p style="margin:12px 0 0;color:#3a4353"><b>What they need:</b><br>${esc(String(b.need).slice(0, 1000))}</p>` : ''}
         <p style="margin:14px 0 0;color:#5b6472;font-size:13px">Reply straight to this email to reach them.</p>`, brandName(env)),
+    }));
+    return cors(json({ ok: true }));
+  }
+
+  // ---- A driver sending us another driver.
+  //
+  // The referred driver becomes an ordinary lead, so they land in the pipeline
+  // the team already works rather than in a list nobody opens. The referral row
+  // records who sent them, which is the fact a referral fee is paid on.
+  if (action === 'referral') {
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (request.method !== 'POST') return cors(json({ error: 'method not allowed' }, 405));
+    const b = await request.json().catch(() => ({}));
+    if (b._hp) return cors(json({ ok: true }));
+    const t = (v, n) => String(v || '').trim().slice(0, n) || null;
+    const from = t(b.referrer_name, 200), who = t(b.driver_name, 200);
+    const fromPhone = t(b.referrer_phone, 40), whoPhone = t(b.driver_phone, 40);
+    if (!from || !fromPhone) {
+      return cors(json({ error: 'We need your name and your phone number.' }, 400));
+    }
+    if (!who || !whoPhone) {
+      return cors(json({ error: "We need your friend's name and phone number." }, 400));
+    }
+
+    const carrierId = url.searchParams.get('carrier');
+    const carrier = carrierId
+      ? await db.prepare('SELECT * FROM carriers WHERE id=? AND active=1').bind(carrierId).first()
+      : await firstCarrier(db);
+    const applyToken = token();
+    const lead = await db.prepare(`INSERT INTO leads
+        (name, phone, email, status, client_id, source, carrier_id, apply_token, interest)
+        VALUES (?,?,?, 'New', 'house', 'referral', ?, ?, ?)`).bind(
+      who, whoPhone, t(b.driver_email, 200), carrier ? carrier.id : null, applyToken,
+      'Referred by ' + from + ' (' + fromPhone + ')').run();
+    const leadId = lead && lead.meta ? lead.meta.last_row_id : null;
+
+    await db.prepare(`INSERT INTO referrals
+        (id, referrer_name, referrer_phone, referrer_email, driver_name, driver_phone,
+         driver_email, lead_id, source, notes)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(
+      rid('rf'), from, fromPhone, t(b.referrer_email, 200), who, whoPhone,
+      t(b.driver_email, 200), leadId, t(b.source, 120) || 'referral page', t(b.note, 1000)).run();
+
+    context.waitUntil(sendEmail(env, {
+      to: recruitingTeamEmail(env), replyTo: t(b.referrer_email, 200) || undefined,
+      subject: `Referral: ${who}, from ${from}`,
+      html: emailShell('A driver sent us someone', `
+        <p style="margin:0 0 12px;font-size:16px"><b>${esc(who)}</b> &middot; ${esc(whoPhone)}</p>
+        <p style="margin:0 0 12px;color:#3a4353">Referred by <b>${esc(from)}</b> (${esc(fromPhone)}).</p>
+        ${b.note ? `<p style="margin:0 0 12px;color:#3a4353">${esc(String(b.note).slice(0, 1000))}</p>` : ''}
+        <p style="margin:14px 0 0;color:#5b6472;font-size:13px">Both are in the CRM. The referred driver is a new lead.</p>`,
+        brandName(env)),
+    }));
+    return cors(json({ ok: true }));
+  }
+
+  // ---- Someone applying to recruit for us.
+  //
+  // They go into the same table the working recruiters live in, as status
+  // 'applicant' with active=0. Saying yes is then a status change rather than
+  // re-typing everything, and active=0 keeps an applicant out of every split
+  // and payout path in the meantime.
+  if (action === 'recruiter') {
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (request.method !== 'POST') return cors(json({ error: 'method not allowed' }, 405));
+    const b = await request.json().catch(() => ({}));
+    if (b._hp) return cors(json({ ok: true }));
+    const t = (v, n) => String(v || '').trim().slice(0, n) || null;
+    const name = t(b.name, 200), email = t(b.email, 200), phone = t(b.phone, 40);
+    if (!name || !(email || phone)) {
+      return cors(json({ error: 'We need your name and either an email or a phone number.' }, 400));
+    }
+    const id = rid('rc');
+    await db.prepare(`INSERT INTO recruiters
+        (id, name, email, phone, city, experience, share_pct, active, status, source, notes)
+        VALUES (?,?,?,?,?,?, 0, 0, 'applicant', ?, ?)`).bind(
+      id, name, email, phone, t(b.city, 120), t(b.experience, 200),
+      t(b.source, 120) || 'join page', t(b.about, 1000)).run();
+
+    context.waitUntil(sendEmail(env, {
+      to: recruitingTeamEmail(env), replyTo: email || undefined,
+      subject: `Recruiter application: ${name}`,
+      html: emailShell('Someone wants to recruit with us', `
+        <p style="margin:0 0 10px;font-size:16px"><b>${esc(name)}</b></p>
+        <table style="font-size:14px">
+          ${email ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6472">Email</td><td style="font-weight:600">${esc(email)}</td></tr>` : ''}
+          ${phone ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6472">Phone</td><td style="font-weight:600">${esc(phone)}</td></tr>` : ''}
+          ${b.city ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6472">Where</td><td style="font-weight:600">${esc(String(b.city))}</td></tr>` : ''}
+          ${b.experience ? `<tr><td style="padding:3px 12px 3px 0;color:#5b6472">Experience</td><td style="font-weight:600">${esc(String(b.experience))}</td></tr>` : ''}
+        </table>
+        ${b.about ? `<p style="margin:12px 0 0;color:#3a4353">${esc(String(b.about).slice(0, 1000))}</p>` : ''}
+        <p style="margin:14px 0 0;color:#5b6472;font-size:13px">They are in the CRM under Recruiters, pending. Set their share and mark them active to take them on.</p>`,
+        brandName(env)),
     }));
     return cors(json({ ok: true }));
   }

@@ -1857,7 +1857,8 @@ async function renderDrMoney(m){
           <div style="display:flex;justify-content:space-between;font-size:13px"><span class="sub">Paid out</span><b>${drMoney(r.paid)}</b></div>
         </div>`).join("")}
       </div>
-      <div style="margin-top:12px"><button class="btn ghost sm" id="mEditSplit" type="button">Edit shares</button></div>
+      <div style="margin-top:12px"><button class="btn ghost sm" id="mEditSplit" type="button">Edit shares</button>
+        <button class="btn ghost sm" id="mReferrals" type="button">Referrals</button></div>
     </div>`:""}
     ${byC.length?`<div class="card" style="margin-bottom:14px"><table><thead><tr><th>Carrier</th><th>Placements</th><th>Booked</th><th>Paid</th></tr></thead>
       <tbody>${byC.map(r=>`<tr><td>${esc(r.carrier||"—")}</td><td>${r.n}</td><td>${drMoney(r.total)}</td><td>${drMoney(r.paid)}</td></tr>`).join("")}</tbody></table></div>`:""}
@@ -1891,11 +1892,16 @@ async function renderDrMoney(m){
     catch(e){ toast(e.message); }
   });
   const es=$("#mEditSplit"); if(es) es.onclick=()=>openRecruiters(()=>renderDrMoney(m));
+  const rf=$("#mReferrals"); if(rf) rf.onclick=()=>openReferrals(()=>renderDrMoney(m));
 }
 
 async function openRecruiters(onSave){
-  let rs=[];
-  try{ const r=await drapi("/recruiters"); rs=r.recruiters||[]; }catch(e){}
+  let all=[];
+  try{ const r=await drapi("/recruiters"); all=r.recruiters||[]; }catch(e){}
+  // Applicants come in from the website with no share and active=0. They're
+  // listed apart from the working split so nobody edits a share for someone
+  // who hasn't been taken on yet.
+  const rs=all.filter(r=>r.status!=="applicant"), apps=all.filter(r=>r.status==="applicant");
   const d=$("#drawer");
   d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
     <div class="dhead">${avatar({name:"Split"})}<div><div class="name">The split</div><div class="sub">Who shares each placement fee</div></div></div>
@@ -1910,6 +1916,20 @@ async function openRecruiters(onSave){
         <input data-rf="source_tag" value="${esc(r.source_tag||"")}" placeholder="Carrier source tag (e.g. uri_b value)" style="margin-top:7px;font-size:12.5px">
       </div>`).join("")}</div>
       <button class="btn ghost sm" id="rcAdd" type="button">+ Add person</button>
+      ${apps.length?`<div style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px">
+        <div style="font-weight:800;font-size:14.5px;margin-bottom:3px">Applications <span class="sub" style="font-weight:600">(${apps.length})</span></div>
+        <p class="sub" style="margin:0 0 11px">Came in through the website. Taking someone on sets their share; until then they're in no split and no payout.</p>
+        ${apps.map(a=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:9px">
+          <div style="font-weight:700;font-size:14.5px">${esc(a.name)}</div>
+          <div class="sub" style="font-size:12.5px;margin-bottom:6px">${[a.email,a.phone,a.city,a.experience?a.experience+" yrs":""].filter(Boolean).map(esc).join(" · ")}</div>
+          ${a.notes?`<div class="sub" style="font-size:12.5px;margin-bottom:8px">${esc(a.notes)}</div>`:""}
+          <div class="drow" style="gap:7px;align-items:center">
+            <input data-apshare="${a.id}" type="number" step="1" placeholder="% share" style="max-width:92px">
+            <button class="btn sm" data-aptake="${a.id}" type="button">Take on</button>
+            <button class="btn ghost sm" data-apno="${a.id}" type="button">Decline</button>
+          </div>
+        </div>`).join("")}
+      </div>`:""}
       <p class="sub" style="margin:10px 0 0;font-size:11.5px">The <b>source tag</b> is the code the carrier's application platform uses to credit whoever sent the driver. Ask the carrier for one each — without it your drivers look like walk-ins on their side, and getting paid relies on someone remembering.</p>
       <div class="dfoot"><button class="btn" id="rcSave">Save shares</button><span class="sub" id="rcMsg"></span></div>
     </div>`;
@@ -1921,6 +1941,22 @@ async function openRecruiters(onSave){
         <input data-rf="share_pct" type="number" step="1" value="50" style="max-width:78px"></div>
       <input data-rf="source_tag" placeholder="Carrier source tag" style="margin-top:7px;font-size:12.5px"></div>`);
   };
+  d.querySelectorAll("[data-aptake]").forEach(b=>b.onclick=async()=>{
+    const id=b.dataset.aptake, el=d.querySelector(`[data-apshare="${id}"]`);
+    const share=el&&el.value.trim()?parseFloat(el.value):null;
+    if(share==null||!isFinite(share)){ toast("Set their share first."); el&&el.focus(); return; }
+    try{ await drapi("/recruiters/"+id,{method:"PATCH",headers:{"content-type":"application/json"},
+      body:JSON.stringify({status:"active",active:1,share_pct:share})});
+      toast("Taken on."); openRecruiters(onSave); onSave&&onSave();
+    }catch(e){ toast(e.message); }
+  });
+  d.querySelectorAll("[data-apno]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("Decline this application? They stay in the CRM, marked declined.")) return;
+    try{ await drapi("/recruiters/"+b.dataset.apno,{method:"PATCH",headers:{"content-type":"application/json"},
+      body:JSON.stringify({status:"declined",active:0})});
+      toast("Declined."); openRecruiters(onSave);
+    }catch(e){ toast(e.message); }
+  });
   $("#rcSave").onclick=async()=>{
     const rows=[...$("#rcList").querySelectorAll("[data-rc]")];
     $("#rcMsg").textContent="Saving…";
@@ -1935,6 +1971,39 @@ async function openRecruiters(onSave){
       toast("Split saved."); closeDrawer(); onSave&&onSave();
     }catch(e){ $("#rcMsg").textContent=e.message; }
   };
+}
+
+// Who sent us whom, and whether they've been paid for it. The referred driver
+// is already a lead in the pipeline; this is the fee side of the same event.
+async function openReferrals(onSave){
+  let rows=[];
+  try{ const r=await drapi("/referrals"); rows=r.referrals||[]; }catch(e){}
+  const owed=rows.filter(r=>r.payout_status==="owed").length;
+  const d=$("#drawer");
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead">${avatar({name:"Referrals"})}<div><div class="name">Referrals</div><div class="sub">${rows.length} total${owed?` · ${owed} owed`:""}</div></div></div>
+    <div class="dbody">
+      ${rows.length?rows.map(r=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:9px">
+        <div style="font-weight:700;font-size:14.5px">${esc(r.driver_name)}${r.lead_row?` <span class="sub" style="font-weight:600">· lead ${r.lead_row}${r.lead_status?" ("+esc(r.lead_status)+")":""}</span>`:""}</div>
+        <div class="sub" style="font-size:12.5px">${esc(r.driver_phone||"")}</div>
+        <div class="sub" style="font-size:12.5px;margin:6px 0 8px">Sent by <b>${esc(r.referrer_name)}</b>${r.referrer_phone?" · "+esc(r.referrer_phone):""}${r.referrer_email?" · "+esc(r.referrer_email):""}</div>
+        ${r.notes?`<div class="sub" style="font-size:12.5px;margin-bottom:8px">${esc(r.notes)}</div>`:""}
+        <div class="drow" style="gap:7px;align-items:center">
+          <select data-rfstatus="${r.id}">${["new","contacted","placed","closed"].map(x=>`<option${x===r.status?" selected":""}>${x}</option>`).join("")}</select>
+          <select data-rfpay="${r.id}">${["none","owed","paid"].map(x=>`<option${x===r.payout_status?" selected":""}>${x}</option>`).join("")}</select>
+          <input data-rfamt="${r.id}" type="number" step="1" placeholder="fee" value="${r.payout_amount!=null?r.payout_amount:""}" style="max-width:90px">
+        </div>
+      </div>`).join(""):`<div class="empty"><div class="mark">✦</div><h3>No referrals yet</h3><p>They arrive from the referral page on the website.</p></div>`}
+    </div>`;
+  d.classList.add("show"); $("#scrim").classList.add("show"); $("#scrim").onclick=closeDrawer;
+  const save=async(id,body)=>{
+    try{ await drapi("/referrals/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+      toast("Updated."); onSave&&onSave(); }catch(e){ toast(e.message); }
+  };
+  d.querySelectorAll("[data-rfstatus]").forEach(el=>el.onchange=()=>save(el.dataset.rfstatus,{status:el.value}));
+  d.querySelectorAll("[data-rfpay]").forEach(el=>el.onchange=()=>save(el.dataset.rfpay,{payout_status:el.value}));
+  d.querySelectorAll("[data-rfamt]").forEach(el=>el.onchange=()=>save(el.dataset.rfamt,
+    {payout_amount:el.value.trim()?parseFloat(el.value):null}));
 }
 
 async function openDriver(id,onSave){

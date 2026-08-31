@@ -79,6 +79,54 @@
     <changefreq>monthly</changefreq><priority>0.6</priority>
   </url>
   <url>
+    <loc>https://truckersandtrokeros.com/refer</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/refer"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/refer"/>
+    <xhtml:link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/refer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/refer"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/es/refer</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/refer"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/refer"/>
+    <xhtml:link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/refer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/refer"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/pa/refer</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/refer"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/refer"/>
+    <xhtml:link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/refer"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/refer"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/join</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/join"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/join"/>
+    <xhtml:link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/join"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/join"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/es/join</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/join"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/join"/>
+    <xhtml:link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/join"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/join"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://truckersandtrokeros.com/pa/join</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/join"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/join"/>
+    <xhtml:link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/join"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/join"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://truckersandtrokeros.com/privacy</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/privacy"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/privacy"/>

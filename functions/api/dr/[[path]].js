@@ -441,6 +441,33 @@ export async function onRequest(context) {
   }
 
   // ---------- RECRUITERS + THE SPLIT ----------
+  // Referrals: who sent us whom, and whether they've been paid for it.
+  if (res === 'referrals') {
+    if (method === 'GET' && !id) {
+      const { results } = await db.prepare(`
+        SELECT r.*, l.status AS lead_status, l.id AS lead_row
+        FROM referrals r LEFT JOIN leads l ON l.id = r.lead_id
+        ORDER BY r.created_at DESC`).all();
+      return json({ referrals: results || [] });
+    }
+    if (method === 'PATCH' && id) {
+      const b = await request.json();
+      const sets = [], vals = [];
+      for (const c of ['status', 'payout_status', 'payout_amount', 'notes']) {
+        if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
+      }
+      if (!sets.length) return json({ error: 'nothing to update' }, 400);
+      vals.push(id);
+      await db.prepare(`UPDATE referrals SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+      return json({ ok: true });
+    }
+    if (method === 'DELETE' && id) {
+      await db.prepare('DELETE FROM referrals WHERE id=?').bind(id).run();
+      return json({ ok: true });
+    }
+    return json({ error: 'not found' }, 404);
+  }
+
   if (res === 'recruiters') {
     if (method === 'GET' && !id) {
       const { results } = await db.prepare(`

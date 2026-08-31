@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recruit with us · Truckers &amp; Trokeros</title>
+<meta name="description" content="Apply to recruit drivers with us. 1099, commission only, no desk and no quota. You get our system and our carriers.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://truckersandtrokeros.com/join">
+<link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/join">
+<link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/join">
+<link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/join">
+<link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/join">
+<meta name="theme-color" content="#0b0b0c">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://truckersandtrokeros.com/join">
+<meta property="og:title" content="Recruit with us">
+<meta property="og:description" content="1099, commission only. You get our system and our carriers.">
+<meta property="og:image" content="https://truckersandtrokeros.com/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script src="/contact.js"></script>
+</head>
+<body>
+<div class="strip" id="strip"></div>
+<header id="hdr"></header>
+
+<div class="phead">
+  <div class="tex"><img src="/img/streaks.jpg" alt="" width="1500" height="750"></div>
+  <div class="wrap">
+    <span class="eyebrow" data-t="eyebrow">Recruit with us</span>
+    <h1 data-t="h1">Recruit drivers, keep a share</h1>
+    <p data-t="sub">1099, commission only. No desk, no quota, no draw against your earnings. You bring the drivers; we bring the carriers, the screening and the paperwork.</p>
+  </div>
+</div>
+
+<section class="paper">
+  <div class="wrap narrow">
+    <ul class="ticks" data-list="points"></ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow">
+    <form class="formcard" id="join" novalidate>
+      <div class="err" id="err"></div>
+      <h2 class="fh" data-t="fh">Tell us about you</h2>
+      <div class="two">
+        <div class="f"><label data-t="l_name">Your name</label><input name="name" autocomplete="name" required></div>
+        <div class="f"><label data-t="l_phone">Phone</label><input name="phone" type="tel" autocomplete="tel"></div>
+      </div>
+      <div class="two">
+        <div class="f"><label data-t="l_email">Email</label><input name="email" type="email" autocomplete="email"></div>
+        <div class="f"><label data-t="l_city">Where are you based?</label><input name="city" autocomplete="address-level2"></div>
+      </div>
+      <div class="f"><label data-t="l_exp">Recruiting experience</label>
+        <select name="experience">
+          <option value="" data-t="o_pick"></option>
+          <option value="none" data-t="o_none"></option>
+          <option value="<1" data-t="o_e0"></option>
+          <option value="1-2" data-t="o_e1"></option>
+          <option value="3-5" data-t="o_e3"></option>
+          <option value="5+" data-t="o_e5"></option>
+        </select>
+      </div>
+      <div class="f"><label data-t="l_about">Who can you reach, and how?</label><textarea name="about" rows="4"></textarea></div>
+      <input class="hp" name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn" type="submit" data-t="btn">Send my application</button>
+      <p class="fine" data-t="fine">We read every one. If it is not a fit we will say so rather than leave you waiting.</p>
+    </form>
+  </div>
+</section>
+
+<nav class="callbar" id="callbar" hidden></nav>
+<footer id="ftr"></footer>
+
+<script src="/site.js"></script>
+<script>
+const T = {
+  en: {
+    title:"Recruit with us · Truckers & Trokeros",
+    desc:"Apply to recruit drivers with us. 1099, commission only, no desk and no quota. You get our system and our carriers.",
+    eyebrow:"Recruit with us",
+    h1:"Recruit drivers, keep a share",
+    sub:"1099, commission only. No desk, no quota, no draw against your earnings. You bring the drivers; we bring the carriers, the screening and the paperwork.",
+    points:[
+      ["You keep a share of every placement you bring.","Agreed up front, in writing, before you start."],
+      ["You work our carriers, not your own rolodex.","We hold the relationships and the qualification standards; you do not have to go find a carrier first."],
+      ["The screening is done for you.","Our system checks a driver against the carrier's real standards, so you are not sending files that were never going to pass."],
+      ["The paperwork chases itself.","Deadlines, documents and follow-ups run automatically. You recruit; you do not babysit a spreadsheet."],
+      ["Work in whatever language you work in.","English, Spanish, Punjabi. The whole system is built for it."]
+    ],
+    fh:"Tell us about you",
+    l_name:"Your name", l_phone:"Phone", l_email:"Email", l_city:"Where are you based?",
+    l_exp:"Recruiting experience",
+    o_pick:"Select", o_none:"None yet", o_e0:"Less than a year", o_e1:"1-2 years",
+    o_e3:"3-5 years", o_e5:"5 years or more",
+    l_about:"Who can you reach, and how?",
+    btn:"Send my application",
+    fine:"We read every one. If it is not a fit we will say so rather than leave you waiting.",
+    done_h:"Got it, thank you",
+    done_p:"We will come back to you within a couple of days, either way.",
+    err_req:"We need your name and either an email or a phone number."
+  },
+  es: {
+    title:"Recluta con nosotros · Truckers & Trokeros",
+    desc:"Aplica para reclutar choferes con nosotros. 1099, solo comisión, sin escritorio y sin cuota. Te damos nuestro sistema y nuestras compañías.",
+    eyebrow:"Recluta con nosotros",
+    h1:"Recluta choferes, quédate con tu parte",
+    sub:"1099, solo comisión. Sin escritorio, sin cuota, sin adelantos contra lo que ganas. Tú traes los choferes; nosotros ponemos las compañías, la revisión y el papeleo.",
+    points:[
+      ["Te quedas con una parte de cada colocación que traigas.","Acordada por adelantado y por escrito, antes de empezar."],
+      ["Trabajas nuestras compañías, no tu propia agenda.","Nosotros llevamos la relación y los requisitos; tú no tienes que salir a conseguir una compañía primero."],
+      ["La revisión ya está hecha.","Nuestro sistema compara al chofer con los requisitos reales de la compañía, así no mandas expedientes que nunca iban a pasar."],
+      ["El papeleo se persigue solo.","Fechas, documentos y seguimientos corren automáticamente. Tú reclutas; no cuidas una hoja de cálculo."],
+      ["Trabaja en el idioma en que trabajas.","Inglés, español, punjabi. Todo el sistema está hecho para eso."]
+    ],
+    fh:"Cuéntanos de ti",
+    l_name:"Tu nombre", l_phone:"Teléfono", l_email:"Correo", l_city:"¿Dónde estás?",
+    l_exp:"Experiencia reclutando",
+    o_pick:"Escoge", o_none:"Todavía ninguna", o_e0:"Menos de un año", o_e1:"1-2 años",
+    o_e3:"3-5 años", o_e5:"5 años o más",
+    l_about:"¿A quién puedes llegar, y cómo?",
+    btn:"Manda mi solicitud",
+    fine:"Las leemos todas. Si no da, te lo decimos en vez de dejarte esperando.",
+    done_h:"Listo, gracias",
+    done_p:"Te contestamos en un par de días, en cualquier caso.",
+    err_req:"Danos tu nombre y un correo o un teléfono."
+  },
+  pa: {
+    title:"Sade naal bharti karo · Truckers & Trokeros",
+    desc:"Sade naal drivers bharti karan layi apply karo. 1099, sirf commission, na desk na quota. Sada system te sadiyan companies tuhanu mildiyan han.",
+    eyebrow:"Sade naal bharti karo",
+    h1:"Drivers bharti karo, apna hissa rakho",
+    sub:"1099, sirf commission. Na desk, na quota, na tuhadi kamai de khilaaf koi advance. Tusi drivers liaunde ho; asi companies, jaanch te kaagzi kaarvai dinde haan.",
+    points:[
+      ["Har placement da hissa tuhada, jo tusi liaunde ho.","Shuru karan ton pehla likh ke tey keeta jaanda hai."],
+      ["Tusi sadiyan companies te kamm karde ho, apni list te nahi.","Rishta te sharta asi sambhalde haan; tuhanu pehla koi company labhan di lorr nahi."],
+      ["Jaanch tuhade layi pehla hi ho jandi hai.","Sada system driver nu company diyan asli sharta naal mila ke vekhda hai, taan jo tusi oh file na bhejo jo kadey pass honi hi nahi si."],
+      ["Kaagaz apne aap piche lagg jande han.","Taarikhaan, documents te follow-up apne aap chalde han. Tusi bharti karo; spreadsheet di rakhwali na karo."],
+      ["Jis bhasha vich tusi kamm karde ho, usse vich karo.","English, Spanish, Punjabi. Poora system ese layi baneya hai."]
+    ],
+    fh:"Sanu apne baare dasso",
+    l_name:"Tuhada naam", l_phone:"Phone", l_email:"Email", l_city:"Tusi kithe ho?",
+    l_exp:"Bharti da tajurba",
+    o_pick:"Chuno", o_none:"Hale koi nahi", o_e0:"Ikk saal ton ghatt", o_e1:"1-2 saal",
+    o_e3:"3-5 saal", o_e5:"5 saal jaan vaddh",
+    l_about:"Tusi kis tak pahunch sakde ho, te kiven?",
+    btn:"Meri application bhejo",
+    fine:"Asi har ikk padhde haan. Je gall nahi banndi taan saaf keh devaange, tuhanu udeek vich nahi rakhaange.",
+    done_h:"Mil gayi, dhanvaad",
+    done_p:"Asi do ku din vich jawab de devaange, chahe haan hove jaan na.",
+    err_req:"Sanu apna naam te ikk email jaan phone number dio."
+  }
+};
+const PAGE_CTA = null;
+if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
+paintPage();
+
+document.getElementById('join').onsubmit = async (e) => {
+  e.preventDefault();
+  const form = e.target, err = document.getElementById('err');
+  const t = Object.assign({}, T.en, T[document.documentElement.lang] || {});
+  const b = Object.fromEntries(new FormData(form));
+  if (!b.name || !(b.email || b.phone)) {
+    err.textContent = t.err_req; err.style.display = 'block'; return;
+  }
+  err.style.display = 'none';
+  b.source = new URLSearchParams(location.search).get('src') || 'join page';
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch('/api/apply/recruiter', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.');
+    form.innerHTML = `<div class="done"><div class="big">&#10003;</div>
+      <h2>${t.done_h}</h2><p>${t.done_p}</p></div>`;
+  } catch (ex) {
+    err.textContent = ex.message; err.style.display = 'block';
+    btn.disabled = false; btn.textContent = t.btn;
+  }
+};
+</script>
+</body>
+</html>
