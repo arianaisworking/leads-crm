@@ -1,92 +1,149 @@
-/* site.css — shared chrome for the content pages on truckersandtrokeros.com
-   (privacy, terms, referrals, carriers, 404).
+/* site.css — shared chrome for truckersandtrokeros.com
+   (drivers, carriers, about, privacy, terms).
 
-   drive.html keeps its own styles on purpose: it's the marketing landing page
-   with a bespoke hero and card grid, and it's already live and tested. These
-   pages are the other kind — header, prose, footer — and they all want the
-   same shell. Tokens below mirror drive.html exactly so the two never drift
-   apart visually. */
+   Same system as the landing page: near-black, one saturated red, Anton for
+   display and Barlow for everything read at length. drive.html carries its own
+   copy of these tokens because it has a bespoke hero and card rhythm; the
+   values here mirror it exactly, so the two never drift. */
 
 :root{
-  --ink:#101720; --ink-2:#1c2733; --soft:#5d6b7a; --line:#e2e8ef; --bg:#fff; --wash:#f5f7fa;
-  --brand:#e8590c; --brand-dark:#c04a08; --brand-wash:#fff3ec; --deep:#0d1620; --ok:#1f9d6b;
+  --ink:#0b0b0c; --nav:#121214; --band:#17181a; --line-d:#2a2b2e;
+  --paper:#efeeee; --card:#fff; --line:#dcdad6;
+  --text:#111214; --text-2:#4a4c50; --soft:#6f7276;
+  --red:#d00000; --red-dark:#9a0505; --red-soft:#ff2d2d;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);
-  font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+body{margin:0;background:var(--card);color:var(--text);
+  font:400 16.5px/1.65 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   -webkit-font-smoothing:antialiased}
-h1,h2,h3{line-height:1.2;margin:0}
-a{color:var(--brand-dark)}
+h1,h2,h3,h4{margin:0;font-family:"Anton",Impact,"Arial Narrow",sans-serif;font-weight:400;
+  text-transform:uppercase;letter-spacing:.005em;line-height:1.02;text-wrap:balance}
+a{color:var(--red-dark)}
+img{max-width:100%;display:block}
 
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-.narrow{max-width:760px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px}
+.narrow{max-width:780px}
 
-/* header — same bar as the landing page so the site feels like one place */
-header{position:sticky;top:0;z-index:40;background:rgba(13,22,32,.94);backdrop-filter:blur(8px);color:#fff}
+/* announcement strip */
+.strip{background:var(--ink);color:#a9abb0;font-size:12.5px;font-weight:500;text-align:center;
+  padding:7px 18px;letter-spacing:.02em;border-bottom:1px solid var(--line-d)}
+.strip b{color:#fff;font-weight:600}
+.strip .dot{color:var(--red-soft);margin:0 8px}
+
+/* header */
+header{position:sticky;top:0;z-index:60;background:var(--nav);color:#fff;border-bottom:1px solid var(--line-d)}
 header a{color:inherit}
-.hd{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0}
-.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em;text-decoration:none}
-.logo svg{flex:none}
-.lang{display:flex;gap:2px;background:rgba(255,255,255,.12);border-radius:9px;padding:3px}
-.lang button{border:0;background:transparent;color:#c3cedb;font:inherit;font-size:13px;font-weight:700;
-  padding:5px 11px;border-radius:7px;cursor:pointer;min-height:44px}
-.lang button.on{background:#fff;color:var(--deep)}
-.hd .cta{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 18px;
-  font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;text-decoration:none;white-space:nowrap;min-height:44px;
-  display:inline-flex;align-items:center}
-.hd .cta:hover{background:var(--brand-dark)}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:11px}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex:none}
+.logo .mark{font-family:"Anton",Impact,sans-serif;font-size:clamp(14px,4.2vw,19px);letter-spacing:.01em;
+  color:#fff;text-transform:uppercase;line-height:1;padding-bottom:4px;
+  border-bottom:2.5px solid var(--red);white-space:nowrap}
+.logo .amp{color:var(--red-soft)}
+.hdr-right{display:flex;align-items:center;gap:10px}
 
-/* page head */
-.phead{background:var(--wash);border-bottom:1px solid var(--line);padding:44px 0 38px}
-.phead h1{font-size:clamp(29px,4.6vw,42px);font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
-.phead p{color:var(--soft);font-size:17.5px;margin:0;max-width:620px}
-.eyebrow{color:var(--brand);font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:11px}
+/* primary nav — desktop inline, phone in a sheet under the bar */
+.nav{display:flex;gap:22px;align-items:center}
+.nav a{text-decoration:none;color:#c6c8cc;font-weight:600;font-size:14.5px;padding:6px 0;
+  border-bottom:2px solid transparent}
+.nav a:hover{color:#fff}
+.nav a.on{color:#fff;border-bottom-color:var(--red)}
+.navtoggle{display:none;background:transparent;border:0;color:#fff;min-height:44px;min-width:44px;
+  align-items:center;justify-content:center;cursor:pointer;padding:0}
+@media(max-width:900px){
+  .nav{position:absolute;left:0;right:0;top:100%;flex-direction:column;align-items:stretch;gap:0;
+    background:var(--nav);border-bottom:1px solid var(--line-d);padding:6px 18px 14px;display:none}
+  .nav.open{display:flex}
+  .nav a{padding:13px 0;border-bottom:1px solid var(--line-d);min-height:48px;display:flex;align-items:center}
+  .nav a.on{border-bottom-color:var(--line-d);color:var(--red-soft)}
+  .navtoggle{display:flex}
+  header{position:sticky}
+  .hd{position:relative}
+}
+
+.lang{display:flex;gap:2px;background:rgba(255,255,255,.09);border-radius:6px;padding:3px}
+.lang button{border:0;background:transparent;color:#9a9ca1;font:inherit;font-size:12.5px;font-weight:600;
+  padding:0 13px;min-height:44px;border-radius:4px;cursor:pointer;letter-spacing:.03em}
+.lang button.on{background:#fff;color:var(--ink)}
+.hd .cta{background:var(--red);color:#fff;border:0;border-radius:4px;padding:0 20px;min-height:44px;
+  display:inline-flex;align-items:center;font-family:"Anton",Impact,sans-serif;font-size:15px;
+  letter-spacing:.03em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+.hd .cta:hover{background:var(--red-dark)}
+@media(max-width:560px){.hd .cta{display:none}}
+
+/* page head — dark band with the section name */
+.phead{background:var(--ink);color:#fff;padding:44px 0 40px;position:relative;overflow:hidden;isolation:isolate}
+.phead .tex{position:absolute;inset:0;z-index:0;opacity:.5}
+.phead .tex img{width:100%;height:100%;object-fit:cover}
+.phead .wrap{position:relative;z-index:2}
+.phead h1{font-size:clamp(30px,6.4vw,50px);margin-bottom:12px}
+.phead p{color:#b9bbc0;font-size:17.5px;margin:0;max-width:62ch}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:"Anton",Impact,sans-serif;
+  font-size:clamp(11px,3vw,13px);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--red-soft);margin-bottom:13px}
+.eyebrow:before{content:"";width:26px;height:2px;background:var(--red);flex:none}
+
+/* section rule with the red streaks either side */
+.rule{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}
+.rule .streak{display:flex;flex-direction:column;gap:3px;flex:none}
+.rule .streak i{display:block;height:2px;background:var(--red);border-radius:2px}
+.rule .streak i:nth-child(1){width:26px;opacity:.45}
+.rule .streak i:nth-child(2){width:38px}
+.rule .streak i:nth-child(3){width:18px;opacity:.7}
+.rule .streak.r{transform:scaleX(-1)}
+
+section{padding:52px 0}
+section[id],div[id]{scroll-margin-top:74px}
+section.paper{background:var(--paper)}
+section.dark{background:var(--ink);color:#fff}
+section h2{font-size:clamp(25px,5vw,36px)}
+section.dark p{color:#b3b5b9}
 
 /* prose */
-.prose{padding:46px 0 60px}
-.prose h2{font-size:23px;font-weight:800;letter-spacing:-.01em;margin:38px 0 10px;scroll-margin-top:74px}
+.prose{padding:44px 0 56px}
+.prose h2{font-size:23px;margin:36px 0 10px;scroll-margin-top:80px}
 .prose h2:first-child{margin-top:0}
-.prose h3{font-size:17.5px;font-weight:700;margin:24px 0 6px}
-.prose p{margin:0 0 14px;color:var(--ink-2)}
-.prose ul{margin:0 0 16px;padding-left:20px;color:var(--ink-2)}
+.prose h3{font-size:17px;margin:22px 0 6px}
+.prose p{margin:0 0 14px;color:var(--text-2)}
+.prose ul{margin:0 0 16px;padding-left:20px;color:var(--text-2)}
 .prose li{margin-bottom:7px}
-.prose strong{color:var(--ink)}
-.prose .upd{color:var(--soft);font-size:14.5px;margin-bottom:30px}
+.prose strong{color:var(--text)}
+.prose .upd{color:var(--soft);font-size:14.5px;margin-bottom:28px}
 
-/* a callout for the parts people actually need to notice */
-.call{background:var(--brand-wash);border:1px solid #ffd9c2;border-radius:14px;padding:16px 19px;
-  margin:0 0 22px;color:#7c3908;font-size:15.5px}
+.call{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--red);
+  border-radius:4px;padding:16px 19px;margin:0 0 22px;font-size:15.5px;color:var(--text-2)}
 .call p{color:inherit;margin:0 0 9px}
 .call p:last-child{margin:0}
-.call.plain{background:var(--wash);border-color:var(--line);color:var(--ink-2)}
+.call b,.call strong{color:var(--text)}
 
-/* table for the data-we-hold summary */
 .tbl{width:100%;border-collapse:collapse;margin:0 0 22px;font-size:15.5px}
 .tbl th,.tbl td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-.tbl th{font-size:12.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--soft);
-  border-bottom:1.5px solid var(--line)}
-.tbl td:first-child{font-weight:700;white-space:nowrap}
+.tbl th{font-family:"Anton",Impact,sans-serif;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--soft);border-bottom:2px solid var(--line)}
+.tbl td:first-child{font-weight:600;white-space:nowrap}
 @media(max-width:640px){
   .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
   .tbl thead{display:none}
   .tbl tr{border-bottom:1px solid var(--line);padding:12px 0}
   .tbl td{border:0;padding:2px 0}
   .tbl td:first-child{white-space:normal;font-size:16px}
-  .tbl td[data-l]:before{content:attr(data-l);display:block;font-size:11.5px;font-weight:800;
-    letter-spacing:.05em;text-transform:uppercase;color:var(--soft);margin-top:7px}
+  .tbl td[data-l]:before{content:attr(data-l);display:block;font-family:"Anton",Impact,sans-serif;
+    font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin-top:7px}
 }
 
-.btn{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:14px 28px;font:inherit;
-  font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;
-  justify-content:center;min-height:48px}
-.btn:hover{background:var(--brand-dark)}
-.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn{background:var(--red);color:#fff;border:0;border-radius:4px;padding:0 26px;min-height:52px;
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;text-decoration:none;
+  font-family:"Anton",Impact,sans-serif;font-size:17px;letter-spacing:.035em;text-transform:uppercase}
+.btn:hover{background:var(--red-dark)}
+.btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.32)}
+.btn.ghost:hover{background:rgba(255,255,255,.08);border-color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.dark:hover{background:#000}
 
-footer{background:#080f16;color:#7d8b9a;padding:34px 0;font-size:13.5px}
-.ft{display:flex;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;align-items:center}
+footer{background:#08080a;color:#7a7d82;padding:30px 0;font-size:13.5px;border-top:1px solid var(--line-d)}
+.ft{display:flex;justify-content:space-between;gap:14px 22px;flex-wrap:wrap;align-items:center}
 .ftlinks{display:flex;gap:18px;flex-wrap:wrap}
-footer a{color:#a9b7c5;text-decoration:none}
+footer a{color:#a4a7ac;text-decoration:none}
 footer a:hover{color:#fff}
 
 input,select,textarea,button{font-size:16px}

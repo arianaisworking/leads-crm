@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apply to drive — Truckers &amp; Trokeros</title>
+<meta name="description" content="Tell us what you're looking for. We check you against the carrier's real standards and come back the same day — in English or Spanish.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://truckersandtrokeros.com/drivers">
+<link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/drivers">
+<link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/drivers">
+<link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/drivers">
+<meta name="theme-color" content="#0b0b0c">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://truckersandtrokeros.com/drivers">
+<meta property="og:title" content="Apply to drive — Truckers &amp; Trokeros">
+<meta property="og:description" content="Own your truck? Five minutes, and you'll know where you stand.">
+<meta property="og:image" content="https://truckersandtrokeros.com/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/site.css">
+<style>
+  /* The application page. One job: get the short form filled in. Everything
+     else on the page exists to answer the doubt that stops someone finishing
+     it — what it costs, who sees it, and whether a person is on the other end. */
+  .apphead{position:relative;background:var(--ink);color:#fff;overflow:hidden;isolation:isolate;
+    padding:46px 0 150px}
+  .apphead .shot{position:absolute;inset:0;z-index:0}
+  .apphead .shot img{width:100%;height:100%;object-fit:cover;object-position:center 62%}
+  .apphead .scrim{position:absolute;inset:0;z-index:1;
+    background:linear-gradient(180deg,rgba(11,11,12,.6) 0%,rgba(11,11,12,.78) 52%,var(--ink) 100%)}
+  .apphead .wrap{position:relative;z-index:2;text-align:center}
+  .apphead .eyebrow{justify-content:center}
+  .apphead h1{font-size:clamp(32px,7.4vw,58px);margin-bottom:14px}
+  .apphead p{color:#c4c6ca;font-size:17.5px;margin:0 auto;max-width:52ch}
+
+  /* the four stages, so nobody thinks this one form is the whole process */
+  .stages{display:flex;justify-content:center;gap:0;flex-wrap:wrap;margin-top:30px}
+  .stage{display:flex;align-items:center;gap:9px;padding:0 6px}
+  .stage .n{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;
+    justify-content:center;font-family:"Anton",Impact,sans-serif;font-size:14px;
+    border:1.5px solid rgba(255,255,255,.3);color:#9a9ca1}
+  .stage.now .n{background:var(--red);border-color:var(--red);color:#fff}
+  .stage span{font-size:13.5px;font-weight:600;color:#9a9ca1;white-space:nowrap}
+  .stage.now span{color:#fff}
+  .stages .bar{width:26px;height:1.5px;background:rgba(255,255,255,.2);margin:0 4px;flex:none}
+  /* Four across doesn't fit a phone, and letting it wrap 3+1 orphans the last
+     stage. Two rows of two, with the connectors dropped — the numbers already
+     say what order they come in. */
+  @media(max-width:620px){
+    .stages{display:grid;grid-template-columns:1fr 1fr;gap:12px 8px;max-width:320px;
+      margin:26px auto 0;text-align:left}
+    .stages .bar{display:none}
+    .stage{padding:0}
+    .stage span{font-size:13px}
+  }
+
+  /* the card lifts out of the dark band */
+  .cardwrap{margin-top:-120px;position:relative;z-index:5;padding-bottom:52px}
+  form.app{background:#fff;border-radius:6px;padding:28px 26px 26px;max-width:660px;margin:0 auto;
+    box-shadow:0 24px 60px -30px rgba(0,0,0,.7)}
+  form.app .top{text-align:center;margin-bottom:22px}
+  form.app h2{font-size:clamp(22px,4.6vw,28px);margin-bottom:5px}
+  form.app .sub{color:var(--soft);font-size:15px;margin:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .f{margin-bottom:14px}
+  .f label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
+  .f input,.f select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:4px;
+    font:inherit;font-size:16px;min-height:50px;background:#fff;color:var(--text)}
+  .f input:focus,.f select:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(208,0,0,.13)}
+  .row2{display:grid;grid-template-columns:1fr 104px;gap:11px}
+  form.app .btn{width:100%;margin-top:6px}
+  .fine{color:var(--soft);font-size:12.5px;margin:13px 0 0;text-align:center}
+  .hp{position:absolute;left:-9999px}
+  .err{background:#fdeaea;border:1px solid #f2bcbc;color:#8e1616;border-radius:4px;padding:10px 12px;
+    font-size:14px;margin-bottom:12px;display:none}
+  .done{text-align:center;padding:26px 6px}
+  .done .big{width:58px;height:58px;border-radius:50%;background:var(--red);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px}
+  .done h2{margin-bottom:9px}
+  .done p{color:var(--text-2);font-size:15.5px;margin:0 0 8px}
+
+  /* reassurance under the card */
+  .assure{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:900px;
+    margin:34px auto 0;text-align:center}
+  @media(max-width:760px){.assure{grid-template-columns:1fr;gap:16px;text-align:left}}
+  .as{display:flex;flex-direction:column;align-items:center;gap:9px}
+  @media(max-width:760px){.as{flex-direction:row;align-items:flex-start;gap:13px}}
+  .as .ic{width:56px;height:56px;flex:none}
+  .as .ic img{width:100%;height:100%;object-fit:contain}
+  .as h3{font-size:17px;margin-bottom:4px}
+  .as p{margin:0;color:var(--text-2);font-size:14.5px;line-height:1.5}
+  .helpline{text-align:center;margin-top:30px;font-size:15.5px;color:var(--text-2)}
+  .helpline a{font-weight:600}
+</style>
+</head>
+<body>
+<div class="strip" id="strip"></div>
+<header id="hdr"></header>
+
+<div class="apphead">
+  <div class="shot"><img src="/img/hero-truck.jpg" alt="" fetchpriority="high" width="1600" height="686"></div>
+  <div class="scrim"></div>
+  <div class="wrap">
+    <span class="eyebrow" data-t="eyebrow">Owner-operator application</span>
+    <h1 data-t="h1"></h1>
+    <p data-t="sub"></p>
+    <div class="stages">
+      <div class="stage now"><span class="n">1</span><span data-t="st1">Your details</span></div>
+      <span class="bar"></span>
+      <div class="stage"><span class="n">2</span><span data-t="st2">Experience</span></div>
+      <span class="bar"></span>
+      <div class="stage"><span class="n">3</span><span data-t="st3">Your record</span></div>
+      <span class="bar"></span>
+      <div class="stage"><span class="n">4</span><span data-t="st4">We screen you</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="cardwrap">
+  <div class="wrap">
+    <form class="app" id="lead" novalidate>
+      <div class="top">
+        <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 data-t="form_h"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+        <p class="sub" data-t="form_sub"></p>
+      </div>
+      <div class="err" id="err"></div>
+      <div class="two">
+        <div class="f"><label data-t="l_name">Full name</label><input name="name" autocomplete="name" required></div>
+        <div class="f"><label data-t="l_phone">Cell phone</label><input name="phone" type="tel" autocomplete="tel" required></div>
+      </div>
+      <div class="two">
+        <div class="f"><label data-t="l_email">Email</label><input name="email" type="email" autocomplete="email"></div>
+        <div class="f"><label data-t="l_city">City &amp; state</label>
+          <div class="row2"><input name="city" autocomplete="address-level2"><input name="state" maxlength="2" placeholder="TX"></div>
+        </div>
+      </div>
+      <div class="two">
+        <div class="f"><label data-t="l_truck">Do you own your truck?</label>
+          <select name="interest">
+            <option value="owns" data-t="o_owns"></option>
+            <option value="buying" data-t="o_buying"></option>
+            <option value="no" data-t="o_no"></option>
+          </select>
+        </div>
+        <div class="f"><label data-t="l_exp">Years of CDL-A experience</label>
+          <select name="experience">
+            <option value="" data-t="o_pick"></option>
+            <option value="<1" data-t="o_e0"></option>
+            <option value="1-2" data-t="o_e1"></option>
+            <option value="3-5" data-t="o_e3"></option>
+            <option value="5+" data-t="o_e5"></option>
+          </select>
+        </div>
+      </div>
+      <input class="hp" name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn" type="submit" data-t="form_btn"></button>
+      <p class="fine" data-t="form_fine"></p>
+    </form>
+
+    <div class="assure">
+      <div class="as">
+        <span class="ic"><img src="/img/ico-route.png" alt="" loading="lazy" width="176" height="176"></span>
+        <div><h3 data-t="as1_h"></h3><p data-t="as1_p"></p></div>
+      </div>
+      <div class="as">
+        <span class="ic"><img src="/img/ico-driver.png" alt="" loading="lazy" width="176" height="176"></span>
+        <div><h3 data-t="as2_h"></h3><p data-t="as2_p"></p></div>
+      </div>
+      <div class="as">
+        <span class="ic"><img src="/img/ico-shield.png" alt="" loading="lazy" width="176" height="176"></span>
+        <div><h3 data-t="as3_h"></h3><p data-t="as3_p"></p></div>
+      </div>
+    </div>
+    <p class="helpline" data-t="helpline"></p>
+  </div>
+</div>
+
+<footer id="ftr"></footer>
+
+<script src="/site.js"></script>
+<script>
+const T = {
+  en: {
+    title:"Apply to drive — Truckers & Trokeros",
+    desc:"Tell us what you're looking for. We check you against the carrier's real standards and come back the same day — in English or Spanish.",
+    eyebrow:"Owner-operator application",
+    h1:"Let's see where you stand",
+    sub:"Five minutes, and you'll know. We check your record against the carrier's published standards before anything is submitted — so nobody wastes an afternoon on an application that was never going to pass.",
+    st1:"Your details", st2:"Experience", st3:"Your record", st4:"We screen you",
+
+    form_h:"Start with the basics",
+    form_sub:"Two minutes now. We'll email you the full application straight away.",
+    l_name:"Full name", l_phone:"Cell phone", l_email:"Email", l_city:"City & state",
+    l_truck:"Do you own your truck?", l_exp:"Years of CDL-A experience",
+    o_owns:"Yes, I own it", o_buying:"I'm buying / financing one", o_no:"Not yet",
+    o_pick:"Select", o_e0:"Less than a year", o_e1:"1–2 years", o_e3:"3–5 years", o_e5:"5 years or more",
+    form_btn:"Send my information",
+    form_fine:"We'll text or email you your application. We never sell your details.",
+    done_h:"Got it — check your email",
+    done_p1:"Your application is on its way. It takes about five minutes.",
+    done_p2:"Nothing in your inbox in a few minutes? Check spam, or just reply to the text.",
+    err_req:"Please give us your name and a phone number so we can reach you.",
+
+    as1_h:"You'll hear back today",
+    as1_p:"Qualified, needs a closer look, or not a fit — with the reason, either way.",
+    as2_h:"A real person, not a call centre",
+    as2_p:"Two of us. In English or Spanish, whichever you'd rather.",
+    as3_h:"Your details stay yours",
+    as3_p:"We never sell them and never pass them to other recruiters. Only the carrier you're applying to sees your file.",
+    helpline:"Stuck on any of it? <a href=\"mailto:recruiting@truckersandtrokeros.com\">Email us</a> and a person will help you through it."
+  },
+  es: {
+    title:"Aplica para manejar — Truckers & Trokeros",
+    desc:"Dinos qué estás buscando. Revisamos tu récord con los requisitos reales de la compañía y te contestamos el mismo día — en español o en inglés.",
+    eyebrow:"Solicitud para dueños de troca",
+    h1:"Vamos a ver cómo estás",
+    sub:"Cinco minutos y lo sabes. Comparamos tu récord con los requisitos publicados de la compañía antes de mandar nada — así nadie pierde una tarde en una solicitud que nunca iba a pasar.",
+    st1:"Tus datos", st2:"Experiencia", st3:"Tu récord", st4:"Te revisamos",
+
+    form_h:"Empecemos por lo básico",
+    form_sub:"Dos minutos ahora. Te mandamos la solicitud completa por correo enseguida.",
+    l_name:"Nombre completo", l_phone:"Celular", l_email:"Correo", l_city:"Ciudad y estado",
+    l_truck:"¿La troca es tuya?", l_exp:"Años de experiencia con CDL-A",
+    o_owns:"Sí, es mía", o_buying:"La estoy pagando / financiando", o_no:"Todavía no",
+    o_pick:"Escoge", o_e0:"Menos de un año", o_e1:"1–2 años", o_e3:"3–5 años", o_e5:"5 años o más",
+    form_btn:"Manda mis datos",
+    form_fine:"Te mandamos tu solicitud por texto o correo. Nunca vendemos tus datos.",
+    done_h:"Listo — revisa tu correo",
+    done_p1:"Tu solicitud va en camino. Toma unos cinco minutos.",
+    done_p2:"¿No llega nada en unos minutos? Revisa spam, o contesta el mensaje.",
+    err_req:"Danos tu nombre y un teléfono para poder contactarte.",
+
+    as1_h:"Te contestamos hoy",
+    as1_p:"Calificas, hay que verlo más de cerca, o no da — y en todos los casos te decimos por qué.",
+    as2_h:"Una persona, no un call center",
+    as2_p:"Somos dos. En español o en inglés, como prefieras.",
+    as3_h:"Tus datos son tuyos",
+    as3_p:"Nunca los vendemos ni se los pasamos a otros reclutadores. Solo la compañía a la que aplicas ve tu expediente.",
+    helpline:"¿Se te atoró algo? <a href=\"mailto:recruiting@truckersandtrokeros.com\">Escríbenos</a> y una persona te ayuda."
+  }
+};
+const PAGE_CTA = false;
+paintPage();
+
+const params = new URLSearchParams(location.search);
+const SOURCE = params.get('src') || 'drivers page';
+const RECRUITER = params.get('r') || '';
+const CARRIER = params.get('carrier') || 'evans_dal';
+
+document.getElementById('lead').onsubmit = async (e) => {
+  e.preventDefault();
+  const form = e.target, t = T[document.documentElement.lang] || T.en, err = document.getElementById('err');
+  const b = Object.fromEntries(new FormData(form));
+  if (!b.name || !b.phone) { err.textContent = t.err_req; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  b.source = SOURCE; if (RECRUITER) b.recruiter = RECRUITER;
+  b.interest = 'Owner-operator · truck: ' + (b.interest || 'unknown')
+    + ' · experience: ' + (b.experience || 'not said')
+    + ' · lang: ' + document.documentElement.lang;
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch('/api/apply/lead?carrier=' + encodeURIComponent(CARRIER),
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.');
+    form.innerHTML = `<div class="done"><div class="big">&#10003;</div>
+      <h2>${t.done_h}</h2><p>${t.done_p1}</p><p>${t.done_p2}</p></div>`;
+  } catch (ex) {
+    err.textContent = ex.message; err.style.display = 'block';
+    btn.disabled = false; btn.textContent = t.form_btn;
+  }
+};
+</script>
+</body>
+</html>
