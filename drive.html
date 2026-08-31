@@ -9,7 +9,7 @@
 <link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/">
 <link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es">
 <link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/">
-<meta name="theme-color" content="#0d1620">
+<meta name="theme-color" content="#0b0b0c">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://truckersandtrokeros.com/">
 <meta property="og:site_name" content="Truckers &amp; Trokeros">
@@ -22,192 +22,284 @@
 <meta property="og:locale:alternate" content="es_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
+  /* ── Truckers & Trokeros ──────────────────────────────────────────────
+     Black, one red, and photography. Display face is Anton — heavy
+     condensed caps, the poster lettering this trade has used on doors and
+     mudflaps for decades. Barlow underneath it, drawn from transit
+     signage, which is why it holds up small on a phone in daylight.
+     No system fonts, no emoji, no gradient hero, no card grid. */
   :root{
-    --ink:#101720; --ink-2:#1c2733; --soft:#5d6b7a; --line:#e2e8ef; --bg:#fff; --wash:#f5f7fa;
-    --brand:#e8590c; --brand-dark:#c04a08; --brand-wash:#fff3ec; --deep:#0d1620; --ok:#1f9d6b;
+    --ink:#0b0b0c; --nav:#121214; --band:#17181a; --line-d:#2a2b2e;
+    --paper:#efeeee; --card:#fff; --line:#dcdad6;
+    --text:#111214; --text-2:#4a4c50; --soft:#6f7276;
+    --red:#d00000; --red-dark:#9a0505; --red-soft:#ff2d2d;
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-  h1,h2,h3{line-height:1.15;margin:0}
+  body{margin:0;background:var(--paper);color:var(--text);
+    font:400 16.5px/1.6 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;font-family:"Anton",Impact,"Arial Narrow",sans-serif;
+    font-weight:400;text-transform:uppercase;letter-spacing:.005em;line-height:.98;text-wrap:balance}
   a{color:inherit}
+  img{max-width:100%;display:block}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 18px}
+
+  /* announcement strip */
+  .strip{background:var(--ink);color:#a9abb0;font-size:12.5px;font-weight:500;
+    text-align:center;padding:7px 18px;letter-spacing:.02em;border-bottom:1px solid var(--line-d)}
+  .strip b{color:#fff;font-weight:600}
+  .strip .dot{color:var(--red-soft);margin:0 8px}
 
   /* header */
-  header{position:sticky;top:0;z-index:40;background:rgba(13,22,32,.94);backdrop-filter:blur(8px);color:#fff}
-  .hd{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0}
-  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em}
-  .logo svg{flex:none}
-  .lang{display:flex;gap:2px;background:rgba(255,255,255,.12);border-radius:9px;padding:3px}
-  .lang button{border:0;background:transparent;color:#c3cedb;font:inherit;font-size:13px;font-weight:700;padding:5px 11px;border-radius:7px;cursor:pointer}
-  .lang button.on{background:#fff;color:var(--deep)}
-  .hd .cta{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;text-decoration:none;white-space:nowrap}
-  .hd .cta:hover{background:var(--brand-dark)}
-  @media(max-width:620px){.hd .cta{display:none}}
+  header{position:sticky;top:0;z-index:60;background:var(--nav);color:#fff;
+    border-bottom:1px solid var(--line-d)}
+  .hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:11px}
+  .logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex:none}
+  .logo .mark{font-family:"Anton",Impact,sans-serif;font-size:clamp(14px,4.2vw,19px);
+    letter-spacing:.01em;color:#fff;text-transform:uppercase;line-height:1;padding-bottom:4px;
+    border-bottom:2.5px solid var(--red);white-space:nowrap}
+  .logo .amp{color:var(--red-soft)}
+  .hdr-right{display:flex;align-items:center;gap:10px}
+  .lang{display:flex;gap:2px;background:rgba(255,255,255,.09);border-radius:6px;padding:3px}
+  .lang button{border:0;background:transparent;color:#9a9ca1;font:inherit;font-size:12.5px;
+    font-weight:600;padding:0 13px;min-height:44px;border-radius:4px;cursor:pointer;letter-spacing:.03em}
+  .lang button.on{background:#fff;color:var(--ink)}
+  .hd .cta{background:var(--red);color:#fff;border:0;border-radius:4px;padding:0 20px;
+    min-height:44px;display:inline-flex;align-items:center;font-family:"Anton",Impact,sans-serif;
+    font-size:15px;letter-spacing:.03em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+  .hd .cta:hover{background:var(--red-dark)}
+  .hd .tel{display:none;align-items:center;gap:6px;color:#fff;text-decoration:none;
+    font-weight:600;font-size:14px;min-height:44px;padding:0 4px}
+  @media(max-width:700px){ .hd .cta{display:none} .hd .tel.show{display:flex} }
 
-  /* hero */
-  .hero{background:linear-gradient(165deg,#0d1620 0%,#16242f 55%,#1d3040 100%);color:#fff;padding:64px 0 74px;position:relative;overflow:hidden}
-  .hero:after{content:"";position:absolute;right:-90px;bottom:-70px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(232,89,12,.22),transparent 68%)}
-  .hero .in{position:relative;z-index:2;max-width:660px}
-  .kicker{display:inline-block;background:rgba(232,89,12,.18);color:#ffb185;border:1px solid rgba(232,89,12,.35);font-size:12.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:6px 13px;border-radius:20px;margin-bottom:18px}
-  .hero h1{font-size:clamp(33px,5.4vw,52px);font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
-  .hero h1 em{font-style:normal;color:#ff8f4d}
-  .hero p{font-size:18.5px;color:#b9c6d4;margin:0 0 28px;max-width:560px}
-  .btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:30px}
-  .btn{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:15px 30px;font:inherit;font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;display:inline-block}
-  .btn:hover{background:var(--brand-dark)}
-  .btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3)}
-  .btn.ghost:hover{background:rgba(255,255,255,.09)}
-  .trust{display:flex;gap:26px;flex-wrap:wrap;color:#93a3b4;font-size:14.5px}
-  .trust b{color:#fff;display:block;font-size:20px;font-weight:800;margin-bottom:1px}
+  /* hero — photograph, black scrim, type on top */
+  .hero{position:relative;background:var(--ink);color:#fff;overflow:hidden;isolation:isolate}
+  .hero .shot{position:absolute;inset:0;z-index:0}
+  .hero .shot img{width:100%;height:100%;object-fit:cover;object-position:66% 50%}
+  .hero .scrim{position:absolute;inset:0;z-index:1;
+    background:linear-gradient(90deg,rgba(11,11,12,.92) 0%,rgba(11,11,12,.78) 38%,rgba(11,11,12,.34) 68%,rgba(11,11,12,.12) 100%)}
+  .hero .in{position:relative;z-index:2;padding:52px 0 46px;max-width:620px}
+  .kicker{display:inline-flex;align-items:center;gap:9px;font-family:"Anton",Impact,sans-serif;
+    font-size:clamp(11px,3vw,13px);letter-spacing:.07em;text-transform:uppercase;
+    color:var(--red-soft);margin-bottom:15px}
+  .kicker:before{content:"";width:26px;height:2px;background:var(--red);flex:none}
+  .hero h1{font-size:clamp(42px,10.5vw,74px);margin-bottom:16px}
+  .hero h1 em{font-style:normal;color:var(--red-soft)}
+  .hero p{font-size:17.5px;color:#c6c8cc;margin:0 0 26px;max-width:44ch}
+  .btns{display:flex;gap:11px;flex-wrap:wrap}
+  .btn{background:var(--red);color:#fff;border:0;border-radius:4px;padding:0 26px;min-height:52px;
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;
+    text-decoration:none;font-family:"Anton",Impact,sans-serif;font-size:17px;letter-spacing:.035em;
+    text-transform:uppercase}
+  .btn:hover{background:var(--red-dark)}
+  .btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.32)}
+  .btn.ghost:hover{background:rgba(255,255,255,.08);border-color:#fff}
+  @media(max-width:560px){ .btns{flex-direction:column;align-items:stretch} .btn{width:100%} }
+
+  /* trust strip under the hero */
+  .trust{background:var(--band);border-top:1px solid var(--line-d);border-bottom:1px solid var(--line-d)}
+  .trust .row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .trust .t{display:flex;align-items:center;gap:11px;padding:16px 14px;color:#e6e7e9;
+    font-size:14px;font-weight:500;border-left:1px solid var(--line-d)}
+  .trust .t:first-child{border-left:0}
+  .trust .ic{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--red);
+    display:flex;align-items:center;justify-content:center;flex:none}
+  @media(max-width:820px){
+    .trust .row{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .trust .t:nth-child(3){border-left:0}
+    .trust .t:nth-child(n+3){border-top:1px solid var(--line-d)}
+  }
 
   /* sections */
-  section{padding:66px 0}
-  section.alt{background:var(--wash)}
-  .eyebrow{color:var(--brand);font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:11px}
-  section h2{font-size:clamp(25px,3.6vw,35px);font-weight:800;letter-spacing:-.015em;margin-bottom:12px}
-  .lede{color:var(--soft);font-size:17.5px;max-width:620px;margin:0 0 36px}
+  section{padding:56px 0}
+  /* the header is sticky, so anchor targets must clear it or the heading
+     they jump to lands underneath it */
+  section[id],div[id]{scroll-margin-top:70px}
+  section.dark{background:var(--ink);color:#fff}
+  section.paper{background:var(--paper)}
+  .rule{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}
+  .rule .streak{display:flex;flex-direction:column;gap:3px;flex:none}
+  .rule .streak i{display:block;height:2px;background:var(--red);border-radius:2px}
+  .rule .streak i:nth-child(1){width:26px;opacity:.45}
+  .rule .streak i:nth-child(2){width:38px}
+  .rule .streak i:nth-child(3){width:18px;opacity:.7}
+  .rule .streak.r{transform:scaleX(-1)}
+  .sec-h{font-size:clamp(27px,5.4vw,40px);text-align:center}
+  .sec-p{text-align:center;color:var(--text-2);font-size:16.5px;max-width:56ch;margin:12px auto 0}
+  section.dark .sec-p{color:#b3b5b9}
+  .eyebrow{font-family:"Anton",Impact,sans-serif;font-size:13px;letter-spacing:.11em;
+    text-transform:uppercase;color:var(--red);text-align:center;margin-bottom:9px}
+  section.dark .eyebrow{color:var(--red-soft)}
 
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:16px}
-  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px}
-  section.alt .card{background:#fff}
-  .card .ic{width:40px;height:40px;border-radius:11px;background:var(--brand-wash);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:13px}
-  .card h3{font-size:17px;font-weight:700;margin-bottom:6px}
-  .card p{color:var(--soft);font-size:15px;margin:0}
+  /* numbered steps */
+  .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:38px}
+  @media(max-width:800px){.steps{grid-template-columns:1fr;gap:13px}}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:26px 22px 22px;
+    position:relative;text-align:center}
+  section.dark .step{background:#1c1d20;border-color:var(--line-d)}
+  .step .n{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:28px;height:28px;
+    border-radius:50%;background:var(--red);color:#fff;font-family:"Anton",Impact,sans-serif;
+    font-size:14px;display:flex;align-items:center;justify-content:center;letter-spacing:.02em}
+  .step .ic{width:56px;height:56px;border-radius:50%;border:1.5px solid var(--text);
+    display:flex;align-items:center;justify-content:center;margin:6px auto 14px}
+  .step .ic.art{width:74px;height:74px;border:0;margin:0 auto 12px}
+  .step .ic.art img{width:100%;height:100%;object-fit:contain}
+  section.dark .step .ic{border-color:#fff}
+  .step h3{font-size:18px;margin-bottom:7px}
+  .step p{margin:0;color:var(--text-2);font-size:15px;line-height:1.5}
+  section.dark .step p{color:#a9abaf}
 
-  /* steps */
-  .steps{counter-reset:s;display:grid;gap:2px}
-  .step{display:grid;grid-template-columns:46px 1fr;gap:16px;padding:19px 0;border-top:1px solid var(--line)}
-  .step:first-child{border-top:0}
-  .step .n{width:36px;height:36px;border-radius:50%;background:var(--deep);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
-  .step h3{font-size:17.5px;font-weight:700;margin-bottom:4px}
-  .step p{color:var(--soft);font-size:15.5px;margin:0}
-  .step .tag{display:inline-block;background:var(--brand-wash);color:var(--brand-dark);font-size:12px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:8px;vertical-align:middle}
+  /* the work: photo band + list */
+  .work{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;margin-top:34px}
+  @media(max-width:860px){.work{grid-template-columns:1fr;gap:24px}}
+  .work .shot{border-radius:6px;overflow:hidden;border:1px solid var(--line-d)}
+  .wlist{display:flex;flex-direction:column}
+  .wrow{display:flex;gap:15px;padding:17px 0;border-top:1px solid var(--line)}
+  section.dark .wrow{border-color:var(--line-d)}
+  .wrow:first-child{border-top:0;padding-top:0}
+  .wrow .ic{flex:none;margin-top:1px}
+  .wrow h3{font-size:18px;margin-bottom:5px}
+  .wrow p{margin:0;color:var(--text-2);font-size:15.5px;line-height:1.5}
+  section.dark .wrow p{color:#a9abaf}
+
+  /* why drivers call us — a real face beside the four messages */
+  .why{display:grid;grid-template-columns:400px 1fr;gap:38px;align-items:center;margin-top:36px}
+  @media(max-width:880px){.why{grid-template-columns:1fr;gap:24px}}
+  .portrait{margin:0;border-radius:6px;overflow:hidden;position:relative;background:var(--ink)}
+  .portrait img{width:100%;height:100%;object-fit:cover;aspect-ratio:760/1188}
+  @media(max-width:880px){.portrait img{aspect-ratio:16/10;object-position:center 28%}}
+  .portrait:after{content:"";position:absolute;inset:auto 0 0 0;height:34%;
+    background:linear-gradient(transparent,rgba(11,11,12,.55))}
 
   /* requirements */
-  .reqs{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;max-width:760px}
+  .reqs{display:grid;grid-template-columns:1fr 1fr;gap:10px 26px;max-width:820px;margin:34px auto 0}
+  @media(max-width:680px){.reqs{grid-template-columns:1fr}}
   .req{display:flex;gap:11px;align-items:flex-start;font-size:16px}
-  .req .tick{color:var(--ok);font-weight:800;flex:none;margin-top:1px}
-  .req .x{color:var(--brand);font-weight:800;flex:none;margin-top:1px}
-  @media(max-width:640px){.reqs{grid-template-columns:1fr}}
-  .note{background:var(--brand-wash);border:1px solid #ffd9c2;border-radius:14px;padding:17px 20px;margin-top:28px;font-size:15.5px;color:#7c3908;max-width:760px}
+  .req .tick,.req .x{flex:none;margin-top:3px}
+  .note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--red);
+    border-radius:4px;padding:18px 20px;margin:30px auto 0;max-width:820px;font-size:15.5px;color:var(--text-2)}
+  .note b{color:var(--text)}
 
-  /* fees -- the carrier's optional programs, priced in the open */
-  .fees{margin-top:34px;border:1px solid var(--line);border-radius:16px;padding:24px;max-width:760px;background:var(--wash)}
-  .fees h3{font-size:18px;font-weight:800;margin-bottom:5px}
+  /* fees */
+  .fees{max-width:820px;margin:34px auto 0;background:#fff;border:1px solid var(--line);border-radius:6px;
+    padding:24px 24px 20px}
+  .fees h3{font-size:20px;margin-bottom:5px}
   .fee_sub{color:var(--soft);font-size:15px;margin:0 0 16px}
   .fee{display:grid;grid-template-columns:1fr auto;gap:3px 16px;padding:13px 0;border-top:1px solid var(--line)}
   .fee:first-child{border-top:0}
-  .fee .lbl{font-weight:700;font-size:15.5px}
-  .fee .amt{font-weight:800;font-size:15.5px;white-space:nowrap;color:var(--brand-dark);text-align:right}
-  .fee .d{grid-column:1/-1;color:var(--soft);font-size:14px}
-  .fee_note{color:var(--soft);font-size:14px;margin:17px 0 0}
+  .fee .lbl{font-weight:600;font-size:16px}
+  .fee .amt{font-family:"Anton",Impact,sans-serif;font-size:17px;letter-spacing:.02em;
+    white-space:nowrap;color:var(--red);text-align:right}
+  .fee .d{grid-column:1/-1;color:var(--text-2);font-size:14.5px}
+  .fee_note{color:var(--soft);font-size:14px;margin:16px 0 0}
 
   /* faq */
-  .faq{max-width:760px}
-  details{border-bottom:1px solid var(--line);padding:17px 0}
-  details summary{font-weight:700;font-size:16.5px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:14px;align-items:center}
+  .faq{max-width:820px;margin:34px auto 0}
+  details{border-bottom:1px solid var(--line);padding:16px 0}
+  details summary{font-family:"Anton",Impact,sans-serif;font-size:17.5px;text-transform:uppercase;
+    letter-spacing:.01em;cursor:pointer;list-style:none;display:flex;justify-content:space-between;
+    gap:14px;align-items:center;min-height:32px}
   details summary::-webkit-details-marker{display:none}
-  details summary:after{content:"+";color:var(--brand);font-size:22px;font-weight:400;flex:none}
-  details[open] summary:after{content:"–"}
-  details p{color:var(--soft);font-size:15.5px;margin:10px 0 0}
+  details summary:after{content:"";width:13px;height:13px;flex:none;border-right:2.5px solid var(--red);
+    border-bottom:2.5px solid var(--red);transform:rotate(45deg);margin-top:-5px;transition:transform .18s}
+  details[open] summary:after{transform:rotate(-135deg);margin-top:3px}
+  details p{color:var(--text-2);font-size:15.5px;margin:11px 0 0}
 
-  /* form */
-  .formwrap{background:var(--deep);color:#fff;padding:66px 0}
-  .fgrid{display:grid;grid-template-columns:1fr 420px;gap:48px;align-items:start}
-  @media(max-width:860px){.fgrid{grid-template-columns:1fr;gap:32px}}
-  .formwrap h2{color:#fff}
-  .formwrap .lede{color:#b9c6d4}
-  .fpoints{display:grid;gap:13px;margin-top:8px}
-  .fpoint{display:flex;gap:11px;font-size:15.5px;color:#c8d4e0}
-  .fpoint .tick{color:#4ade80;font-weight:800;flex:none}
-  form{background:#fff;border-radius:18px;padding:26px;color:var(--ink)}
-  form h3{font-size:19px;font-weight:800;margin-bottom:4px}
+  /* the form band */
+  .formwrap{position:relative;background:var(--ink);color:#fff;padding:56px 0;overflow:hidden;isolation:isolate}
+  .formwrap .streaks{position:absolute;inset:0;z-index:0;opacity:.6}
+  .formwrap .streaks img{width:100%;height:100%;object-fit:cover;object-position:center 65%}
+  .formwrap .wrap{position:relative;z-index:2}
+  .fgrid{display:grid;grid-template-columns:1fr 448px;gap:44px;align-items:start}
+  @media(max-width:900px){.fgrid{grid-template-columns:1fr;gap:28px}}
+  .formwrap h2{font-size:clamp(28px,5.6vw,40px)}
+  .formwrap .lede{color:#b9bbc0;font-size:17px;margin:14px 0 22px}
+  .fpoints{display:grid;gap:12px}
+  .fpoint{display:flex;gap:11px;font-size:15.5px;color:#d2d4d8;align-items:flex-start}
+  .fpoint .tick{color:var(--red-soft);flex:none;margin-top:2px}
+  form{background:#fff;border-radius:6px;padding:26px;color:var(--text)}
+  form h3{font-family:"Anton",Impact,sans-serif;font-size:22px;text-transform:uppercase;margin-bottom:4px}
   form .sub{color:var(--soft);font-size:14.5px;margin:0 0 18px}
   .f{margin-bottom:13px}
   .f label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
-  .f input,.f select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;font:inherit;font-size:16px;background:#fff;color:var(--ink)}
-  .f input:focus,.f select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(232,89,12,.13)}
-  .row2{display:grid;grid-template-columns:1fr 96px;gap:11px}
-  form .btn{width:100%;text-align:center;margin-top:6px;padding:15px}
+  .f input,.f select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:4px;
+    font:inherit;font-size:16px;min-height:50px;background:#fff;color:var(--text)}
+  .f input:focus,.f select:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(208,0,0,.13)}
+  .row2{display:grid;grid-template-columns:1fr 104px;gap:11px}
+  form .btn{width:100%;margin-top:6px}
   .fine{color:var(--soft);font-size:12.5px;margin:13px 0 0;text-align:center}
   .hp{position:absolute;left:-9999px}
-  .done{text-align:center;padding:26px 6px}
-  .done .big{width:58px;height:58px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-size:29px;margin:0 auto 15px}
-  .done h3{font-size:20px;margin-bottom:8px}
-  .done p{color:var(--soft);font-size:15px;margin:0 0 6px}
-  .err{background:#fdecec;border:1px solid #f5c2c2;color:#9b2c2c;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px;display:none}
+  .done{text-align:center;padding:24px 6px}
+  .done .big{width:56px;height:56px;border-radius:50%;background:var(--red);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:27px;margin:0 auto 14px}
+  .done h3{font-size:22px;margin-bottom:8px}
+  .done p{color:var(--text-2);font-size:15px;margin:0 0 6px}
+  .err{background:#fdeaea;border:1px solid #f2bcbc;color:#8e1616;border-radius:4px;
+    padding:10px 12px;font-size:14px;margin-bottom:12px;display:none}
 
-  /* contact -- hidden entirely until a number is configured, so we never ship
-     a dead tel: link. On a phone the bar sits at the bottom, where a thumb is. */
-  .cbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:none;gap:9px;padding:9px 12px;
-    padding-bottom:calc(9px + env(safe-area-inset-bottom));background:rgba(13,22,32,.97);
-    backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.1)}
+  /* carrier band */
+  .carrier{background:var(--band);color:#fff;border-top:1px solid var(--line-d)}
+  .carrier .in{display:flex;align-items:center;gap:22px;padding-block:34px;flex-wrap:wrap}
+  .carrier .ic{width:64px;height:64px;border-radius:50%;border:1.5px solid var(--red);
+    display:flex;align-items:center;justify-content:center;flex:none}
+  .carrier .txt{flex:1;min-width:240px}
+  .carrier h2{font-size:clamp(22px,4.2vw,29px);margin-bottom:6px}
+  .carrier p{margin:0;color:#a9abaf;font-size:15.5px}
+
+  /* contact */
+  .cbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:none;gap:9px;padding:9px 12px;
+    padding-bottom:calc(9px + env(safe-area-inset-bottom));background:rgba(11,11,12,.97);
+    backdrop-filter:blur(8px);border-top:1px solid var(--line-d)}
   .cbar a{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;
-    border-radius:12px;text-decoration:none;font-weight:700;font-size:15.5px}
+    border-radius:4px;text-decoration:none;font-family:"Anton",Impact,sans-serif;font-size:16px;
+    letter-spacing:.03em;text-transform:uppercase}
   .cbar .call{background:rgba(255,255,255,.13);color:#fff}
   .cbar .wa{background:#25d366;color:#08301a}
-  .cbar svg{flex:none}
   body.hasbar{padding-bottom:76px}
   @media(max-width:760px){ body.hasbar .cbar{display:flex} }
-
-  .hd .tel{display:none;align-items:center;gap:7px;color:#fff;text-decoration:none;font-weight:700;
-    font-size:14.5px;min-height:44px;padding:0 4px}
-  @media(max-width:620px){ .hd .tel.show{display:flex} }
-
-  .cband{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;margin-top:26px;
-    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:18px 20px}
+  .cband{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;margin-top:24px;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:18px 20px}
   .cband .txt{flex:1;min-width:210px}
-  .cband h4{font-size:16.5px;font-weight:800;margin:0 0 3px;color:#fff}
-  .cband p{margin:0;color:#b9c6d4;font-size:14.5px}
+  .cband h4{font-family:"Anton",Impact,sans-serif;font-size:19px;text-transform:uppercase;margin:0 0 4px;color:#fff}
+  .cband p{margin:0;color:#b9bbc0;font-size:14.5px}
   .cband .acts{display:flex;gap:9px;flex-wrap:wrap}
-  .cband a{display:flex;align-items:center;gap:8px;min-height:46px;padding:0 18px;border-radius:11px;
-    text-decoration:none;font-weight:700;font-size:15px}
+  .cband a{display:flex;align-items:center;gap:8px;min-height:46px;padding:0 20px;border-radius:4px;
+    text-decoration:none;font-family:"Anton",Impact,sans-serif;font-size:15px;letter-spacing:.03em;text-transform:uppercase}
   .cband .call{background:rgba(255,255,255,.15);color:#fff}
   .cband .wa{background:#25d366;color:#08301a}
 
-  footer{background:#080f16;color:#7d8b9a;padding:34px 0;font-size:13.5px}
-  .ft{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
-  footer a{color:#a9b7c5;text-decoration:none}
+  footer{background:#08080a;color:#7a7d82;padding:30px 0;font-size:13.5px;border-top:1px solid var(--line-d)}
+  .ft{display:flex;justify-content:space-between;gap:14px 22px;flex-wrap:wrap;align-items:center}
+  .ftlinks{display:flex;gap:18px;flex-wrap:wrap}
+  footer a{color:#a4a7ac;text-decoration:none}
   footer a:hover{color:#fff}
 
-  /* ---- Touch sizing. Drivers are on phones, not desktops. ----
-     16px on form controls: below that, iOS zooms the page the moment a field is
-     focused, which throws the layout around mid-answer.
-     44px minimum on tap targets: Apple's guideline, and about right for a thumb. */
+  /* 16px keeps iOS from zooming the page on focus; 44px is a thumb */
   input,select,textarea,button{font-size:16px}
-  .lang button{min-height:44px;padding-left:16px;padding-right:16px}
-  .yn button{min-height:48px}
-  .chip{min-height:44px}
-  .btn{min-height:48px}
-  .f input,.f select{font-size:16px;min-height:48px}
-  .hp{font-size:16px}
 </style>
 </head>
 <body>
+<div class="strip"><b data-t="strip_a">Owner-operators wanted</b><span class="dot">&#9679;</span><span data-t="strip_b">English &amp; Español</span></div>
 
 <header>
   <div class="wrap hd">
-    <div class="logo">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e8590c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 16V6.5h11.5V16"/><path d="M13.5 10H18l3.2 3.9V16"/>
-        <circle cx="7" cy="17.6" r="2.1"/><circle cx="17.5" cy="17.6" r="2.1"/>
-      </svg>
-      <span>Truckers <span style="color:#ff8f4d">&amp;</span> Trokeros</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div class="lang">
-        <button data-lang="en" class="on">EN</button>
-        <button data-lang="es">ES</button>
-      </div>
+    <a class="logo" href="/"><span class="mark">Truckers <span class="amp">&amp;</span> Trokeros</span></a>
+    <div class="hdr-right">
       <a class="tel" id="navtel" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span data-t="c_call">Call</span></a>
+      <div class="lang"><button data-lang="en" class="on">EN</button><button data-lang="es">ES</button></div>
       <a class="cta" href="#apply" data-t="nav_cta">Apply now</a>
     </div>
   </div>
 </header>
 
 <div class="hero">
+  <div class="shot"><img src="/img/hero-truck.jpg" alt="" fetchpriority="high" width="1600" height="686"></div>
+  <div class="scrim"></div>
   <div class="wrap"><div class="in">
     <span class="kicker" data-t="hero_kicker">Owner-operators · Dallas–Fort Worth</span>
     <h1 data-t="hero_h1"></h1>
@@ -216,23 +308,30 @@
       <a class="btn" href="#apply" data-t="hero_btn1">Apply in 5 minutes</a>
       <a class="btn ghost" href="#how" data-t="hero_btn2">See how it works</a>
     </div>
-    <div class="trust">
-      <div><b data-t="t1_n">No trailer</b><span data-t="t1_l">needed — that's on the carrier</span></div>
-      <div><b data-t="t2_n">Weekly</b><span data-t="t2_l">settlements, direct deposit</span></div>
-      <div><b data-t="t3_n">Plates &amp; IFTA</b><span data-t="t3_l">available if you want them</span></div>
-    </div>
+  </div></div>
+</div>
+
+<div class="trust">
+  <div class="wrap"><div class="row">
+    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span data-t="t1_full">No trailer needed</span></div>
+    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13M12 6l6 6-6 6"/></svg></span><span data-t="t2_full">Weekly settlements</span></div>
+    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 20.5l1.5-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg></span><span data-t="t3_full">Bilingual support</span></div>
+    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span data-t="t4_full">No runaround</span></div>
   </div></div>
 </div>
 
 <section id="work">
   <div class="wrap">
     <div class="eyebrow" data-t="k_eyebrow">The work</div>
-    <h2 data-t="k_h2"></h2>
-    <p class="lede" data-t="k_lede"></p>
-    <div class="cards">
-      <div class="card"><div class="ic">📦</div><h3 data-t="k1_h"></h3><p data-t="k1_p"></p></div>
-      <div class="card"><div class="ic">🏠</div><h3 data-t="k2_h"></h3><p data-t="k2_p"></p></div>
-      <div class="card"><div class="ic">🔑</div><h3 data-t="k3_h"></h3><p data-t="k3_p"></p></div>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="k_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="k_lede"></p>
+    <div class="work">
+      <div class="shot"><img src="/img/yard.jpg" alt="" loading="lazy" width="1300" height="253"></div>
+      <div class="wlist">
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5z"/><path d="M3 8.5 12 13l9-4.5M12 13v7"/></svg></span><div><h3 data-t="k1_h"></h3><p data-t="k1_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg></span><div><h3 data-t="k2_h"></h3><p data-t="k2_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.4-8.4M17 6l2.5 2.5M14.5 8.5 17 11"/></svg></span><div><h3 data-t="k3_h"></h3><p data-t="k3_p"></p></div></div>
+      </div>
     </div>
 
     <div class="fees">
@@ -244,63 +343,75 @@
   </div>
 </section>
 
-<section class="alt">
-  <div class="wrap">
-    <div class="eyebrow" data-t="w_eyebrow">Why drivers call us</div>
-    <h2 data-t="w_h2"></h2>
-    <p class="lede" data-t="w_lede"></p>
-    <div class="cards">
-      <div class="card"><div class="ic">🚛</div><h3 data-t="w1_h"></h3><p data-t="w1_p"></p></div>
-      <div class="card"><div class="ic">🌎</div><h3 data-t="w2_h"></h3><p data-t="w2_p"></p></div>
-      <div class="card"><div class="ic">⚖️</div><h3 data-t="w3_h"></h3><p data-t="w3_p"></p></div>
-      <div class="card"><div class="ic">⏱️</div><h3 data-t="w4_h"></h3><p data-t="w4_p"></p></div>
-    </div>
-  </div>
-</section>
-
-<section id="how">
+<section class="dark" id="how">
   <div class="wrap">
     <div class="eyebrow" data-t="h_eyebrow">The process</div>
-    <h2 data-t="h_h2"></h2>
-    <p class="lede" data-t="h_lede"></p>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="h_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="h_lede"></p>
     <div class="steps">
-      <div class="step"><div class="n">1</div><div><h3 data-t="s1_h"></h3><p data-t="s1_p"></p></div></div>
-      <div class="step"><div class="n">2</div><div><h3 data-t="s2_h"></h3><p data-t="s2_p"></p></div></div>
-      <div class="step"><div class="n">3</div><div><h3 data-t="s3_h"></h3><p data-t="s3_p"></p></div></div>
-      <div class="step"><div class="n">4</div><div><h3 data-t="s4_h"></h3><p data-t="s4_p"></p></div></div>
-      <div class="step"><div class="n">5</div><div><h3 data-t="s5_h"></h3><p data-t="s5_p"></p></div></div>
+      <div class="step"><span class="n">1</span><span class="ic art"><img src="/img/ico-check.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s1_h"></h3><p data-t="s1_p"></p></div>
+      <div class="step"><span class="n">2</span><span class="ic art"><img src="/img/ico-match.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s2_h"></h3><p data-t="s2_p"></p></div>
+      <div class="step"><span class="n">3</span><span class="ic art"><img src="/img/ico-terminal.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s3_h"></h3><p data-t="s3_p"></p></div>
+    </div>
+    <div class="steps" style="margin-top:22px">
+      <div class="step"><span class="n">4</span><span class="ic art"><img src="/img/ico-route.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s4_h"></h3><p data-t="s4_p"></p></div>
+      <div class="step"><span class="n">5</span><span class="ic art"><img src="/img/ico-shield.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s5_h"></h3><p data-t="s5_p"></p></div>
+      <div class="step" style="display:flex;flex-direction:column;justify-content:center;gap:12px">
+        <h3 data-t="ready_h"></h3>
+        <a class="btn" href="#apply" data-t="hero_btn1">Apply in 5 minutes</a>
+      </div>
     </div>
   </div>
 </section>
 
-<section>
+<section class="paper">
+  <div class="wrap">
+    <div class="eyebrow" data-t="w_eyebrow">Why drivers call us</div>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="w_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="w_lede"></p>
+    <div class="why">
+      <figure class="portrait">
+        <img src="/img/driver.jpg" alt="An owner-operator beside his tractor at a truck stop at dusk" loading="lazy" width="760" height="1188">
+      </figure>
+      <div class="wlist">
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V7h11v9"/><path d="M13 10h4l3.2 3.9V16"/><circle cx="6.5" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/></svg></span><div><h3 data-t="w1_h"></h3><p data-t="w1_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18"/></svg></span><div><h3 data-t="w2_h"></h3><p data-t="w2_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8h9a3 3 0 0 1 0 6H5"/></svg></span><div><h3 data-t="w3_h"></h3><p data-t="w3_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><div><h3 data-t="w4_h"></h3><p data-t="w4_p"></p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="paper">
   <div class="wrap">
     <div class="eyebrow" data-t="r_eyebrow">Straight answers</div>
-    <h2 data-t="r_h2"></h2>
-    <p class="lede" data-t="r_lede"></p>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="r_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="r_lede"></p>
     <div class="reqs" id="reqs"></div>
     <div class="note" data-t="r_note"></div>
   </div>
 </section>
 
-<section class="alt">
+<section class="dark">
   <div class="wrap">
     <div class="eyebrow" data-t="f_eyebrow">Questions</div>
-    <h2 data-t="f_h2" style="margin-bottom:28px"></h2>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="f_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
     <div class="faq" id="faq"></div>
   </div>
 </section>
 
 <div class="formwrap" id="apply">
+  <div class="streaks"><img src="/img/streaks.jpg" alt="" loading="lazy" width="1500" height="750"></div>
   <div class="wrap fgrid">
     <div>
-      <div class="eyebrow" data-t="a_eyebrow">Get started</div>
+      <div class="eyebrow" style="text-align:left" data-t="a_eyebrow">Get started</div>
       <h2 data-t="a_h2"></h2>
       <p class="lede" data-t="a_lede"></p>
       <div class="fpoints">
-        <div class="fpoint"><span class="tick">✓</span><span data-t="a_p1"></span></div>
-        <div class="fpoint"><span class="tick">✓</span><span data-t="a_p2"></span></div>
-        <div class="fpoint"><span class="tick">✓</span><span data-t="a_p3"></span></div>
+        <div class="fpoint"><svg class="tick" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5.5 5.5L20 7"/></svg><span data-t="a_p1"></span></div>
+        <div class="fpoint"><svg class="tick" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5.5 5.5L20 7"/></svg><span data-t="a_p2"></span></div>
+        <div class="fpoint"><svg class="tick" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5.5 5.5L20 7"/></svg><span data-t="a_p3"></span></div>
       </div>
       <div class="cband" id="cband" hidden>
         <div class="txt"><h4 data-t="c_h"></h4><p data-t="c_p"></p></div>
@@ -334,6 +445,17 @@
   </div>
 </div>
 
+<div class="carrier">
+  <div class="wrap in">
+    <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5M15.5 19c0-2 1.2-3.4 3-3.8"/></svg></span>
+    <div class="txt">
+      <h2 data-t="car_h"></h2>
+      <p data-t="car_p"></p>
+    </div>
+    <a class="btn ghost" href="/carriers" data-t="car_btn"></a>
+  </div>
+</div>
+
 <div class="cbar" id="cbar">
   <a class="call" id="bartel" href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span data-t="c_call">Call</span></a>
   <a class="wa" id="barwa" href="#" target="_blank" rel="noopener"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-2.9-1.3-4.8-4.3-5-4.5-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.4.1.6-.1l.9-1c.2-.2.4-.2.6-.1l2 .9c.2.1.4.2.4.3.1.1.1.6-.1 1.3Z"/></svg><span data-t="c_wa">WhatsApp</span></a>
@@ -342,13 +464,21 @@
 <footer>
   <div class="wrap ft">
     <div>© <span id="yr"></span> Truckers &amp; Trokeros · <span data-t="ft_tag"></span></div>
-    <div style="display:flex;gap:18px;flex-wrap:wrap"><a id="fttel" href="#" data-tel hidden></a><a id="ftpriv" href="/privacy" data-t="ft_privacy"></a><a id="ftterms" href="/terms" data-t="ft_terms"></a><a href="#apply" data-t="ft_link">Apply to drive</a></div>
+    <div class="ftlinks"><a id="fttel" href="#" data-tel hidden></a><a id="ftpriv" href="/privacy" data-t="ft_privacy"></a><a id="ftterms" href="/terms" data-t="ft_terms"></a><a href="/carriers" data-t="ft_carriers"></a><a href="#apply" data-t="ft_link">Apply to drive</a></div>
   </div>
 </footer>
 
 <script>
 const T = {
   en: {
+    strip_a:"Owner-operators wanted", strip_b:"English & Español",
+    t1_full:"No trailer needed", t2_full:"Weekly settlements",
+    t3_full:"Bilingual support", t4_full:"No runaround",
+    ready_h:"Ready when you are",
+    car_h:"Looking for qualified owner-operators?",
+    car_p:"We recruit, screen against your own standards, and chase the paperwork. You pay when a driver is seated.",
+    car_btn:"Partner with us",
+    ft_carriers:"For carriers",
     nav_cta:"Apply now",
     hero_kicker:"Owner-operators · Dallas–Fort Worth",
     hero_h1:"You own the truck. <em>We'll get you loaded.</em>",
@@ -462,6 +592,14 @@ const T = {
     ]
   },
   es: {
+    strip_a:"Buscamos dueños de troca", strip_b:"English & Español",
+    t1_full:"Sin trailer", t2_full:"Pagos semanales",
+    t3_full:"Apoyo bilingüe", t4_full:"Sin vueltas",
+    ready_h:"Cuando tú digas",
+    car_h:"¿Buscas dueños de troca calificados?",
+    car_p:"Reclutamos, filtramos con tus propios requisitos y perseguimos el papeleo. Pagas cuando el chofer ya está trabajando.",
+    car_btn:"Trabaja con nosotros",
+    ft_carriers:"Para compañías",
     nav_cta:"Aplica ya",
     hero_kicker:"Dueños de troca · Dallas–Fort Worth",
     hero_h1:"Tú tienes la troca. <em>Nosotros te conseguimos la carga.</em>",
