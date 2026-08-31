@@ -43,16 +43,6 @@
   .story p:first-child{font-size:19px;color:var(--text)}
   .story h2{margin:30px 0 10px;font-size:clamp(22px,4.2vw,28px)}
 
-  /* the two of us */
-  .who{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:820px}
-  @media(max-width:640px){.who{grid-template-columns:1fr}}
-  .card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--red);
-    border-radius:3px;padding:21px 22px}
-  .card .role{font-family:"Anton",Impact,sans-serif;font-size:12px;letter-spacing:.09em;
-    text-transform:uppercase;color:var(--red-dark);margin-bottom:6px}
-  .card h3{font-size:21px;margin-bottom:7px}
-  .card p{margin:0;color:var(--text-2);font-size:15.5px}
-
   /* what we will and won't do — the honest bit */
   .vows{display:grid;gap:0;max-width:830px;border:1px solid var(--line-d);border-radius:4px;
     overflow:hidden}
@@ -64,8 +54,6 @@
   .vow b{display:block;font-size:16.5px;margin-bottom:3px;color:#fff}
   .vow p{margin:0;color:#a9abb0;font-size:15px}
 
-  section.paper .rule{justify-content:flex-start}
-  section.paper .rule .streak.r{display:none}
   .close{text-align:center;max-width:640px;margin:0 auto}
   .close h2{margin-bottom:11px}
   .close p{color:var(--text-2);font-size:17px;margin:0 0 22px}
@@ -102,18 +90,6 @@
     </div>
   </div>
 </section>
-
-<section class="paper">
-  <div class="wrap">
-    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 data-t="who_h"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
-    <p class="lede" data-t="who_sub" style="color:var(--text-2);font-size:17px;margin:0 0 26px"></p>
-    <div class="who">
-      <div class="card"><div class="role" data-t="p1_r"></div><h3 data-t="p1_n"></h3><p data-t="p1_p"></p></div>
-      <div class="card"><div class="role" data-t="p2_r"></div><h3 data-t="p2_n"></h3><p data-t="p2_p"></p></div>
-    </div>
-  </div>
-</section>
-
 <section class="dark">
   <div class="wrap">
     <span class="eyebrow" data-t="vow_eye"></span>
@@ -161,17 +137,8 @@ const T = {
     s1:"Truckers & Trokeros exists because the two ends of this business barely talk to each other. Carriers have trucks sitting because nobody qualified reached their application. Drivers, plenty of them with their own truck already paid for, spend weeks on applications that were never going to pass, and nobody tells them why.",
     s2:"We sit in the middle and do the unglamorous part: read the carrier's standards properly, check the driver against them honestly, and then stay on the paperwork until somebody is actually working.",
     s3_h:"Why the name",
-    s3:"Half of the drivers we talk to run their business in Spanish. Trokero is what they call themselves, it isn't a translation of anything, it's the word. Putting both on the sign is the shortest way to say that either language gets you the same answer, from a person, on the same day.",
+    s3:"Half of the drivers we talk to run their business in Spanish. Trokero is what they call themselves, it isn't a translation of anything, it's the word. Putting both on the sign is the shortest way to say that whichever language you use gets you the same answer, from a person, on the same day. Punjabi is there for the same reason.",
     s4:"Tell us where you are and where you want to run. If we can't place you there we'll say so rather than keep you waiting.",
-
-    who_h:"Who you'll be talking to",
-    who_sub:"Not a queue and not a call centre. There are two of us, and one of us answers.",
-    p1_r:"Recruiting & operations",
-    p1_n:"Ariana",
-    p1_p:"Runs the carrier side, criteria, screening rules, the systems that keep every driver's file moving. If your standards land in our inbox, she's the one reading them.",
-    p2_r:"Driver relations",
-    p2_n:"Mystica",
-    p2_p:"Works with the drivers day to day, in whichever language they start in. Applications, documents, the drug-test window, the deadlines nobody enjoys chasing.",
 
     vow_eye:"Straight answers",
     vow_h:"What we do, and what we won't",
@@ -205,17 +172,8 @@ const T = {
     s1:"Truckers & Trokeros existe porque los dos lados de este negocio casi no se hablan. Las compañías tienen trabajo parado porque nadie calificado llegó a su solicitud. Y los choferes, muchos con su troca ya pagada, pierden semanas en solicitudes que nunca iban a pasar, y nadie les dice por qué.",
     s2:"Nosotras nos ponemos en medio y hacemos la parte aburrida: leer bien los requisitos de la compañía, revisar al chofer con honestidad, y luego estar encima del papeleo hasta que alguien de verdad esté trabajando.",
     s3_h:"De dónde viene el nombre",
-    s3:"La mitad de los choferes con los que hablamos manejan su negocio en español. Trokero es como se dicen a sí mismos, no es la traducción de nada, es la palabra. Poner las dos en el letrero es la forma más corta de decir que en cualquiera de los dos idiomas recibes la misma respuesta, de una persona, el mismo día.",
+    s3:"La mitad de los choferes con los que hablamos manejan su negocio en español. Trokero es como se dicen a sí mismos, no es la traducción de nada, es la palabra. Poner las dos en el letrero es la forma más corta de decir que en el idioma que hables recibes la misma respuesta, de una persona, el mismo día. El punjabi está por lo mismo.",
     s4:"Dinos dónde estás y por dónde quieres correr. Si no te podemos colocar ahí, te lo decimos en vez de tenerte esperando.",
-
-    who_h:"Con quién vas a hablar",
-    who_sub:"No es una fila ni un call center. Somos dos, y una de nosotras contesta.",
-    p1_r:"Reclutamiento y operaciones",
-    p1_n:"Ariana",
-    p1_p:"Lleva el lado de las compañías, requisitos, reglas de revisión, los sistemas que mantienen el expediente de cada chofer avanzando. Si tus requisitos llegan a nuestro correo, ella los lee.",
-    p2_r:"Atención a choferes",
-    p2_n:"Mystica",
-    p2_p:"Trabaja con los choferes todos los días, en el idioma que ellos prefieran. Solicitudes, documentos, la ventana del examen antidoping, y todas las fechas que a nadie le gusta perseguir.",
 
     vow_eye:"Respuestas claras",
     vow_h:"Lo que hacemos, y lo que no",
@@ -251,15 +209,6 @@ const T = {
     s3_h:"Naam kithon aaya",
     s3:"Jinha drivers naal asi gall karde haan, ohna vichon bahut saare apna kaarobaar Spanish vich chalaunde han. Trokero oh apne aap nu kehnde han. Eh kise shabad da anuvaad nahi, ehi shabad hai. Board te dove likhan da matlab sidha hai: jis vi bhasha vich tusi gall karo, jawab ohi din, kise bande vallon milega. Punjabi vi usse kaaran hai.",
     s4:"Sanu dasso tusi kithe ho te kidhar challna chahunde ho. Je asi uthe tuhanu nahi laga sakde taan saaf keh devaange, tuhanu udeek vich nahi rakhaange.",
-
-    who_h:"Tusi kis naal gall karoge",
-    who_sub:"Na koi line, na koi call centre. Asi do janiyan haan, te sade vichon hi koi phone chukdi hai.",
-    p1_r:"Bharti te kamkaaj",
-    p1_n:"Ariana",
-    p1_p:"Companies waala paasa sambhaldi hai: sharta, jaanch de niyam, te oh system jo har driver di file agge torde rehnde han.",
-    p2_r:"Drivers naal raabta",
-    p2_n:"Mystica",
-    p2_p:"Har roz drivers naal kamm kardi hai, usse bhasha vich jis vich oh shuru karde han. Applications, kaagaz, te oh taarikha jinha de piche lagna kise nu changa nahi lagda.",
 
     vow_eye:"Sidhi gall",
     vow_h:"Asi ki karde haan, te ki nahi",
