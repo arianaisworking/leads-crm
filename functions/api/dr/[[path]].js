@@ -9,7 +9,7 @@ import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '
 import { seedDocs, ensurePlacement, leasePacketHtml, openSecure, secret as mkSecret,
   carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
 import { redact } from '../../_lib/vault.js';
-import { draftRules } from '../../_lib/brain.js';
+import { draftRules } from '../../_lib/carrier-brain.js';
 
 function token() {
   const b = crypto.getRandomValues(new Uint8Array(18));
