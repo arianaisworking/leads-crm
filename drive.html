@@ -3,243 +3,61 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Truckers &amp; Trokeros — owner-operator placement</title>
-<meta name="description" content="Own your truck? We place owner-operators with intermodal carriers. No trailer needed, no citizenship requirement, weekly settlements. Apply in five minutes.">
+<title>Truckers &amp; Trokeros — owner-operator recruiting</title>
+<meta name="description" content="We place owner-operators with carriers across the country. Free for drivers, answers the same day, in English, Spanish or Punjabi.">
+<meta name="robots" content="index,follow">
 <link rel="canonical" href="https://truckersandtrokeros.com/">
 <link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/">
 <link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es">
+<link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa">
 <link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/">
 <meta name="theme-color" content="#0b0b0c">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://truckersandtrokeros.com/">
-<meta property="og:site_name" content="Truckers &amp; Trokeros">
 <meta property="og:title" content="Truckers &amp; Trokeros">
-<meta property="og:description" content="Own your truck? Get placed with a carrier that keeps you loaded. Apply in five minutes.">
+<meta property="og:description" content="You own the truck. We'll get you loaded.">
 <meta property="og:image" content="https://truckersandtrokeros.com/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:locale" content="en_US">
-<meta property="og:locale:alternate" content="es_US">
-<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script src="/contact.js"></script>
 <style>
-  /* ── Truckers & Trokeros ──────────────────────────────────────────────
-     Black, one red, and photography. Display face is Anton — heavy
-     condensed caps, the poster lettering this trade has used on doors and
-     mudflaps for decades. Barlow underneath it, drawn from transit
-     signage, which is why it holds up small on a phone in daylight.
-     No system fonts, no emoji, no gradient hero, no card grid. */
-  :root{
-    --ink:#0b0b0c; --nav:#121214; --band:#17181a; --line-d:#2a2b2e;
-    --paper:#efeeee; --card:#fff; --line:#dcdad6;
-    --text:#111214; --text-2:#4a4c50; --soft:#6f7276;
-    --red:#d00000; --red-dark:#9a0505; --red-soft:#ff2d2d;
-  }
-  *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{margin:0;background:var(--paper);color:var(--text);
-    font:400 16.5px/1.6 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
-    -webkit-font-smoothing:antialiased;overflow-wrap:break-word}
-  h1,h2,h3{margin:0;font-family:"Anton",Impact,"Arial Narrow",sans-serif;
-    font-weight:400;text-transform:uppercase;letter-spacing:.005em;line-height:.98;text-wrap:balance}
-  a{color:inherit}
-  img{max-width:100%;display:block}
-  .wrap{max-width:1120px;margin:0 auto;padding:0 18px}
-
-  /* announcement strip */
-  .strip{background:var(--ink);color:#a9abb0;font-size:12.5px;font-weight:500;
-    text-align:center;padding:7px 18px;letter-spacing:.02em;border-bottom:1px solid var(--line-d)}
-  .strip b{color:#fff;font-weight:600}
-  .strip .dot{color:var(--red-soft);margin:0 8px}
-
-  /* header */
-  header{position:sticky;top:0;z-index:60;background:var(--nav);color:#fff;
-    border-bottom:1px solid var(--line-d)}
-  /* Three columns, so the wordmark sits dead centre on the page no matter how
-     wide the two nav groups are — the layout the design calls for. */
-  /* The wordmark is centred against the bar, not against the two nav groups —
-     a grid column grows to fit its content, so the moment one side is wider than
-     the other (a "Call" link, a longer CTA) the centre stops being the centre. */
-  .hd{display:flex;align-items:center;justify-content:space-between;gap:14px;
-    padding-block:11px;position:relative}
-  .logo{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;
-    text-decoration:none}
-  .logo .mark{position:relative;font-family:"Anton",Impact,sans-serif;
-    font-size:clamp(15px,4.2vw,21px);letter-spacing:.015em;color:#fff;text-transform:uppercase;
-    line-height:1;padding-bottom:7px;white-space:nowrap}
-  /* two strokes meeting at the ampersand, not one rule straight across */
-  .logo .mark:before,.logo .mark:after{content:"";position:absolute;bottom:0;height:2.5px}
-  .logo .mark:before{left:0;width:43%;background:rgba(255,255,255,.9)}
-  .logo .mark:after{right:0;width:43%;background:var(--red)}
-  .logo .amp{color:var(--red-soft)}
-  .navL{flex:none}
-  .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
-  .nav{display:flex;gap:22px;align-items:center}
-  .nav a{text-decoration:none;color:#c6c8cc;font-weight:600;font-size:14.5px;padding:6px 0;
-    border-bottom:2px solid transparent}
-  .nav a:hover{color:#fff}
-  .nav a.on{color:#fff;border-bottom-color:var(--red)}
-  .navtoggle{display:none;background:transparent;border:0;color:#fff;min-height:44px;min-width:44px;
-    align-items:center;justify-content:center;cursor:pointer;padding:0}
-  /* The phone gets one sheet with all four links rather than the two desktop
-     halves, which would otherwise stack on top of each other. */
-  .navsheet{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;
-    background:var(--nav);border-bottom:1px solid var(--line-d);padding:4px 18px 14px}
-  .navsheet.open{display:flex}
-  .navsheet a{text-decoration:none;color:#c6c8cc;font-weight:600;font-size:15.5px;padding:13px 0;
-    border-bottom:1px solid var(--line-d);min-height:48px;display:flex;align-items:center}
-  .navsheet a.on{color:var(--red-soft)}
-  @media(max-width:1150px){
-    .logo{position:static;transform:none}
-    .nav{display:none}
-    .navtoggle{display:flex}
-  }
-  @media(min-width:1151px){ .navsheet{display:none !important} }
-  .lang{display:flex;gap:2px;background:rgba(255,255,255,.09);border-radius:6px;padding:3px}
-  .lang button{border:0;background:transparent;color:#9a9ca1;font:inherit;font-size:12.5px;
-    font-weight:600;padding:0 13px;min-height:44px;border-radius:4px;cursor:pointer;letter-spacing:.03em}
-  .lang button.on{background:#fff;color:var(--ink)}
-  .hd .cta{background:var(--red);color:#fff;border:0;border-radius:4px;padding:0 20px;
-    min-height:44px;display:inline-flex;align-items:center;font-family:"Anton",Impact,sans-serif;
-    font-size:15px;letter-spacing:.03em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
-  .hd .cta:hover{background:var(--red-dark)}
-  .hd .tel[hidden]{display:none !important}
-  .hd .tel{display:none;align-items:center;gap:6px;color:#fff;text-decoration:none;
-    font-weight:600;font-size:14px;min-height:44px;padding:0 4px}
-  /* Icon only on a phone: "Llámanos" is half again the width of "Call", and a
-     header that fits in one language has to fit in both. */
-  @media(max-width:1150px){ .hd .tel span{display:none} }
-  @media(max-width:700px){ .hd .cta{display:none} .hd .tel.show{display:flex} }
-
-  /* At 390px the row is logo + call + EN/ES + menu. Tighten the chrome rather
-     than let the header push the page sideways. */
-  @media(max-width:560px){
-    .hd{gap:8px}
-    .hdr-right{gap:4px}
-    .lang{padding:2px}
-    .lang button{padding:0 8px;font-size:12px}
-    .hd .tel{padding:0;min-width:38px;justify-content:center}
-    }
-  @media(max-width:620px){
-    /* Impact — the fallback while Anton loads, or if it never does — sets the
-       wordmark about 45% wider than Anton at the same size. Size it so the bar
-       holds in either face rather than only once the webfont has arrived. */
-    .logo .mark{font-size:clamp(13px,3.6vw,16px)}
-  }
-  @media(max-width:480px){
-    .hd .tel,.hd .tel.show{display:none}
-    /* Something has to give at 360px. The call icon goes: the sticky bar at the
-       bottom of these pages is a bigger, better call button, and the footer
-       prints the number. The language toggle stays — half this audience needs
-       it, and burying it behind a menu is not a trade worth making. */
-  }
-
-  /* hero — photograph, black scrim, type on top */
+  /* The landing page. Its job is to say what we do in one line and send people
+     to one of two places. Nothing carrier-specific lives here — pay, fees and
+     requirements differ per carrier and reach a driver from us directly or from
+     the ad they came in on, never from a page that can't know which. */
   .hero{position:relative;background:var(--ink);color:#fff;overflow:hidden;isolation:isolate}
   .hero .shot{position:absolute;inset:0;z-index:0}
   .hero .shot img{width:100%;height:100%;object-fit:cover;object-position:66% 50%}
   .hero .scrim{position:absolute;inset:0;z-index:1;
-    background:linear-gradient(90deg,rgba(11,11,12,.92) 0%,rgba(11,11,12,.78) 38%,rgba(11,11,12,.34) 68%,rgba(11,11,12,.12) 100%)}
-  .hero .in{position:relative;z-index:2;padding:52px 0 46px;max-width:620px}
-  .kicker{display:inline-flex;align-items:center;gap:9px;font-family:"Anton",Impact,sans-serif;
-    font-size:clamp(11px,3vw,13px);letter-spacing:.07em;text-transform:uppercase;
-    color:var(--red-soft);margin-bottom:15px}
-  .kicker:before{content:"";width:26px;height:2px;background:var(--red);flex:none}
-  .hero h1{font-size:clamp(42px,10.5vw,74px);margin-bottom:16px}
+    background:linear-gradient(90deg,rgba(11,11,12,.93) 0%,rgba(11,11,12,.8) 40%,rgba(11,11,12,.34) 70%,rgba(11,11,12,.12) 100%)}
+  .hero .in{position:relative;z-index:2;padding:58px 0 52px;max-width:620px}
+  .hero h1{font-size:clamp(38px,9vw,68px);margin-bottom:16px}
   .hero h1 em{font-style:normal;color:var(--red-soft)}
-  .hero p{font-size:17.5px;color:#c6c8cc;margin:0 0 26px;max-width:44ch}
+  .hero p{font-size:17.5px;color:#c6c8cc;margin:0 0 26px;max-width:46ch}
   .btns{display:flex;gap:11px;flex-wrap:wrap}
-  .btn{background:var(--red);color:#fff;border:0;border-radius:4px;padding:0 26px;min-height:52px;
-    display:inline-flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;
-    text-decoration:none;font-family:"Anton",Impact,sans-serif;font-size:17px;letter-spacing:.035em;
-    text-transform:uppercase}
-  .btn:hover{background:var(--red-dark)}
-  .btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.32)}
-  .btn.ghost:hover{background:rgba(255,255,255,.08);border-color:#fff}
-  @media(max-width:560px){ .btns{flex-direction:column;align-items:stretch} .btn{width:100%} }
+  @media(max-width:560px){ .btns{flex-direction:column;align-items:stretch} .btns .btn{width:100%} }
 
-  /* trust strip under the hero */
-  .trust{background:var(--band);border-top:1px solid var(--line-d);border-bottom:1px solid var(--line-d)}
+  /* four plain facts, all of them true of us rather than of any one carrier */
+  .trust{background:var(--band);border-block:1px solid var(--line-d)}
   .trust .row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
-  .trust .t{display:flex;align-items:center;gap:11px;padding:16px 14px;color:#e6e7e9;
-    font-size:14px;font-weight:500;border-left:1px solid var(--line-d)}
+  .trust .t{display:flex;align-items:center;gap:11px;padding:17px 14px;color:#e6e7e9;
+    font-size:14.5px;font-weight:500;border-left:1px solid var(--line-d)}
   .trust .t:first-child{border-left:0}
-  .trust .ic{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--red);
-    display:flex;align-items:center;justify-content:center;flex:none}
+  .trust .ic{width:36px;height:36px;flex:none;border-radius:50%;border:1.5px solid var(--red);
+    display:flex;align-items:center;justify-content:center}
   @media(max-width:820px){
-    .trust .row{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .trust .t:nth-child(3){border-left:0}
+    .trust .row{grid-template-columns:1fr 1fr}
+    .trust .t:nth-child(odd){border-left:0}
     .trust .t:nth-child(n+3){border-top:1px solid var(--line-d)}
   }
-
-  /* sections */
-  section{padding:56px 0}
-  /* the header is sticky, so anchor targets must clear it or the heading
-     they jump to lands underneath it */
-  section[id],div[id]{scroll-margin-top:70px}
-  section.dark{background:var(--ink);color:#fff}
-  section.paper{background:var(--paper)}
-  .rule{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}
-  .rule .streak{display:flex;flex-direction:column;gap:3px;flex:none}
-  .rule .streak i{display:block;height:2px;background:var(--red);border-radius:2px}
-  .rule .streak i:nth-child(1){width:26px;opacity:.45}
-  .rule .streak i:nth-child(2){width:38px}
-  .rule .streak i:nth-child(3){width:18px;opacity:.7}
-  .rule .streak.r{transform:scaleX(-1)}
-  @media(max-width:400px){
-    /* Decoration, and the first thing to go: a long Spanish heading plus two
-       fixed-width streaks doesn't fit a 320px screen. */
-    .rule .streak{display:none}
-  }
-  .sec-h{font-size:clamp(27px,5.4vw,40px);text-align:center}
-  .sec-p{text-align:center;color:var(--text-2);font-size:16.5px;max-width:56ch;margin:12px auto 0}
-  section.dark .sec-p{color:#b3b5b9}
-  .eyebrow{font-family:"Anton",Impact,sans-serif;font-size:13px;letter-spacing:.11em;
-    text-transform:uppercase;color:var(--red);text-align:center;margin-bottom:9px}
-  section.dark .eyebrow{color:var(--red-soft)}
-
-  /* numbered steps */
-  .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:38px}
-  @media(max-width:800px){.steps{grid-template-columns:1fr;gap:13px}}
-  .step{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:26px 22px 22px;
-    position:relative;text-align:center}
-  section.dark .step{background:#1c1d20;border-color:var(--line-d)}
-  .step .n{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:28px;height:28px;
-    border-radius:50%;background:var(--red);color:#fff;font-family:"Anton",Impact,sans-serif;
-    font-size:14px;display:flex;align-items:center;justify-content:center;letter-spacing:.02em}
-  .step .ic{width:56px;height:56px;border-radius:50%;border:1.5px solid var(--text);
-    display:flex;align-items:center;justify-content:center;margin:6px auto 14px}
-  .step .ic.art{width:74px;height:74px;border:0;margin:0 auto 12px}
-  .step .ic.art img{width:100%;height:100%;object-fit:contain}
-  section.dark .step .ic{border-color:#fff}
-  .step h3{font-size:18px;margin-bottom:7px}
-  .step p{margin:0;color:var(--text-2);font-size:15px;line-height:1.5}
-  section.dark .step p{color:#a9abaf}
-
-  /* the work: photo band + list */
-  /* The yard fills the band rather than sitting in a box inside it — it's a
-     backdrop for the copy, not an illustration beside it. */
-  .workband{position:relative;background:var(--ink);color:#fff;overflow:hidden;isolation:isolate;
-    padding:64px 0}
-  .workband .shot{position:absolute;inset:0;z-index:0}
-  .workband .shot img{width:100%;height:100%;object-fit:cover;object-position:center 58%}
-  .workband .scrim{position:absolute;inset:0;z-index:1;
-    background:linear-gradient(180deg,rgba(11,11,12,.9) 0%,rgba(11,11,12,.74) 45%,rgba(11,11,12,.93) 100%)}
-  .workband .wrap{position:relative;z-index:2}
-  .workband .sec-p{color:#c2c4c8}
-  .work{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:36px}
-  @media(max-width:820px){.work{grid-template-columns:1fr;gap:12px}}
-  .wrow{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:5px;
-    padding:22px 21px;backdrop-filter:blur(2px)}
-  .wrow .ic{display:block;margin-bottom:11px}
-  .wrow h3{font-size:18.5px;margin-bottom:6px;color:#fff}
-  .wrow p{margin:0;color:#b7b9be;font-size:15.5px;line-height:1.55}
+  @media(max-width:420px){ .trust .row{grid-template-columns:1fr} .trust .t{border-left:0}
+    .trust .t + .t{border-top:1px solid var(--line-d)} }
 
   /* the two doors — the only decision this page asks anyone to make */
-  .doors{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:36px}
+  .doors{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
   @media(max-width:760px){.doors{grid-template-columns:1fr}}
   .door{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
     border-top:4px solid var(--red);border-radius:5px;padding:28px 26px 26px;text-decoration:none;
@@ -254,472 +72,155 @@
   .door .go svg{transition:transform .15s}
   .door:hover .go svg{transform:translateX(4px)}
 
-  /* why drivers call us — a real face beside the four messages */
-  .why{display:grid;grid-template-columns:400px 1fr;gap:38px;align-items:center;margin-top:36px}
-  @media(max-width:880px){.why{grid-template-columns:1fr;gap:24px}}
-  .portrait{margin:0;border-radius:6px;overflow:hidden;position:relative;background:var(--ink)}
-  .portrait img{width:100%;height:100%;object-fit:cover;aspect-ratio:760/1188}
-  @media(max-width:880px){.portrait img{aspect-ratio:16/10;object-position:center 28%}}
-  .portrait:after{content:"";position:absolute;inset:auto 0 0 0;height:34%;
-    background:linear-gradient(transparent,rgba(11,11,12,.55))}
-
-  /* requirements */
-  .reqs{display:grid;grid-template-columns:1fr 1fr;gap:10px 26px;max-width:820px;margin:34px auto 0}
-  @media(max-width:680px){.reqs{grid-template-columns:1fr}}
-  .req{display:flex;gap:11px;align-items:flex-start;font-size:16px}
-  .req .tick,.req .x{flex:none;margin-top:3px}
-  .note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--red);
-    border-radius:4px;padding:18px 20px;margin:30px auto 0;max-width:820px;font-size:15.5px;color:var(--text-2)}
-  .note b{color:var(--text)}
-
-  /* fees */
-  .fees{max-width:820px;margin:34px auto 0;background:#fff;border:1px solid var(--line);border-radius:6px;
-    padding:24px 24px 20px}
-  .fees h3{font-size:20px;margin-bottom:5px}
-  .fee_sub{color:var(--soft);font-size:15px;margin:0 0 16px}
-  .fee{display:grid;grid-template-columns:1fr auto;gap:3px 16px;padding:13px 0;border-top:1px solid var(--line)}
-  .fee:first-child{border-top:0}
-  .fee .lbl{font-weight:600;font-size:16px}
-  .fee .amt{font-family:"Anton",Impact,sans-serif;font-size:17px;letter-spacing:.02em;
-    white-space:nowrap;color:var(--red);text-align:right}
-  .fee .d{grid-column:1/-1;color:var(--text-2);font-size:14.5px}
-  .fee_note{color:var(--soft);font-size:14px;margin:16px 0 0}
-
-  /* faq */
-  .faq{max-width:820px;margin:34px auto 0}
-  details{border-bottom:1px solid var(--line);padding:16px 0}
-  details summary{font-family:"Anton",Impact,sans-serif;font-size:17.5px;text-transform:uppercase;
-    letter-spacing:.01em;cursor:pointer;list-style:none;display:flex;justify-content:space-between;
-    gap:14px;align-items:center;min-height:32px}
-  details summary::-webkit-details-marker{display:none}
-  details summary:after{content:"";width:13px;height:13px;flex:none;border-right:2.5px solid var(--red);
-    border-bottom:2.5px solid var(--red);transform:rotate(45deg);margin-top:-5px;transition:transform .18s}
-  details[open] summary:after{transform:rotate(-135deg);margin-top:3px}
-  details p{color:var(--text-2);font-size:15.5px;margin:11px 0 0}
-
-  /* the form band */
-  .formwrap{position:relative;background:var(--ink);color:#fff;padding:56px 0;overflow:hidden;isolation:isolate}
-  .formwrap .streaks{position:absolute;inset:0;z-index:0;opacity:.6}
-  .formwrap .streaks img{width:100%;height:100%;object-fit:cover;object-position:center 65%}
-  .formwrap .wrap{position:relative;z-index:2}
-  .close{max-width:660px;margin:0 auto;text-align:center}
-  .close .cband{text-align:left;margin-top:26px}
-  .formwrap h2{font-size:clamp(28px,5.6vw,40px)}
-  .formwrap .lede{color:#b9bbc0;font-size:17px;margin:14px 0 22px}
-  .fpoints{display:grid;gap:12px}
-  .fpoint{display:flex;gap:11px;font-size:15.5px;color:#d2d4d8;align-items:flex-start}
-  .fpoint .tick{color:var(--red-soft);flex:none;margin-top:2px}
-  form{background:#fff;border-radius:6px;padding:26px;color:var(--text)}
-  form h3{font-family:"Anton",Impact,sans-serif;font-size:22px;text-transform:uppercase;margin-bottom:4px}
-  form .sub{color:var(--soft);font-size:14.5px;margin:0 0 18px}
-  .f{margin-bottom:13px}
-  .f label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
-  .f input,.f select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:4px;
-    font:inherit;font-size:16px;min-height:50px;background:#fff;color:var(--text)}
-  .f input:focus,.f select:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(208,0,0,.13)}
-  .row2{display:grid;grid-template-columns:1fr 104px;gap:11px}
-  form .btn{width:100%;margin-top:6px}
-  .fine{color:var(--soft);font-size:12.5px;margin:13px 0 0;text-align:center}
-  .hp{position:absolute;left:-9999px}
-  .done{text-align:center;padding:24px 6px}
-  .done .big{width:56px;height:56px;border-radius:50%;background:var(--red);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-size:27px;margin:0 auto 14px}
-  .done h3{font-size:22px;margin-bottom:8px}
-  .done p{color:var(--text-2);font-size:15px;margin:0 0 6px}
-  .err{background:#fdeaea;border:1px solid #f2bcbc;color:#8e1616;border-radius:4px;
-    padding:10px 12px;font-size:14px;margin-bottom:12px;display:none}
-
-  /* carrier band */
-  .carrier{background:var(--band);color:#fff;border-top:1px solid var(--line-d)}
-  .carrier .in{display:flex;align-items:center;gap:22px;padding-block:34px;flex-wrap:wrap}
-  .carrier .ic{width:64px;height:64px;border-radius:50%;border:1.5px solid var(--red);
-    display:flex;align-items:center;justify-content:center;flex:none}
-  .carrier .txt{flex:1;min-width:240px}
-  .carrier h2{font-size:clamp(22px,4.2vw,29px);margin-bottom:6px}
-  .carrier p{margin:0;color:#a9abaf;font-size:15.5px}
-
-  /* contact */
-  .cbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:none;gap:9px;padding:9px 12px;
-    padding-bottom:calc(9px + env(safe-area-inset-bottom));background:rgba(11,11,12,.97);
-    backdrop-filter:blur(8px);border-top:1px solid var(--line-d)}
-  .cbar a[hidden]{display:none}
-  .cbar a{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;
-    border-radius:4px;text-decoration:none;font-family:"Anton",Impact,sans-serif;font-size:16px;
-    letter-spacing:.03em;text-transform:uppercase}
-  .cbar .call{background:rgba(255,255,255,.13);color:#fff}
-  .cbar .wa{background:#25d366;color:#08301a}
-  body.hasbar{padding-bottom:76px}
-  @media(max-width:760px){ body.hasbar .cbar{display:flex} }
-  .cband[hidden]{display:none}
-  .cband{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;margin-top:24px;
-    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:18px 20px}
-  .cband .txt{flex:1;min-width:210px}
-  .cband h4{font-family:"Anton",Impact,sans-serif;font-size:19px;text-transform:uppercase;margin:0 0 4px;color:#fff}
-  .cband p{margin:0;color:#b9bbc0;font-size:14.5px}
-  .cband .acts{display:flex;gap:9px;flex-wrap:wrap}
-  .cband a[hidden],.cbar a[hidden]{display:none}
-  .cband a{display:flex;align-items:center;gap:8px;min-height:46px;padding:0 20px;border-radius:4px;
-    text-decoration:none;font-family:"Anton",Impact,sans-serif;font-size:15px;letter-spacing:.03em;text-transform:uppercase}
-  .cband .call{background:rgba(255,255,255,.15);color:#fff}
-  .cband .wa{background:#25d366;color:#08301a}
-
-  footer{background:#08080a;color:#7a7d82;padding:30px 0;font-size:13.5px;border-top:1px solid var(--line-d)}
-  .ft{display:flex;justify-content:space-between;gap:14px 22px;flex-wrap:wrap;align-items:center}
-  .ftlinks{display:flex;gap:18px;flex-wrap:wrap}
-  footer a{color:#a4a7ac;text-decoration:none}
-  footer a:hover{color:#fff}
-
-  /* 16px keeps iOS from zooming the page on focus; 44px is a thumb */
-  input,select,textarea,button{font-size:16px}
+  .close{position:relative;background:var(--ink);color:#fff;padding:56px 0;overflow:hidden;isolation:isolate}
+  .close .tex{position:absolute;inset:0;z-index:0;opacity:.55}
+  .close .tex img{width:100%;height:100%;object-fit:cover;object-position:center 65%}
+  .close .wrap{position:relative;z-index:2;max-width:660px;text-align:center}
+  .close h2{font-size:clamp(27px,5.4vw,40px);margin-bottom:11px}
+  .close p{color:#b9bbc0;font-size:17px;margin:0 0 24px}
+  .close .btns{justify-content:center}
 </style>
 </head>
 <body>
-<div class="strip"><b data-t="strip_a">Owner-operators wanted</b><span class="dot">&#9679;</span><span data-t="strip_b">English &amp; Español</span></div>
-
-<header>
-  <div class="wrap hd">
-    <nav class="nav navL" id="navL">
-      <a class="on" id="n_home" href="/" data-t="nav_home">Home</a>
-      <a id="n_drv" href="/drivers" data-t="nav_drivers">For drivers</a>
-    </nav>
-    <a class="logo" id="hlogo" href="/"><span class="mark">Truckers <span class="amp">&amp;</span> Trokeros</span></a>
-    <div class="hdr-right">
-      <nav class="nav navR" id="nav">
-        <a id="n_car" href="/carriers" data-t="nav_carriers">For carriers</a>
-        <a id="n_abt" href="/about" data-t="nav_about">About</a>
-      </nav>
-      <a class="tel" id="navtel" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span data-t="c_call">Call</span></a>
-      <div class="lang"><button data-lang="en" class="on">EN</button><button data-lang="es">ES</button></div>
-      <a class="cta" id="navcta" href="/drivers" data-t="nav_cta">Apply now</a>
-      <button class="navtoggle" id="navtoggle" aria-label="Menu" aria-expanded="false">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-    </div>
-    <nav class="navsheet" id="navsheet">
-      <a class="on" id="m_home" href="/" data-t="nav_home">Home</a>
-      <a id="m_drv" href="/drivers" data-t="nav_drivers">For drivers</a>
-      <a id="m_car" href="/carriers" data-t="nav_carriers">For carriers</a>
-      <a id="m_abt" href="/about" data-t="nav_about">About</a>
-    </nav>
-  </div>
-</header>
+<div class="strip" id="strip"></div>
+<header id="hdr"></header>
 
 <div class="hero">
   <div class="shot"><img src="/img/hero-truck.jpg" alt="" fetchpriority="high" width="1600" height="686"></div>
   <div class="scrim"></div>
   <div class="wrap"><div class="in">
-    <span class="kicker" data-t="hero_kicker">Owner-operators · Dallas–Fort Worth</span>
-    <h1 data-t="hero_h1"></h1>
-    <p data-t="hero_p"></p>
+    <span class="eyebrow" data-t="hero_kicker">Owner-operator recruiting</span>
+    <h1 data-t="hero_h1">You own the truck. <em>We'll get you loaded.</em></h1>
+    <p data-t="hero_p">We place owner-operators with carriers across the country. You tell us what you're looking for; we find the fit and handle the paperwork.</p>
     <div class="btns">
-      <a class="btn" id="hero_btn" href="/drivers" data-t="hero_btn1">Apply in 5 minutes</a>
-      <a class="btn ghost" id="hero_btn2" href="/drivers#how" data-t="hero_btn2">See how it works</a>
+      <a class="btn" data-href="/drivers" data-t="hero_btn1">Apply in 5 minutes</a>
+      <a class="btn ghost" data-href="/carriers" data-t="hero_btn2">I'm hiring drivers</a>
     </div>
   </div></div>
 </div>
 
 <div class="trust">
   <div class="wrap"><div class="row">
-    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span data-t="t1_full">No trailer needed</span></div>
-    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13M12 6l6 6-6 6"/></svg></span><span data-t="t2_full">Weekly settlements</span></div>
-    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 20.5l1.5-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg></span><span data-t="t3_full">Bilingual support</span></div>
-    <div class="t"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span data-t="t4_full">No runaround</span></div>
+    <div class="t"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8h9a3 3 0 0 1 0 6H5"/></svg></span><span data-t="t1">Free for drivers</span></div>
+    <div class="t"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><span data-t="t2">An answer the same day</span></div>
+    <div class="t"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18"/></svg></span><span data-t="t3">Three languages</span></div>
+    <div class="t"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span data-t="t4">Checked before you apply</span></div>
   </div></div>
-</div>
-
-<div class="workband" id="work">
-  <div class="shot"><img src="/img/yard.jpg" alt="" loading="lazy" width="1300" height="185"></div>
-  <div class="scrim"></div>
-  <div class="wrap">
-    <div class="eyebrow" data-t="k_eyebrow">The work</div>
-    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="k_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
-    <p class="sec-p" data-t="k_lede"></p>
-    <div class="work">
-      <div class="wrow"><span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff2d2d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5z"/><path d="M3 8.5 12 13l9-4.5M12 13v7"/></svg></span><h3 data-t="k1_h"></h3><p data-t="k1_p"></p></div>
-      <div class="wrow"><span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff2d2d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg></span><h3 data-t="k2_h"></h3><p data-t="k2_p"></p></div>
-      <div class="wrow"><span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff2d2d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.4-8.4M17 6l2.5 2.5M14.5 8.5 17 11"/></svg></span><h3 data-t="k3_h"></h3><p data-t="k3_p"></p></div>
-    </div>
-  </div>
 </div>
 
 <section class="paper">
   <div class="wrap">
-    <div class="eyebrow" data-t="d_eyebrow"></div>
-    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="d_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
-    <p class="sec-p" data-t="d_lede"></p>
+    <span class="eyebrow" data-t="d_eyebrow">Two ways in</span>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 data-t="d_h2">Which one are you?</h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="lede" data-t="d_lede">Drivers apply in five minutes. Carriers send us what they need. Both start on the next page.</p>
     <div class="doors">
-      <a class="door" id="door_drv" href="/drivers">
-        <span class="lbl" data-t="d1_l"></span>
-        <h3 data-t="d1_h"></h3>
-        <p data-t="d1_p"></p>
-        <span class="go"><span data-t="d1_go"></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+      <a class="door" data-href="/drivers">
+        <span class="lbl" data-t="d1_l">For drivers</span>
+        <h3 data-t="d1_h">You own a truck</h3>
+        <p data-t="d1_p">Tell us about your truck and your record. We check you against the carrier's real standards before anything is submitted, and come back the same day — in English, Spanish or Punjabi. It never costs you a cent.</p>
+        <span class="go"><span data-t="d1_go">Apply to drive</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
       </a>
-      <a class="door" id="door_car" href="/carriers">
-        <span class="lbl" data-t="d2_l"></span>
-        <h3 data-t="d2_h"></h3>
-        <p data-t="d2_p"></p>
-        <span class="go"><span data-t="d2_go"></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+      <a class="door" data-href="/carriers">
+        <span class="lbl" data-t="d2_l">For carriers</span>
+        <h3 data-t="d2_h">You need drivers seated</h3>
+        <p data-t="d2_p">Send us your qualification standards and we recruit against them — screened before they reach your application, and chased through onboarding. Commission only: you pay when a driver is working.</p>
+        <span class="go"><span data-t="d2_go">See how we work</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
       </a>
     </div>
   </div>
 </section>
 
-<div class="formwrap">
-  <div class="streaks"><img src="/img/streaks.jpg" alt="" loading="lazy" width="1500" height="750"></div>
+<div class="close">
+  <div class="tex"><img src="/img/streaks.jpg" alt="" loading="lazy" width="1500" height="750"></div>
   <div class="wrap">
-    <div class="close">
-      <h2 data-t="cl_h2"></h2>
-      <p class="lede" data-t="cl_p"></p>
-      <div class="btns" style="justify-content:center">
-        <a class="btn" id="cl_btn" href="/drivers" data-t="hero_btn1"></a>
-      </div>
-      <div class="cband" id="cband" hidden>
-        <div class="txt"><h4 data-t="c_h"></h4><p data-t="c_p"></p></div>
-        <div class="acts">
-          <a class="call" id="bandtel" href="#"><span data-t="c_call">Call</span></a>
-          <a class="wa" id="bandwa" href="#" target="_blank" rel="noopener"><span data-t="c_wa">WhatsApp</span></a>
-        </div>
-      </div>
+    <h2 data-t="cl_h2">Ready when you are</h2>
+    <p data-t="cl_p">Five minutes on the application, and you'll know where you stand.</p>
+    <div class="btns">
+      <a class="btn" data-href="/drivers" data-t="hero_btn1">Apply in 5 minutes</a>
+      <a class="btn ghost" id="clcall" href="#" data-t="cl_call" hidden>Contact us</a>
     </div>
   </div>
 </div>
 
-<div class="cbar" id="cbar">
-  <a class="call" id="bartel" href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span data-t="c_call">Call</span></a>
-  <a class="wa" id="barwa" href="#" target="_blank" rel="noopener"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-2.9-1.3-4.8-4.3-5-4.5-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.4.1.6-.1l.9-1c.2-.2.4-.2.6-.1l2 .9c.2.1.4.2.4.3.1.1.1.6-.1 1.3Z"/></svg><span data-t="c_wa">WhatsApp</span></a>
-</div>
+<nav class="callbar" id="callbar" hidden></nav>
+<footer id="ftr"></footer>
 
-<footer>
-  <div class="wrap ft">
-    <div>© <span id="yr"></span> Truckers &amp; Trokeros · <span data-t="ft_tag"></span></div>
-    <div class="ftlinks"><a id="fttel" href="#" hidden></a><a id="ftpriv" href="/privacy" data-t="ft_privacy"></a><a id="ftterms" href="/terms" data-t="ft_terms"></a><a href="/carriers" data-t="ft_carriers"></a><a id="ftapply" href="/drivers" data-t="ft_link">Apply to drive</a></div>
-  </div>
-</footer>
-
-<script src="/contact.js"></script>
+<script src="/site.js"></script>
 <script>
 const T = {
   en: {
-    strip_a:"Owner-operators wanted", strip_b:"English & Español",
-    t1_full:"No trailer needed", t2_full:"Weekly settlements",
-    t3_full:"Bilingual support", t4_full:"No runaround",
-    ft_carriers:"For carriers",
-    nav_cta:"Apply now",
-    nav_home:"Home", nav_drivers:"For drivers", nav_carriers:"For carriers", nav_about:"About",
-    d_eyebrow:"Two ways in",
-    d_h2:"Which one are you?",
-    d_lede:"Drivers apply in five minutes. Carriers send us their standards. Both start on the next page.",
+    title:"Truckers & Trokeros — owner-operator recruiting",
+    desc:"We place owner-operators with carriers across the country. Free for drivers, answers the same day, in English, Spanish or Punjabi.",
+    hero_kicker:"Owner-operator recruiting",
+    hero_h1:"You own the truck. <em>We'll get you loaded.</em>",
+    hero_p:"We place owner-operators with carriers across the country. You tell us what you're looking for; we find the fit and handle the paperwork.",
+    hero_btn1:"Apply in 5 minutes", hero_btn2:"I'm hiring drivers",
+    t1:"Free for drivers", t2:"An answer the same day",
+    t3:"English · Español · ਪੰਜਾਬੀ", t4:"Checked before you apply",
+    d_eyebrow:"Two ways in", d_h2:"Which one are you?",
+    d_lede:"Drivers apply in five minutes. Carriers send us what they need. Both start on the next page.",
     d1_l:"For drivers", d1_h:"You own a truck",
-    d1_p:"Tell us your record and we'll check it against the carrier's real standards before anything is submitted. Same-day answer, in English or Spanish, and it never costs you a cent.",
+    d1_p:"Tell us about your truck and your record. We check you against the carrier's real standards before anything is submitted, and come back the same day — in English, Spanish or Punjabi. It never costs you a cent.",
     d1_go:"Apply to drive",
     d2_l:"For carriers", d2_h:"You need drivers seated",
-    d2_p:"Send us your qualification criteria and we recruit against them — screened before they reach your application, chased through onboarding. Commission only: you pay when a driver is working.",
+    d2_p:"Send us your qualification standards and we recruit against them — screened before they reach your application, and chased through onboarding. Commission only: you pay when a driver is working.",
     d2_go:"See how we work",
     cl_h2:"Ready when you are",
     cl_p:"Five minutes on the application, and you'll know where you stand.",
-    hero_kicker:"Owner-operators · Dallas–Fort Worth",
-    hero_h1:"You own the truck. <em>We'll get you loaded.</em>",
-    hero_p:"We place owner-operators with intermodal carriers running steady freight out of Dallas. You bring the tractor — the trailer, the plates and the loads are handled.",
-    hero_btn1:"Apply in 5 minutes", hero_btn2:"See how it works",
-
-    k_eyebrow:"The work",
-    k_h2:"Intermodal container work out of Dallas",
-    k_lede:"You pull containers on the carrier's chassis, running out of the Dallas–Fort Worth rail yards. It's not over-the-road — it's drayage, and the day looks different because of it.",
-    k1_h:"Containers, not freight you load",
-    k1_p:"The container comes off the rail on the carrier's chassis. No trailer to buy, no trailer to maintain, and you're not touching the freight.",
-    k2_h:"Local and regional, not weeks out",
-    k2_p:"Drayage runs between the yards, ports and customers rather than across the country. Your exact schedule depends on the lane you're put on — ask us and we'll get you the specifics before you commit to anything.",
-    k3_h:"You stay your own boss",
-    k3_p:"This is a lease-on: you own the tractor and run under the carrier's authority. You're not becoming a company driver, and the truck stays yours.",
-
-
-
-
-
-
-
-    c_call:"Call", c_wa:"WhatsApp",
-    c_h:"Rather just talk to someone?",
-    c_p:"Call or message us. We'll answer your questions straight, in English or Spanish, with no pressure to apply.",
-    wa_msg:"Hi — I saw truckersandtrokeros.com and I'd like to know more about driving as an owner-operator.",
-    ft_privacy:"Privacy", ft_terms:"Terms",
-    ft_tag:"Owner-operator placement · Dallas–Fort Worth", ft_link:"Apply to drive",
+    cl_call:"Rather talk to someone?"
   },
   es: {
-    strip_a:"Buscamos dueños de troca", strip_b:"English & Español",
-    t1_full:"Sin trailer", t2_full:"Pagos semanales",
-    t3_full:"Apoyo bilingüe", t4_full:"Sin vueltas",
-    ft_carriers:"Para compañías",
-    nav_cta:"Aplica ya",
-    nav_home:"Inicio", nav_drivers:"Para choferes", nav_carriers:"Para compañías", nav_about:"Nosotros",
-    d_eyebrow:"Dos caminos",
-    d_h2:"¿Cuál eres tú?",
-    d_lede:"Los choferes aplican en cinco minutos. Las compañías nos mandan sus requisitos. Los dos empiezan en la siguiente página.",
+    title:"Truckers & Trokeros — reclutamiento de dueños de troca",
+    desc:"Colocamos dueños de troca con compañías en todo el país. Gratis para el chofer, respuesta el mismo día, en inglés, español o punjabi.",
+    hero_kicker:"Reclutamiento de dueños de troca",
+    hero_h1:"Tú tienes la troca. <em>Nosotros te conseguimos la carga.</em>",
+    hero_p:"Colocamos dueños de troca con compañías en todo el país. Tú nos dices qué buscas; nosotros encontramos dónde encajas y hacemos el papeleo.",
+    hero_btn1:"Aplica en 5 minutos", hero_btn2:"Busco choferes",
+    t1:"Gratis para el chofer", t2:"Respuesta el mismo día",
+    t3:"English · Español · ਪੰਜਾਬੀ", t4:"Te revisamos antes de aplicar",
+    d_eyebrow:"Dos caminos", d_h2:"¿Cuál eres tú?",
+    d_lede:"Los choferes aplican en cinco minutos. Las compañías nos dicen qué necesitan. Los dos empiezan en la siguiente página.",
     d1_l:"Para choferes", d1_h:"Tienes tu troca",
-    d1_p:"Dinos cómo está tu récord y lo comparamos con los requisitos reales de la compañía antes de mandar nada. Respuesta el mismo día, en español o en inglés, y nunca te cuesta un centavo.",
+    d1_p:"Cuéntanos de tu troca y de tu récord. Te comparamos con los requisitos reales de la compañía antes de mandar nada, y te contestamos el mismo día — en inglés, español o punjabi. Nunca te cuesta un centavo.",
     d1_go:"Aplica para manejar",
     d2_l:"Para compañías", d2_h:"Necesitas choferes trabajando",
     d2_p:"Mándanos tus requisitos y reclutamos con ellos — revisados antes de llegar a tu solicitud, y perseguidos hasta terminar el papeleo. Solo comisión: pagas cuando el chofer ya está trabajando.",
     d2_go:"Mira cómo trabajamos",
     cl_h2:"Cuando tú quieras",
     cl_p:"Cinco minutos en la solicitud y sabes cómo estás.",
-    hero_kicker:"Dueños de troca · Dallas–Fort Worth",
-    hero_h1:"Tú tienes la troca. <em>Nosotros te conseguimos la carga.</em>",
-    hero_p:"Colocamos a dueños de troca con compañías intermodales que mueven carga constante desde Dallas. Tú pones el tractor — el trailer, las placas y las cargas ya están resueltos.",
-    hero_btn1:"Aplica en 5 minutos", hero_btn2:"Mira cómo funciona",
-
-    k_eyebrow:"El trabajo",
-    k_h2:"Trabajo intermodal de contenedores desde Dallas",
-    k_lede:"Jalas contenedores sobre el chasis de la compañía, saliendo de los patios de tren de Dallas–Fort Worth. No es carretera larga — es dray, y por eso el día se ve distinto.",
-    k1_h:"Contenedores, no carga que tú subes",
-    k1_p:"El contenedor sale del tren sobre el chasis de la compañía. No hay trailer que comprar ni mantener, y tú no tocas la carga.",
-    k2_h:"Local y regional, no semanas fuera",
-    k2_p:"El dray se mueve entre patios, puertos y clientes, no de costa a costa. Tu horario exacto depende de la ruta que te toque — pregúntanos y te conseguimos los detalles antes de que te comprometas a nada.",
-    k3_h:"Sigues siendo tu propio jefe",
-    k3_p:"Esto es un lease-on: la troca es tuya y trabajas bajo la autoridad de la compañía. No te vuelves chofer de compañía, y la troca sigue siendo tuya.",
-
-
-
-
-
-
-
-    c_call:"Llámanos", c_wa:"WhatsApp",
-    c_h:"¿Prefieres hablar con alguien?",
-    c_p:"Llámanos o mándanos un mensaje. Te contestamos claro, en español o en inglés, sin presionarte para que apliques.",
-    wa_msg:"Hola — vi truckersandtrokeros.com y quiero saber más sobre trabajar como dueño de troca.",
-    ft_privacy:"Privacidad", ft_terms:"Términos",
-    ft_tag:"Colocación de dueños de troca · Dallas–Fort Worth", ft_link:"Aplica para manejar",
+    cl_call:"¿Prefieres hablar con alguien?"
+  },
+  pa: {
+    title:"Truckers & Trokeros — ਓਨਰ-ਓਪਰੇਟਰ ਭਰਤੀ",
+    desc:"ਅਸੀਂ ਓਨਰ-ਓਪਰੇਟਰਾਂ ਨੂੰ ਪੂਰੇ ਦੇਸ਼ ਦੀਆਂ ਕੰਪਨੀਆਂ ਨਾਲ ਜੋੜਦੇ ਹਾਂ। ਡਰਾਈਵਰਾਂ ਲਈ ਮੁਫ਼ਤ, ਉਸੇ ਦਿਨ ਜਵਾਬ, ਅੰਗਰੇਜ਼ੀ, ਸਪੈਨਿਸ਼ ਜਾਂ ਪੰਜਾਬੀ ਵਿੱਚ।",
+    hero_kicker:"ਓਨਰ-ਓਪਰੇਟਰ ਭਰਤੀ",
+    hero_h1:"ਟਰੱਕ ਤੁਹਾਡਾ ਹੈ। <em>ਲੋਡ ਅਸੀਂ ਦਿਵਾਉਂਦੇ ਹਾਂ।</em>",
+    hero_p:"ਅਸੀਂ ਓਨਰ-ਓਪਰੇਟਰਾਂ ਨੂੰ ਪੂਰੇ ਦੇਸ਼ ਦੀਆਂ ਕੰਪਨੀਆਂ ਨਾਲ ਜੋੜਦੇ ਹਾਂ। ਤੁਸੀਂ ਸਾਨੂੰ ਦੱਸੋ ਕਿ ਤੁਸੀਂ ਕੀ ਲੱਭ ਰਹੇ ਹੋ; ਅਸੀਂ ਸਹੀ ਜੋੜ ਲੱਭਦੇ ਹਾਂ ਅਤੇ ਕਾਗਜ਼ੀ ਕਾਰਵਾਈ ਸੰਭਾਲਦੇ ਹਾਂ।",
+    hero_btn1:"5 ਮਿੰਟ ਵਿੱਚ ਅਪਲਾਈ ਕਰੋ", hero_btn2:"ਮੈਨੂੰ ਡਰਾਈਵਰ ਚਾਹੀਦੇ ਹਨ",
+    t1:"ਡਰਾਈਵਰਾਂ ਲਈ ਮੁਫ਼ਤ", t2:"ਉਸੇ ਦਿਨ ਜਵਾਬ",
+    t3:"English · Español · ਪੰਜਾਬੀ", t4:"ਅਪਲਾਈ ਤੋਂ ਪਹਿਲਾਂ ਜਾਂਚ",
+    d_eyebrow:"ਦੋ ਰਸਤੇ", d_h2:"ਤੁਸੀਂ ਕਿਹੜੇ ਹੋ?",
+    d_lede:"ਡਰਾਈਵਰ ਪੰਜ ਮਿੰਟ ਵਿੱਚ ਅਪਲਾਈ ਕਰਦੇ ਹਨ। ਕੰਪਨੀਆਂ ਸਾਨੂੰ ਆਪਣੀ ਲੋੜ ਦੱਸਦੀਆਂ ਹਨ। ਦੋਵੇਂ ਅਗਲੇ ਸਫ਼ੇ ਤੋਂ ਸ਼ੁਰੂ ਹੁੰਦੇ ਹਨ।",
+    d1_l:"ਡਰਾਈਵਰਾਂ ਲਈ", d1_h:"ਤੁਹਾਡਾ ਆਪਣਾ ਟਰੱਕ ਹੈ",
+    d1_p:"ਸਾਨੂੰ ਆਪਣੇ ਟਰੱਕ ਅਤੇ ਆਪਣੇ ਰਿਕਾਰਡ ਬਾਰੇ ਦੱਸੋ। ਕੁਝ ਵੀ ਭੇਜਣ ਤੋਂ ਪਹਿਲਾਂ ਅਸੀਂ ਤੁਹਾਨੂੰ ਕੰਪਨੀ ਦੀਆਂ ਅਸਲ ਸ਼ਰਤਾਂ ਨਾਲ ਮਿਲਾ ਕੇ ਵੇਖਦੇ ਹਾਂ, ਅਤੇ ਉਸੇ ਦਿਨ ਜਵਾਬ ਦਿੰਦੇ ਹਾਂ — ਅੰਗਰੇਜ਼ੀ, ਸਪੈਨਿਸ਼ ਜਾਂ ਪੰਜਾਬੀ ਵਿੱਚ। ਤੁਹਾਡਾ ਇੱਕ ਪੈਸਾ ਨਹੀਂ ਲੱਗਦਾ।",
+    d1_go:"ਡਰਾਈਵ ਲਈ ਅਪਲਾਈ ਕਰੋ",
+    d2_l:"ਕੰਪਨੀਆਂ ਲਈ", d2_h:"ਤੁਹਾਨੂੰ ਡਰਾਈਵਰ ਚਾਹੀਦੇ ਹਨ",
+    d2_p:"ਸਾਨੂੰ ਆਪਣੀਆਂ ਸ਼ਰਤਾਂ ਭੇਜੋ ਅਤੇ ਅਸੀਂ ਉਹਨਾਂ ਦੇ ਹਿਸਾਬ ਨਾਲ ਭਰਤੀ ਕਰਦੇ ਹਾਂ — ਤੁਹਾਡੀ ਅਰਜ਼ੀ ਤੱਕ ਪਹੁੰਚਣ ਤੋਂ ਪਹਿਲਾਂ ਜਾਂਚੇ ਹੋਏ, ਅਤੇ ਪੂਰੀ ਕਾਰਵਾਈ ਤੱਕ ਪਿੱਛੇ ਲੱਗੇ ਰਹਿੰਦੇ ਹਾਂ। ਸਿਰਫ਼ ਕਮਿਸ਼ਨ: ਤੁਸੀਂ ਉਦੋਂ ਦਿੰਦੇ ਹੋ ਜਦੋਂ ਡਰਾਈਵਰ ਕੰਮ 'ਤੇ ਲੱਗ ਜਾਂਦਾ ਹੈ।",
+    d2_go:"ਵੇਖੋ ਅਸੀਂ ਕਿਵੇਂ ਕੰਮ ਕਰਦੇ ਹਾਂ",
+    cl_h2:"ਜਦੋਂ ਤੁਸੀਂ ਤਿਆਰ ਹੋ",
+    cl_p:"ਅਰਜ਼ੀ 'ਤੇ ਪੰਜ ਮਿੰਟ, ਅਤੇ ਤੁਹਾਨੂੰ ਪਤਾ ਲੱਗ ਜਾਵੇਗਾ ਕਿ ਤੁਸੀਂ ਕਿੱਥੇ ਖੜ੍ਹੇ ਹੋ।",
+    cl_call:"ਕਿਸੇ ਨਾਲ ਗੱਲ ਕਰਨੀ ਹੈ?"
   }
 };
+const PAGE_CTA = null;
+if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
+paintPage();
 
-// ---- Contact details. Fill these in and the call / WhatsApp buttons appear
-// everywhere at once: the header (on phones), the sticky bottom bar, the band
-// beside the form, and the footer. Leave them empty and none of it renders --
-// a recruiting site with a dead tel: link is worse than one with no number.
-//
-//   phone    what the driver sees and what tel: dials, e.g. "(469) 555-0142"
-//   whatsapp digits only, with country code, e.g. "14695550142"
-// Defined in /contact.js so the home page and the shared pages can't drift.
-const CONTACT = window.CONTACT || { phone: '', display: '', whatsapp: '' };
-
-function paintContact() {
-  const digits = (CONTACT.phone || '').replace(/[^\d+]/g, '');
-  const wa = (CONTACT.whatsapp || '').replace(/\D/g, '');
-  const t = T[lang];
-  if (digits) {
-    for (const id of ['navtel', 'bandtel', 'bartel']) {
-      const el = document.getElementById(id);
-      if (el) el.href = 'tel:' + digits;
-    }
-    const nav = document.getElementById('navtel');
-    if (nav) nav.classList.add('show');
-  }
-  // No WhatsApp number means no WhatsApp button. wa.me for a number that
-  // isn't on WhatsApp opens an error page, which is worse than not offering it.
-  const href = wa ? 'https://wa.me/' + wa + '?text=' + encodeURIComponent(t.wa_msg) : '';
-  for (const id of ['bandwa', 'barwa']) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    if (wa) { el.href = href; el.hidden = false; } else { el.hidden = true; }
-  }
-  // Same for the call links: only show them once there's something to dial.
-  for (const id of ['navtel', 'bandtel', 'bartel']) {
-    const el = document.getElementById(id);
-    if (el) el.hidden = !digits;
-  }
-  // The band needs at least one of the two; the bottom bar shows what exists.
-  // The footer prints the number itself; the header just says "Call".
-  const barLabel = document.querySelector('#bartel span');
-  if (barLabel && CONTACT.display) barLabel.textContent = t.c_call + ' ' + CONTACT.display;
-  const ft = document.getElementById('fttel');
-  if (ft && digits) { ft.href = 'tel:' + digits; ft.textContent = CONTACT.display || CONTACT.phone; ft.hidden = false; }
-  const band = document.getElementById('cband');
-  if (band) band.hidden = !(digits || wa);
-  const bar = document.getElementById('cbar');
-  if (bar) {
-    const bt = document.getElementById('bartel'), bw = document.getElementById('barwa');
-    if (bt) bt.style.display = digits ? '' : 'none';
-    if (bw) bw.style.display = wa ? '' : 'none';
-    document.body.classList.toggle('hasbar', !!(digits || wa));
-  }
-  // The footer shows the number as text -- some people want to read it, not tap it.
-  document.querySelectorAll('[data-tel]').forEach(el => {
-    el.textContent = CONTACT.phone;
-    el.hidden = !CONTACT.phone;
-    if (digits) el.href = 'tel:' + digits;
-  });
-}
-
-// Language, most explicit signal first. /es is a deliberate act — someone chose
-// to share that link — so it outranks both a saved preference and the browser's.
-let lang = (navigator.language || 'en').toLowerCase().startsWith('es') ? 'es' : 'en';
-try { const s = localStorage.getItem('tt_lang'); if (s) lang = s; } catch (e) {}
-if (/^\/es\/?$/.test(location.pathname)) lang = 'es';
-
-function paint(){
-  const t = T[lang];
-  document.documentElement.lang = lang;
-  document.querySelectorAll('[data-t]').forEach(el=>{
-    const v = t[el.dataset.t];
-    if (v == null) return;
-    if (/<\/?[a-z]/i.test(v)) el.innerHTML = v; else el.textContent = v;
-  });
-  document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on', b.dataset.lang===lang));
-  try { localStorage.setItem('tt_lang', lang); } catch (e) {}
-  // Keep the address bar honest: whatever they're reading is what they'd send.
-  // The canonical follows, so /es doesn't get indexed as a duplicate of /.
-  if (history.replaceState && !location.pathname.endsWith('.html')) {
-    const want = lang === 'es' ? '/es' : '/';
-    if (location.pathname !== want) history.replaceState(null, '', want + location.search + location.hash);
-  }
-  const canon = document.querySelector('link[rel=canonical]');
-  if (canon) canon.href = 'https://truckersandtrokeros.com' + (lang === 'es' ? '/es' : '/');
-  const pfx = lang === 'es' ? '/es' : '';
-  const fp = document.getElementById('ftpriv'), ftm = document.getElementById('ftterms');
-  if (fp) fp.href = pfx + '/privacy';
-  if (ftm) ftm.href = pfx + '/terms';
-  const home = pfx || '/';
-  [['hlogo', home], ['n_home', home], ['n_drv', pfx + '/drivers'],
-   ['n_car', pfx + '/carriers'], ['n_abt', pfx + '/about'],
-   ['hero_btn2', pfx + '/drivers#how'], ['m_home', home], ['m_drv', pfx + '/drivers'], ['m_car', pfx + '/carriers'],
-   ['m_abt', pfx + '/about'], ['navcta', pfx + '/drivers'], ['hero_btn', pfx + '/drivers'], ['cl_btn', pfx + '/drivers'],
-   ['ftapply', pfx + '/drivers'], ['door_drv', pfx + '/drivers'], ['door_car', pfx + '/carriers'],
-   ['ftcar', pfx + '/carriers']].forEach(([id, href]) => {
-    const el = document.getElementById(id); if (el) el.href = href;
-  });
-  if (typeof paintContact === 'function') paintContact();
-  if (typeof carryQuery === 'function') carryQuery();
-}
-document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>{ lang=b.dataset.lang; paint(); });
-{
-  const tog = document.getElementById('navtoggle'), sheet = document.getElementById('navsheet');
-  if (tog && sheet) tog.onclick = () => {
-    const open = sheet.classList.toggle('open');
-    tog.setAttribute('aria-expanded', open ? 'true' : 'false');
-  };
-}
-document.getElementById('yr').textContent = new Date().getFullYear();
-paint();
-
-// Where this lead came from, so the CRM can tell the sites apart.
-const params = new URLSearchParams(location.search);
-
-// The form lives on /drivers now, but attribution starts here: a link shared
-// as /?r=mystica or /?carrier=... must carry that tag across the hop, or the
-// lead lands unattributed and nobody gets paid for it.
-// Declared inside, not above: paint() runs before this point in the file, and
-// a const read from a hoisted function is a dead-zone error waiting to happen.
-function carryQuery() {
-  const KEEP = ['r', 'src', 'carrier', 'utm_source', 'utm_medium', 'utm_campaign'];
-  const q0 = new URLSearchParams(location.search);
-  const keep = new URLSearchParams();
-  for (const k of KEEP) { const v = q0.get(k); if (v) keep.set(k, v); }
-  const q = keep.toString(); if (!q) return;
-  document.querySelectorAll('#navcta,#hero_btn,#cl_btn,#ftapply,#door_drv,#door_car')
-    .forEach((a) => { if (a) a.href = a.getAttribute('href').split('?')[0] + '?' + q; });
-}
-
+// The closing "rather talk to someone?" button only exists if there's a number.
+(function () {
+  const c = window.CONTACT || {}, el = document.getElementById('clcall');
+  if (el && c.phone) { el.href = 'tel:' + c.phone; el.hidden = false; }
+})();
 </script>
 </body>
 </html>

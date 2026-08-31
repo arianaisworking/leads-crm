@@ -38,19 +38,31 @@ export async function onRequest(context) {
   // way — the page reads the path and paints itself in that language.
   const site = PUBLIC_SITES[url.hostname.toLowerCase()];
   if (site) {
-    // Clean URLs, each with a Spanish twin: /privacy and /es/privacy both serve
-    // privacy.html, which reads the path to decide which language to paint.
-    const PAGES = {
-      '': site,
-      'drivers': '/drivers.html',
-      'carriers': '/carriers.html',
-      'about': '/about.html',
-      'privacy': '/privacy.html',
-      'terms': '/terms.html',
-    };
-    const seg = path.replace(/^\/es(?=\/|$)/, '').replace(/^\/|\/$/g, '');
-    if (path === '/index.html' || Object.prototype.hasOwnProperty.call(PAGES, seg)) {
-      return next(new Request(new URL(PAGES[path === '/index.html' ? '' : seg], url), request));
+    // Only rewrite what Pages can't serve on its own.
+    //
+    // Pages already serves drivers.html at /drivers — and redirects
+    // /drivers.html back to /drivers. So rewriting a clean path to the .html
+    // file sends the browser a redirect straight back to the path we just
+    // rewrote: an infinite loop, and a page that never loads. Clean paths are
+    // therefore left alone, and the two cases that genuinely need help map to
+    // clean paths as well, never to a .html:
+    //
+    //   /                  -> /drive   (bare / would serve the CRM shell)
+    //   /es, /pa           -> /drive
+    //   /es/drivers, /pa/… -> /drivers (no such file exists to serve)
+    //
+    // Each page reads the language out of the path it was requested under.
+    const PAGES = ['drivers', 'carriers', 'about', 'privacy', 'terms'];
+    const LANGS = ['es', 'pa'];
+    const langPrefix = new RegExp('^/(' + LANGS.join('|') + ')(?=/|$)');
+
+    if (path === '/' || path === '/index.html') {
+      return next(new Request(new URL('/drive', url), request));
+    }
+    if (langPrefix.test(path)) {
+      const rest = path.replace(langPrefix, '').replace(/^\/|\/$/g, '');
+      if (!rest) return next(new Request(new URL('/drive', url), request));
+      if (PAGES.includes(rest)) return next(new Request(new URL('/' + rest, url), request));
     }
   }
 

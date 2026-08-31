@@ -81,44 +81,48 @@ header a{color:inherit}
 }
 @media(min-width:1151px){ .navsheet{display:none !important} }
 
-/* header call link — the number itself is in the footer, this is just the verb */
-.hd .tel{display:none;align-items:center;gap:6px;color:#fff;text-decoration:none;font-weight:600;
-  font-size:14px;min-height:44px;padding:0 4px;white-space:nowrap}
-@media(max-width:1150px){ .hd .tel{display:flex} .hd .tel span{display:none} }
-@media(min-width:1151px){ .hd .tel{display:flex} }
+/* Contact sits inside the right-hand nav rather than beside it, so it's spaced
+   like the item next to it. It reads as a nav item rather than a second button
+   competing with the CTA — the same weight as "About", which is right for it. */
+.navR .tel{text-decoration:none;color:#c6c8cc;font-weight:600;font-size:14.5px;padding:6px 0;
+  border-bottom:2px solid transparent;white-space:nowrap}
+.navR .tel:hover{color:#fff}
 
-.lang{display:flex;gap:2px;background:rgba(255,255,255,.09);border-radius:6px;padding:3px}
-.lang button{border:0;background:transparent;color:#9a9ca1;font:inherit;font-size:12.5px;font-weight:600;
-  padding:0 13px;min-height:44px;border-radius:4px;cursor:pointer;letter-spacing:.03em}
-.lang button.on{background:#fff;color:var(--ink)}
+/* A select, not a button per language: fixed width whatever the label says,
+   native on a phone, and it still fits when a fourth language turns up. */
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.lang{display:inline-flex;align-items:center}
+/* 16px is not a style choice: iOS zooms the whole page when a control smaller
+   than that takes focus, and a driver who taps the language picker should not
+   land on a zoomed page. */
+.lang select{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.09);color:#fff;
+  border:1px solid rgba(255,255,255,.16);border-radius:5px;font:inherit;font-size:16px;
+  font-weight:600;padding:0 24px 0 10px;min-height:44px;cursor:pointer;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' fill='none' stroke='%23c6c8cc' stroke-width='2'%3E%3Cpath d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center}
+.lang select:focus{outline:2px solid var(--red);outline-offset:1px}
+.lang option{background:var(--nav);color:#fff}
+
 .hd .cta{background:var(--red);color:#fff;border:0;border-radius:4px;padding:0 20px;min-height:44px;
   display:inline-flex;align-items:center;font-family:"Anton",Impact,sans-serif;font-size:15px;
   letter-spacing:.03em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
 .hd .cta:hover{background:var(--red-dark)}
-@media(max-width:560px){.hd .cta{display:none}}
+
+@media(max-width:560px){ .hd .cta{display:none} }
 
 
-/* At 390px the row is logo + call + EN/ES + menu. Tighten the chrome rather
-   than let the header push the page sideways. */
+/* At 390px the row is wordmark + language + menu. Tighten rather than let the
+   header push the page sideways. */
 @media(max-width:560px){
   .hd{gap:8px}
-  .hdr-right{gap:4px}
-  .lang{padding:2px}
-  .lang button{padding:0 8px;font-size:12px}
-  .hd .tel{padding:0;min-width:38px;justify-content:center}
-  }
+  .hdr-right{gap:6px}
+  .lang select{padding:0 20px 0 7px;background-position:right 5px center}
+}
 @media(max-width:620px){
   /* Impact — the fallback while Anton loads, or if it never does — sets the
      wordmark about 45% wider than Anton at the same size. Size it so the bar
      holds in either face rather than only once the webfont has arrived. */
   .logo .mark{font-size:clamp(13px,3.6vw,16px)}
-}
-@media(max-width:480px){
-  /* Something has to give at 360px. The call icon goes: the sticky bar at the
-     bottom of these pages is a bigger, better call button, and the footer
-     prints the number. The language toggle stays — half this audience needs
-     it, and burying it behind a menu is not a trade worth making. */
-  .hd .tel{display:none}
 }
 
 /* page head — dark band with the section name */
@@ -152,6 +156,9 @@ section[id],div[id]{scroll-margin-top:74px}
 section.paper{background:var(--paper)}
 section.dark{background:var(--ink);color:#fff}
 section h2{font-size:clamp(25px,5vw,36px)}
+.lede{color:var(--text-2);font-size:17px;max-width:60ch;margin:0}
+section.dark .lede{color:#b3b5b9}
+.rule + .lede{text-align:center;margin:12px auto 0;max-width:56ch}
 section.dark p{color:#b3b5b9}
 
 /* prose */
@@ -214,6 +221,6 @@ footer a:hover{color:#fff}
 .callbar .call{background:var(--red);color:#fff}
 .callbar .wa{background:#25d366;color:#08301a}
 @media(min-width:761px){ .callbar{display:none !important} }
-body.hascallbar{padding-bottom:74px}
+@media(max-width:760px){ body.hascallbar{padding-bottom:74px} }
 
 input,select,textarea,button{font-size:16px}

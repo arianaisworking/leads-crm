@@ -14,11 +14,21 @@ const LOGO = '<span class="mark">Truckers <span class="amp">&amp;</span> Trokero
 
 // One nav, defined once. `base` is the language-neutral path; site.js adds the
 // /es prefix. Order is the order a driver needs them in.
+// Three languages. Punjabi is here because a large share of owner-operators in
+// the US run their business in Punjabi, and a site that only speaks English and
+// Spanish is closed to them.
+//
+// English is the fallback for every key, per key, not per language: a page that
+// hasn't been translated yet shows English text rather than an empty element.
+// That's what lets Punjabi be added a page at a time instead of all at once.
+const LANGS = ['en', 'es', 'pa'];
+const LANG_LABEL = { en: 'EN', es: 'ES', pa: 'ਪੰਜਾਬੀ' };
+
 const NAV = [
-  { base: '/', en: 'Home', es: 'Inicio' },
-  { base: '/drivers', en: 'For drivers', es: 'Para choferes' },
-  { base: '/carriers', en: 'For carriers', es: 'Para compañías' },
-  { base: '/about', en: 'About', es: 'Nosotros' },
+  { base: '/', en: 'Home', es: 'Inicio', pa: 'ਹੋਮ' },
+  { base: '/drivers', en: 'For drivers', es: 'Para choferes', pa: 'ਡਰਾਈਵਰਾਂ ਲਈ' },
+  { base: '/carriers', en: 'For carriers', es: 'Para compañías', pa: 'ਕੰਪਨੀਆਂ ਲਈ' },
+  { base: '/about', en: 'About', es: 'Nosotros', pa: 'ਸਾਡੇ ਬਾਰੇ' },
 ];
 
 // /contact.js, if the page loaded it. Everything below degrades to nothing
@@ -32,23 +42,29 @@ function contact() {
 
 const CHROME = {
   en: {
-    nav_cta: 'Apply now', ft_tag: 'Owner-operator placement · Dallas–Fort Worth',
+    nav_cta: 'Apply now', ft_tag: 'Owner-operator placement, nationwide',
     ft_apply: 'Apply to drive', ft_privacy: 'Privacy', ft_terms: 'Terms',
-    strip_a: 'Owner-operators wanted', strip_b: 'English & Español',
-    menu: 'Menu', call: 'Call', call_aria: 'Call us',
+    strip_a: 'Owner-operators wanted', strip_b: 'English · Español · ਪੰਜਾਬੀ',
+    menu: 'Menu', call: 'Contact', call_aria: 'Contact us', lang_label: 'Language',
   },
   es: {
-    nav_cta: 'Aplica ya', ft_tag: 'Colocación de dueños de troca · Dallas–Fort Worth',
+    nav_cta: 'Aplica ya', ft_tag: 'Colocación de dueños de troca en todo el país',
     ft_apply: 'Aplica para manejar', ft_privacy: 'Privacidad', ft_terms: 'Términos',
-    strip_a: 'Buscamos dueños de troca', strip_b: 'English & Español',
-    menu: 'Menú', call: 'Llámanos', call_aria: 'Llámanos',
+    strip_a: 'Buscamos dueños de troca', strip_b: 'English · Español · ਪੰਜਾਬੀ',
+    menu: 'Menú', call: 'Contacto', call_aria: 'Contáctanos', lang_label: 'Idioma',
+  },
+  pa: {
+    nav_cta: 'ਹੁਣੇ ਅਪਲਾਈ ਕਰੋ', ft_tag: 'ਪੂਰੇ ਦੇਸ਼ ਵਿੱਚ ਓਨਰ-ਓਪਰੇਟਰ ਪਲੇਸਮੈਂਟ',
+    ft_apply: 'ਡਰਾਈਵ ਕਰਨ ਲਈ ਅਪਲਾਈ ਕਰੋ', ft_privacy: 'ਪਰਾਈਵੇਸੀ', ft_terms: 'ਸ਼ਰਤਾਂ',
+    strip_a: 'ਓਨਰ-ਓਪਰੇਟਰ ਚਾਹੀਦੇ ਹਨ', strip_b: 'English · Español · ਪੰਜਾਬੀ',
+    menu: 'ਮੀਨੂ', call: 'ਸੰਪਰਕ', call_aria: 'ਸਾਡੇ ਨਾਲ ਸੰਪਰਕ ਕਰੋ', lang_label: 'ਭਾਸ਼ਾ',
   },
 };
 
 // Strip a leading /es so a page can work out what it is regardless of language.
 function basePath() {
   const p = location.pathname.replace(/\/index\.html$/, '/').replace(/\.html$/, '');
-  return p.replace(/^\/es(?=\/|$)/, '') || '/';
+  return p.replace(/^\/(es|pa)(?=\/|$)/, '').replace(/^\/drive$/, '/') || '/';
 }
 
 // A page can declare itself single-language with `const PAGE_LANG = 'en'`.
@@ -62,9 +78,11 @@ function onlyLang() {
 function pickLang() {
   const fixed = onlyLang();
   if (fixed) return fixed;
-  let l = (navigator.language || 'en').toLowerCase().startsWith('es') ? 'es' : 'en';
-  try { const s = localStorage.getItem('tt_lang'); if (s) l = s; } catch (e) {}
-  if (/^\/es(\/|$)/.test(location.pathname)) l = 'es';
+  const nav = (navigator.language || 'en').toLowerCase();
+  let l = nav.startsWith('es') ? 'es' : nav.startsWith('pa') ? 'pa' : 'en';
+  try { const s = localStorage.getItem('tt_lang'); if (LANGS.includes(s)) l = s; } catch (e) {}
+  const m = location.pathname.match(/^\/(es|pa)(\/|$)/);
+  if (m) l = m[1];
   return l;
 }
 
@@ -73,8 +91,8 @@ let lang = pickLang();
 // A language-neutral path, prefixed for the current language.
 function L(base, l) {
   const lg = l || lang;
-  if (lg !== 'es') return base;
-  return base === '/' ? '/es' : '/es' + base;
+  if (lg === 'en') return base;
+  return base === '/' ? '/' + lg : '/' + lg + base;
 }
 function langPath(l) { return L(basePath(), l); }
 
@@ -102,15 +120,18 @@ function chrome(t) {
        <nav class="nav navL">${navLeft}</nav>
        <a class="logo" href="${L('/')}">${LOGO}</a>
        <div class="hdr-right">
-         <nav class="nav navR">${navRight}</nav>
-         ${ct.phone ? `<a class="tel" href="tel:${ct.phone}" aria-label="${t.call_aria}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span>${t.call}</span></a>` : ''}
-         ${onlyLang() ? '' : `<div class="lang"><button data-lang="en">EN</button><button data-lang="es">ES</button></div>`}
+         <nav class="nav navR">${navRight}${ct.phone
+           ? `<a class="tel" href="tel:${ct.phone}" aria-label="${t.call_aria}">${t.call}</a>` : ''}</nav>
+         ${onlyLang() ? '' : `<label class="lang"><span class="vh">${t.lang_label}</span><select id="langsel">${LANGS
+           .map((l) => `<option value="${l}"${l === lang ? ' selected' : ''}>${LANG_LABEL[l]}</option>`)
+           .join('')}</select></label>`}
          ${hasCta ? `<a class="cta" href="${cta.href}">${cta.label}</a>` : ''}
          <button class="navtoggle" id="navtoggle" aria-label="${t.menu}" aria-expanded="false">
            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
          </button>
        </div>
-       <nav class="navsheet" id="navsheet">${navAll}</nav>
+       <nav class="navsheet" id="navsheet">${navAll}${ct.phone
+         ? `<a href="tel:${ct.phone}">${t.call} &middot; ${ct.display}</a>` : ''}</nav>
      </div>`;
 
   document.getElementById('ftr').innerHTML =
@@ -124,17 +145,15 @@ function chrome(t) {
        </div>
      </div>`;
 
-  document.querySelectorAll('.lang button').forEach((b) => {
-    b.classList.toggle('on', b.dataset.lang === lang);
-    b.onclick = () => { lang = b.dataset.lang; paintPage(); };
-  });
+  const sel = document.getElementById('langsel');
+  if (sel) sel.onchange = () => { lang = sel.value; paintPage(); };
 
   // A driver stuck halfway through the form should be one thumb from a call.
   const bar = document.getElementById('callbar');
   if (bar) {
     if (ct.phone) {
       bar.innerHTML =
-        `<a class="call" href="tel:${ct.phone}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span>${t.call} ${ct.display}</span></a>` +
+        `<a class="call" href="tel:${ct.phone}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span>${t.call}</span></a>` +
         (ct.wa ? `<a class="wa" href="https://wa.me/${ct.wa}" target="_blank" rel="noopener">WhatsApp</a>` : '');
       bar.hidden = false;
     } else { bar.hidden = true; }
@@ -147,6 +166,26 @@ function chrome(t) {
   };
 }
 
+// Attribution. A link shared as /?r=mystica or /pa/drivers?utm_source=fb has to
+// survive every hop, because the form that finally reads the tag may be two
+// pages away. Every internal link on the page carries the tags forward; nothing
+// else is carried, so a stray query string can't ride along into the CRM.
+const CARRY = ['r', 'src', 'carrier', 'utm_source', 'utm_medium', 'utm_campaign'];
+function carryQuery() {
+  const from = new URLSearchParams(location.search);
+  const keep = new URLSearchParams();
+  for (const k of CARRY) { const v = from.get(k); if (v) keep.set(k, v); }
+  const q = keep.toString();
+  if (!q) return;
+  document.querySelectorAll('a[href]').forEach((a) => {
+    const raw = a.getAttribute('href');
+    if (!raw || /^(tel:|mailto:|https?:|#)/i.test(raw)) return;
+    const hash = raw.includes('#') ? raw.slice(raw.indexOf('#')) : '';
+    const path = raw.split('#')[0].split('?')[0];
+    a.setAttribute('href', path + '?' + q + hash);
+  });
+}
+
 function paintPage() {
   // `lang` was picked when this file loaded, before the page's own PAGE_LANG
   // existed. A single-language page overrides it here, on every paint — a
@@ -154,7 +193,10 @@ function paintPage() {
   // bolted onto an English page.
   const fixed = onlyLang();
   if (fixed) lang = fixed;
-  const t = Object.assign({}, CHROME[lang], (typeof T !== 'undefined' && T[lang]) || {});
+  // English underneath, the chosen language on top, key by key — an untranslated
+  // string falls back to readable English instead of painting nothing.
+  const t = Object.assign({}, CHROME.en, CHROME[lang],
+    (typeof T !== 'undefined' && T.en) || {}, (typeof T !== 'undefined' && T[lang]) || {});
   document.documentElement.lang = lang;
   chrome(t);
 
@@ -192,6 +234,8 @@ function paintPage() {
 
   // Only a page that actually has both languages gets to move the address bar,
   // rewrite its canonical, or remember the reader's choice.
+  carryQuery();
+
   if (onlyLang()) return;
   try { localStorage.setItem('tt_lang', lang); } catch (e) {}
   const want = langPath(lang);
