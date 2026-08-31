@@ -58,13 +58,20 @@
   /* header */
   header{position:sticky;top:0;z-index:60;background:var(--nav);color:#fff;
     border-bottom:1px solid var(--line-d)}
-  .hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:11px}
-  .logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex:none}
-  .logo .mark{font-family:"Anton",Impact,sans-serif;font-size:clamp(14px,4.2vw,19px);
-    letter-spacing:.01em;color:#fff;text-transform:uppercase;line-height:1;padding-bottom:4px;
-    border-bottom:2.5px solid var(--red);white-space:nowrap}
+  /* Three columns, so the wordmark sits dead centre on the page no matter how
+     wide the two nav groups are — the layout the design calls for. */
+  .hd{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding-block:11px}
+  .logo{justify-self:center;display:flex;align-items:center;text-decoration:none}
+  .logo .mark{position:relative;font-family:"Anton",Impact,sans-serif;
+    font-size:clamp(15px,4.2vw,21px);letter-spacing:.015em;color:#fff;text-transform:uppercase;
+    line-height:1;padding-bottom:7px;white-space:nowrap}
+  /* two strokes meeting at the ampersand, not one rule straight across */
+  .logo .mark:before,.logo .mark:after{content:"";position:absolute;bottom:0;height:2.5px}
+  .logo .mark:before{left:0;width:43%;background:rgba(255,255,255,.9)}
+  .logo .mark:after{right:0;width:43%;background:var(--red)}
   .logo .amp{color:var(--red-soft)}
-  .hdr-right{display:flex;align-items:center;gap:10px}
+  .navL{justify-self:start}
+  .hdr-right{justify-self:end;display:flex;align-items:center;gap:10px}
   .nav{display:flex;gap:22px;align-items:center}
   .nav a{text-decoration:none;color:#c6c8cc;font-weight:600;font-size:14.5px;padding:6px 0;
     border-bottom:2px solid transparent}
@@ -72,15 +79,22 @@
   .nav a.on{color:#fff;border-bottom-color:var(--red)}
   .navtoggle{display:none;background:transparent;border:0;color:#fff;min-height:44px;min-width:44px;
     align-items:center;justify-content:center;cursor:pointer;padding:0}
+  /* The phone gets one sheet with all four links rather than the two desktop
+     halves, which would otherwise stack on top of each other. */
+  .navsheet{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;
+    background:var(--nav);border-bottom:1px solid var(--line-d);padding:4px 18px 14px}
+  .navsheet.open{display:flex}
+  .navsheet a{text-decoration:none;color:#c6c8cc;font-weight:600;font-size:15.5px;padding:13px 0;
+    border-bottom:1px solid var(--line-d);min-height:48px;display:flex;align-items:center}
+  .navsheet a.on{color:var(--red-soft)}
   @media(max-width:900px){
-    .hd{position:relative}
-    .nav{position:absolute;left:0;right:0;top:100%;flex-direction:column;align-items:stretch;gap:0;
-      background:var(--nav);border-bottom:1px solid var(--line-d);padding:6px 18px 14px;display:none}
-    .nav.open{display:flex}
-    .nav a{padding:13px 0;border-bottom:1px solid var(--line-d);min-height:48px;display:flex;align-items:center}
-    .nav a.on{border-bottom-color:var(--line-d);color:var(--red-soft)}
+    .hd{grid-template-columns:1fr auto;position:relative}
+    .logo{justify-self:start;grid-column:1}
+    .hdr-right{grid-column:2}
+    .nav{display:none}
     .navtoggle{display:flex}
   }
+  @media(min-width:901px){ .navsheet{display:none !important} }
   .lang{display:flex;gap:2px;background:rgba(255,255,255,.09);border-radius:6px;padding:3px}
   .lang button{border:0;background:transparent;color:#9a9ca1;font:inherit;font-size:12.5px;
     font-weight:600;padding:0 13px;min-height:44px;border-radius:4px;cursor:pointer;letter-spacing:.03em}
@@ -171,17 +185,39 @@
   section.dark .step p{color:#a9abaf}
 
   /* the work: photo band + list */
-  .work{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;margin-top:34px}
-  @media(max-width:860px){.work{grid-template-columns:1fr;gap:24px}}
-  .work .shot{border-radius:6px;overflow:hidden;border:1px solid var(--line-d)}
-  .wlist{display:flex;flex-direction:column}
-  .wrow{display:flex;gap:15px;padding:17px 0;border-top:1px solid var(--line)}
-  section.dark .wrow{border-color:var(--line-d)}
-  .wrow:first-child{border-top:0;padding-top:0}
-  .wrow .ic{flex:none;margin-top:1px}
-  .wrow h3{font-size:18px;margin-bottom:5px}
-  .wrow p{margin:0;color:var(--text-2);font-size:15.5px;line-height:1.5}
-  section.dark .wrow p{color:#a9abaf}
+  /* The yard fills the band rather than sitting in a box inside it — it's a
+     backdrop for the copy, not an illustration beside it. */
+  .workband{position:relative;background:var(--ink);color:#fff;overflow:hidden;isolation:isolate;
+    padding:64px 0}
+  .workband .shot{position:absolute;inset:0;z-index:0}
+  .workband .shot img{width:100%;height:100%;object-fit:cover;object-position:center 58%}
+  .workband .scrim{position:absolute;inset:0;z-index:1;
+    background:linear-gradient(180deg,rgba(11,11,12,.9) 0%,rgba(11,11,12,.74) 45%,rgba(11,11,12,.93) 100%)}
+  .workband .wrap{position:relative;z-index:2}
+  .workband .sec-p{color:#c2c4c8}
+  .work{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:36px}
+  @media(max-width:820px){.work{grid-template-columns:1fr;gap:12px}}
+  .wrow{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:5px;
+    padding:22px 21px;backdrop-filter:blur(2px)}
+  .wrow .ic{display:block;margin-bottom:11px}
+  .wrow h3{font-size:18.5px;margin-bottom:6px;color:#fff}
+  .wrow p{margin:0;color:#b7b9be;font-size:15.5px;line-height:1.55}
+
+  /* the two doors — the only decision this page asks anyone to make */
+  .doors{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:36px}
+  @media(max-width:760px){.doors{grid-template-columns:1fr}}
+  .door{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
+    border-top:4px solid var(--red);border-radius:5px;padding:28px 26px 26px;text-decoration:none;
+    color:inherit}
+  .door:hover{border-color:var(--red);box-shadow:0 14px 34px -26px rgba(0,0,0,.6)}
+  .door .lbl{font-family:"Anton",Impact,sans-serif;font-size:12px;letter-spacing:.11em;
+    text-transform:uppercase;color:var(--red-dark);margin-bottom:9px}
+  .door h3{font-size:clamp(21px,4vw,27px);margin-bottom:9px}
+  .door p{margin:0 0 20px;color:var(--text-2);font-size:15.5px;flex:1}
+  .door .go{display:inline-flex;align-items:center;gap:9px;font-family:"Anton",Impact,sans-serif;
+    font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--red-dark)}
+  .door .go svg{transition:transform .15s}
+  .door:hover .go svg{transform:translateX(4px)}
 
   /* why drivers call us — a real face beside the four messages */
   .why{display:grid;grid-template-columns:400px 1fr;gap:38px;align-items:center;margin-top:36px}
@@ -231,8 +267,8 @@
   .formwrap .streaks{position:absolute;inset:0;z-index:0;opacity:.6}
   .formwrap .streaks img{width:100%;height:100%;object-fit:cover;object-position:center 65%}
   .formwrap .wrap{position:relative;z-index:2}
-  .fgrid{display:grid;grid-template-columns:1fr 448px;gap:44px;align-items:start}
-  @media(max-width:900px){.fgrid{grid-template-columns:1fr;gap:28px}}
+  .close{max-width:660px;margin:0 auto;text-align:center}
+  .close .cband{text-align:left;margin-top:26px}
   .formwrap h2{font-size:clamp(28px,5.6vw,40px)}
   .formwrap .lede{color:#b9bbc0;font-size:17px;margin:14px 0 22px}
   .fpoints{display:grid;gap:12px}
@@ -278,6 +314,7 @@
   .cbar .wa{background:#25d366;color:#08301a}
   body.hasbar{padding-bottom:76px}
   @media(max-width:760px){ body.hasbar .cbar{display:flex} }
+  .cband[hidden]{display:none}
   .cband{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;margin-top:24px;
     background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:18px 20px}
   .cband .txt{flex:1;min-width:210px}
@@ -304,21 +341,29 @@
 
 <header>
   <div class="wrap hd">
-    <a class="logo" id="hlogo" href="/"><span class="mark">Truckers <span class="amp">&amp;</span> Trokeros</span></a>
-    <nav class="nav" id="nav">
+    <nav class="nav navL" id="navL">
       <a class="on" id="n_home" href="/" data-t="nav_home">Home</a>
       <a id="n_drv" href="/drivers" data-t="nav_drivers">For drivers</a>
-      <a id="n_car" href="/carriers" data-t="nav_carriers">For carriers</a>
-      <a id="n_abt" href="/about" data-t="nav_about">About</a>
     </nav>
+    <a class="logo" id="hlogo" href="/"><span class="mark">Truckers <span class="amp">&amp;</span> Trokeros</span></a>
     <div class="hdr-right">
+      <nav class="nav navR" id="nav">
+        <a id="n_car" href="/carriers" data-t="nav_carriers">For carriers</a>
+        <a id="n_abt" href="/about" data-t="nav_about">About</a>
+      </nav>
       <a class="tel" id="navtel" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z"/></svg><span data-t="c_call">Call</span></a>
       <div class="lang"><button data-lang="en" class="on">EN</button><button data-lang="es">ES</button></div>
-      <a class="cta" href="#apply" data-t="nav_cta">Apply now</a>
+      <a class="cta" id="navcta" href="/drivers" data-t="nav_cta">Apply now</a>
       <button class="navtoggle" id="navtoggle" aria-label="Menu" aria-expanded="false">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
     </div>
+    <nav class="navsheet" id="navsheet">
+      <a class="on" id="m_home" href="/" data-t="nav_home">Home</a>
+      <a id="m_drv" href="/drivers" data-t="nav_drivers">For drivers</a>
+      <a id="m_car" href="/carriers" data-t="nav_carriers">For carriers</a>
+      <a id="m_abt" href="/about" data-t="nav_about">About</a>
+    </nav>
   </div>
 </header>
 
@@ -330,8 +375,8 @@
     <h1 data-t="hero_h1"></h1>
     <p data-t="hero_p"></p>
     <div class="btns">
-      <a class="btn" href="#apply" data-t="hero_btn1">Apply in 5 minutes</a>
-      <a class="btn ghost" href="#how" data-t="hero_btn2">See how it works</a>
+      <a class="btn" id="hero_btn" href="/drivers" data-t="hero_btn1">Apply in 5 minutes</a>
+      <a class="btn ghost" id="hero_btn2" href="/drivers#how" data-t="hero_btn2">See how it works</a>
     </div>
   </div></div>
 </div>
@@ -345,98 +390,51 @@
   </div></div>
 </div>
 
-<section id="work">
+<div class="workband" id="work">
+  <div class="shot"><img src="/img/yard.jpg" alt="" loading="lazy" width="1300" height="185"></div>
+  <div class="scrim"></div>
   <div class="wrap">
     <div class="eyebrow" data-t="k_eyebrow">The work</div>
     <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="k_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
     <p class="sec-p" data-t="k_lede"></p>
     <div class="work">
-      <div class="shot"><img src="/img/yard.jpg" alt="" loading="lazy" width="1300" height="185"></div>
-      <div class="wlist">
-        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5z"/><path d="M3 8.5 12 13l9-4.5M12 13v7"/></svg></span><div><h3 data-t="k1_h"></h3><p data-t="k1_p"></p></div></div>
-        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg></span><div><h3 data-t="k2_h"></h3><p data-t="k2_p"></p></div></div>
-        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.4-8.4M17 6l2.5 2.5M14.5 8.5 17 11"/></svg></span><div><h3 data-t="k3_h"></h3><p data-t="k3_p"></p></div></div>
-      </div>
-    </div>
-
-    <div class="fees">
-      <h3 data-t="fee_h"></h3>
-      <p class="fee_sub" data-t="fee_sub"></p>
-      <div id="fees"></div>
-      <p class="fee_note" data-t="fee_note"></p>
+      <div class="wrow"><span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff2d2d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5z"/><path d="M3 8.5 12 13l9-4.5M12 13v7"/></svg></span><h3 data-t="k1_h"></h3><p data-t="k1_p"></p></div>
+      <div class="wrow"><span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff2d2d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg></span><h3 data-t="k2_h"></h3><p data-t="k2_p"></p></div>
+      <div class="wrow"><span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff2d2d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.4-8.4M17 6l2.5 2.5M14.5 8.5 17 11"/></svg></span><h3 data-t="k3_h"></h3><p data-t="k3_p"></p></div>
     </div>
   </div>
-</section>
-
-<section class="dark" id="how">
-  <div class="wrap">
-    <div class="eyebrow" data-t="h_eyebrow">The process</div>
-    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="h_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
-    <p class="sec-p" data-t="h_lede"></p>
-    <div class="steps">
-      <div class="step"><span class="n">1</span><span class="ic art"><img src="/img/ico-check.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s1_h"></h3><p data-t="s1_p"></p></div>
-      <div class="step"><span class="n">2</span><span class="ic art"><img src="/img/ico-match.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s2_h"></h3><p data-t="s2_p"></p></div>
-      <div class="step"><span class="n">3</span><span class="ic art"><img src="/img/ico-terminal.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s3_h"></h3><p data-t="s3_p"></p></div>
-    </div>
-    <div class="steps" style="margin-top:22px">
-      <div class="step"><span class="n">4</span><span class="ic art"><img src="/img/ico-route.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s4_h"></h3><p data-t="s4_p"></p></div>
-      <div class="step"><span class="n">5</span><span class="ic art"><img src="/img/ico-shield.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s5_h"></h3><p data-t="s5_p"></p></div>
-      <div class="step" style="display:flex;flex-direction:column;justify-content:center;gap:12px">
-        <h3 data-t="ready_h"></h3>
-        <a class="btn" href="#apply" data-t="hero_btn1">Apply in 5 minutes</a>
-      </div>
-    </div>
-  </div>
-</section>
+</div>
 
 <section class="paper">
   <div class="wrap">
-    <div class="eyebrow" data-t="w_eyebrow">Why drivers call us</div>
-    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="w_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
-    <p class="sec-p" data-t="w_lede"></p>
-    <div class="why">
-      <figure class="portrait">
-        <img src="/img/driver.jpg" alt="An owner-operator beside his tractor at a truck stop at dusk" loading="lazy" width="760" height="1188">
-      </figure>
-      <div class="wlist">
-        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V7h11v9"/><path d="M13 10h4l3.2 3.9V16"/><circle cx="6.5" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/></svg></span><div><h3 data-t="w1_h"></h3><p data-t="w1_p"></p></div></div>
-        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18"/></svg></span><div><h3 data-t="w2_h"></h3><p data-t="w2_p"></p></div></div>
-        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8h9a3 3 0 0 1 0 6H5"/></svg></span><div><h3 data-t="w3_h"></h3><p data-t="w3_p"></p></div></div>
-        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><div><h3 data-t="w4_h"></h3><p data-t="w4_p"></p></div></div>
-      </div>
+    <div class="eyebrow" data-t="d_eyebrow"></div>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="d_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="d_lede"></p>
+    <div class="doors">
+      <a class="door" id="door_drv" href="/drivers">
+        <span class="lbl" data-t="d1_l"></span>
+        <h3 data-t="d1_h"></h3>
+        <p data-t="d1_p"></p>
+        <span class="go"><span data-t="d1_go"></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="door" id="door_car" href="/carriers">
+        <span class="lbl" data-t="d2_l"></span>
+        <h3 data-t="d2_h"></h3>
+        <p data-t="d2_p"></p>
+        <span class="go"><span data-t="d2_go"></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+      </a>
     </div>
   </div>
 </section>
 
-<section class="paper">
-  <div class="wrap">
-    <div class="eyebrow" data-t="r_eyebrow">Straight answers</div>
-    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="r_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
-    <p class="sec-p" data-t="r_lede"></p>
-    <div class="reqs" id="reqs"></div>
-    <div class="note" data-t="r_note"></div>
-  </div>
-</section>
-
-<section class="dark">
-  <div class="wrap">
-    <div class="eyebrow" data-t="f_eyebrow">Questions</div>
-    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="f_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
-    <div class="faq" id="faq"></div>
-  </div>
-</section>
-
-<div class="formwrap" id="apply">
+<div class="formwrap">
   <div class="streaks"><img src="/img/streaks.jpg" alt="" loading="lazy" width="1500" height="750"></div>
-  <div class="wrap fgrid">
-    <div>
-      <div class="eyebrow" style="text-align:left" data-t="a_eyebrow">Get started</div>
-      <h2 data-t="a_h2"></h2>
-      <p class="lede" data-t="a_lede"></p>
-      <div class="fpoints">
-        <div class="fpoint"><svg class="tick" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5.5 5.5L20 7"/></svg><span data-t="a_p1"></span></div>
-        <div class="fpoint"><svg class="tick" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5.5 5.5L20 7"/></svg><span data-t="a_p2"></span></div>
-        <div class="fpoint"><svg class="tick" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5.5 5.5L20 7"/></svg><span data-t="a_p3"></span></div>
+  <div class="wrap">
+    <div class="close">
+      <h2 data-t="cl_h2"></h2>
+      <p class="lede" data-t="cl_p"></p>
+      <div class="btns" style="justify-content:center">
+        <a class="btn" id="cl_btn" href="/drivers" data-t="hero_btn1"></a>
       </div>
       <div class="cband" id="cband" hidden>
         <div class="txt"><h4 data-t="c_h"></h4><p data-t="c_p"></p></div>
@@ -446,38 +444,6 @@
         </div>
       </div>
     </div>
-    <form id="lead" novalidate>
-      <h3 data-t="form_h"></h3>
-      <p class="sub" data-t="form_sub"></p>
-      <div class="err" id="err"></div>
-      <div class="f"><label data-t="l_name">Full name</label><input name="name" autocomplete="name" required></div>
-      <div class="f"><label data-t="l_phone">Cell phone</label><input name="phone" type="tel" autocomplete="tel" required></div>
-      <div class="f"><label data-t="l_email">Email</label><input name="email" type="email" autocomplete="email"></div>
-      <div class="f"><label data-t="l_city">City &amp; state</label>
-        <div class="row2"><input name="city" autocomplete="address-level2"><input name="state" maxlength="2" placeholder="TX"></div>
-      </div>
-      <div class="f"><label data-t="l_truck">Do you own your truck?</label>
-        <select name="interest">
-          <option value="owns" data-t="o_owns"></option>
-          <option value="buying" data-t="o_buying"></option>
-          <option value="no" data-t="o_no"></option>
-        </select>
-      </div>
-      <input class="hp" name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <button class="btn" type="submit" data-t="form_btn"></button>
-      <p class="fine" data-t="form_fine"></p>
-    </form>
-  </div>
-</div>
-
-<div class="carrier">
-  <div class="wrap in">
-    <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5M15.5 19c0-2 1.2-3.4 3-3.8"/></svg></span>
-    <div class="txt">
-      <h2 data-t="car_h"></h2>
-      <p data-t="car_p"></p>
-    </div>
-    <a class="btn ghost" href="/carriers" data-t="car_btn"></a>
   </div>
 </div>
 
@@ -489,7 +455,7 @@
 <footer>
   <div class="wrap ft">
     <div>© <span id="yr"></span> Truckers &amp; Trokeros · <span data-t="ft_tag"></span></div>
-    <div class="ftlinks"><a id="fttel" href="#" data-tel hidden></a><a id="ftpriv" href="/privacy" data-t="ft_privacy"></a><a id="ftterms" href="/terms" data-t="ft_terms"></a><a href="/carriers" data-t="ft_carriers"></a><a href="#apply" data-t="ft_link">Apply to drive</a></div>
+    <div class="ftlinks"><a id="fttel" href="#" data-tel hidden></a><a id="ftpriv" href="/privacy" data-t="ft_privacy"></a><a id="ftterms" href="/terms" data-t="ft_terms"></a><a href="/carriers" data-t="ft_carriers"></a><a id="ftapply" href="/drivers" data-t="ft_link">Apply to drive</a></div>
   </div>
 </footer>
 
@@ -499,20 +465,24 @@ const T = {
     strip_a:"Owner-operators wanted", strip_b:"English & Español",
     t1_full:"No trailer needed", t2_full:"Weekly settlements",
     t3_full:"Bilingual support", t4_full:"No runaround",
-    ready_h:"Ready when you are",
-    car_h:"Looking for qualified owner-operators?",
-    car_p:"We recruit, screen against your own standards, and chase the paperwork. You pay when a driver is seated.",
-    car_btn:"Partner with us",
     ft_carriers:"For carriers",
     nav_cta:"Apply now",
     nav_home:"Home", nav_drivers:"For drivers", nav_carriers:"For carriers", nav_about:"About",
+    d_eyebrow:"Two ways in",
+    d_h2:"Which one are you?",
+    d_lede:"Drivers apply in five minutes. Carriers send us their standards. Both start on the next page.",
+    d1_l:"For drivers", d1_h:"You own a truck",
+    d1_p:"Tell us your record and we'll check it against the carrier's real standards before anything is submitted. Same-day answer, in English or Spanish, and it never costs you a cent.",
+    d1_go:"Apply to drive",
+    d2_l:"For carriers", d2_h:"You need drivers seated",
+    d2_p:"Send us your qualification criteria and we recruit against them — screened before they reach your application, chased through onboarding. Commission only: you pay when a driver is working.",
+    d2_go:"See how we work",
+    cl_h2:"Ready when you are",
+    cl_p:"Five minutes on the application, and you'll know where you stand.",
     hero_kicker:"Owner-operators · Dallas–Fort Worth",
     hero_h1:"You own the truck. <em>We'll get you loaded.</em>",
     hero_p:"We place owner-operators with intermodal carriers running steady freight out of Dallas. You bring the tractor — the trailer, the plates and the loads are handled.",
     hero_btn1:"Apply in 5 minutes", hero_btn2:"See how it works",
-    t1_n:"No trailer", t1_l:"needed — that's on the carrier",
-    t2_n:"Weekly", t2_l:"settlements, direct deposit",
-    t3_n:"Plates & IFTA", t3_l:"available if you want them",
 
     k_eyebrow:"The work",
     k_h2:"Intermodal container work out of Dallas",
@@ -524,117 +494,41 @@ const T = {
     k3_h:"You stay your own boss",
     k3_p:"This is a lease-on: you own the tractor and run under the carrier's authority. You're not becoming a company driver, and the truck stays yours.",
 
-    fee_h:"What the carrier can handle for you",
-    fee_sub:"All optional — you choose each one on the lease form. Nobody else publishes these. We do, because you'll find out anyway and we'd rather you hear it from us.",
-    fee_note:"Deducted weekly from your settlement. If you'd rather run your own plates and file your own IFTA, that's completely fine — plenty of drivers do.",
-    fees:[
-      ["Trailer &amp; chassis","Included","The carrier supplies it. This is the big one — a trailer of your own runs well into five figures."],
-      ["Apportioned plates","$50 / week","They pull the plates. You skip the IRP account and the lump sum in January. You'll need your title, front and back, plus a current 2290."],
-      ["IFTA","$10 / week","They file your quarterly fuel tax. This is where new owner-operators most often eat a penalty."],
-      ["Maintenance escrow","You set it","Optional savings for the repair that's coming. You pick the weekly amount and you set the ceiling."]
-    ],
 
-    w_eyebrow:"Why drivers call us",
-    w_h2:"Recruiting that doesn't waste your time",
-    w_lede:"Most recruiters send your file in and hope. We check you against the carrier's actual qualification standards first — so you find out where you stand in a day, not three weeks.",
-    w1_h:"Your truck, their trailer",
-    w1_p:"Intermodal work. You bring the tractor; the carrier supplies the chassis and the containers. No trailer to buy or maintain.",
-    w2_h:"Citizenship isn't required",
-    w2_p:"You need to be legally authorized to work in the United States. That's the requirement — not a passport.",
-    w3_h:"A record isn't automatically a no",
-    w3_p:"Misdemeanors are reviewed case by case. So are older items. Tell us the truth up front and we'll tell you honestly where you stand.",
-    w4_h:"We chase the paperwork",
-    w4_p:"Lease forms, inspections, the drug-test window — we track every deadline and stay on it so your file doesn't die waiting on a document.",
 
-    h_eyebrow:"The process",
-    h_h2:"From application to rolling",
-    h_lede:"Five steps. Most drivers who qualify are in orientation within a couple of weeks.",
-    s1_h:"You apply — about five minutes",
-    s1_p:"Your CDL, your experience, your truck, your driving record. Short and straight to the point.",
-    s2_h:"We screen you the same day",
-    s2_p:"We check your record against the carrier's published standards before anything is submitted. If it's not a fit, we tell you straight instead of leaving you hanging.",
-    s3_h:"The carrier's application",
-    s3_p:"About 20 minutes, and it goes to their Safety team. You'll get a confirmation number, then a Clearinghouse query and a drug test.",
-    s4_h:"Lease and documents",
-    s4_p:"One page on your phone: your lease details, plus your registration, ECM port photo, federal inspection and a voided check. Photos are fine.",
-    s5_h:"Orientation, then you're rolling",
-    s5_p:"A few hours, typically on a Wednesday in Hutchins. Finish it and you can start as soon as the next day.",
 
-    r_eyebrow:"Straight answers",
-    r_h2:"What you need to qualify",
-    r_lede:"These come from the carrier, not from us. Better you know them now than three weeks in.",
-    r_note:"<b>Not sure you qualify?</b> Apply anyway. Points age off, and plenty of things people assume are disqualifying get reviewed case by case. We'd rather look at it and tell you than have you count yourself out.",
 
-    f_eyebrow:"Questions", f_h2:"Fair questions, honest answers",
 
-    a_eyebrow:"Get started",
-    a_h2:"Let's see where you stand",
-    a_lede:"Fill this in and we'll send your application over. No cost to you, ever — the carrier pays us when you're seated.",
-    a_p1:"Costs you nothing, now or later",
-    a_p2:"We'll tell you honestly if it isn't a fit",
-    a_p3:"A real person, not a call centre",
 
     c_call:"Call", c_wa:"WhatsApp",
     c_h:"Rather just talk to someone?",
     c_p:"Call or message us. We'll answer your questions straight, in English or Spanish, with no pressure to apply.",
     wa_msg:"Hi — I saw truckersandtrokeros.com and I'd like to know more about driving as an owner-operator.",
     ft_privacy:"Privacy", ft_terms:"Terms",
-    form_h:"Start your application",
-    form_sub:"Two minutes now, five when we send the full one.",
-    l_name:"Full name", l_phone:"Cell phone", l_email:"Email", l_city:"City & state",
-    l_truck:"Do you own your truck?",
-    o_owns:"Yes, I own it", o_buying:"I'm buying / financing one", o_no:"Not yet",
-    form_btn:"Send my information",
-    form_fine:"We'll text or email you your application. We never sell your details.",
-    done_h:"Got it — check your email",
-    done_p1:"Your application is on its way. It takes about five minutes.",
-    done_p2:"Nothing in your inbox in a few minutes? Check spam, or just reply to this text.",
     ft_tag:"Owner-operator placement · Dallas–Fort Worth", ft_link:"Apply to drive",
-    err_req:"Please give us your name and a phone number so we can reach you.",
-    reqs:[
-      [1,"22 years old or older"],
-      [1,"Valid Class A CDL from your home state"],
-      [1,"1 year of Class A experience in the last 5 years"],
-      [1,"8 of those months within the last 3 years"],
-      [1,"Current DOT medical card"],
-      [1,"Legally authorized to work in the U.S."],
-      [1,"Your own tractor (owned or financing)"],
-      [0,"No DUI/DWI in the last 5 years"],
-      [0,"No handheld/texting ticket in the last 6 months"],
-      [0,"No positive or refused drug test in 10 years"]
-    ],
-    faq:[
-      ["What will I make?","Ask us and we'll give you the carrier's pay structure in writing before you fill out anything binding. We won't quote you a number we can't stand behind — and be careful with anyone who throws a big figure at you before they know your lane."],
-      ["What comes out of my settlement?","Plates are $50/week and IFTA $10/week if you take them, and maintenance escrow only if you choose it and at whatever amount you set. Ask us for the full deduction list before you sign — you're entitled to see it, and we'll get it for you."],
-      ["How much will I be home?","This is drayage, so it's container work between the yards, ports and customers rather than weeks across the country. The exact schedule comes down to the lane you're assigned. Ask us and we'll get the specifics from the carrier before you commit."],
-      ["Do I need my own trailer?","No. This is intermodal work — the carrier supplies the chassis and containers. You bring the tractor."],
-      ["Do I have to be a U.S. citizen?","No. You need to be legally authorized to work in the United States. Citizenship is not a requirement."],
-      ["I have a misdemeanor. Am I out?","Not automatically. Misdemeanors are reviewed case by case, and so are non-commercial felonies. Be upfront with us — it gets checked either way, and a surprise later is what actually costs people the seat."],
-      ["What does this cost me?","Nothing. Not now, not later. The carrier pays us when you're placed and seated. If anyone in trucking asks you for money to get hired, walk away."],
-      ["What about plates and IFTA?","The carrier can provide both for a weekly fee — plates run $50/week and IFTA $10/week. If you'd rather run your own, that's fine too. Your call on the lease form."],
-      ["How fast can I start?","Orientation is usually a Wednesday and takes a few hours. Finish it and you can be eligible to start as early as the next day. The slow part is usually documents, which is exactly what we push on."],
-      ["What if my inspection is old?","You'll need a federal inspection dated within the last 30 days when your file goes in. If yours has aged out we'll tell you before it becomes a problem."],
-      ["Can I run under my LLC?","Yes. If the truck is owned by your company, the lease is written in the company's name — we'll collect the EIN details when we get to the lease form."]
-    ]
   },
   es: {
     strip_a:"Buscamos dueños de troca", strip_b:"English & Español",
     t1_full:"Sin trailer", t2_full:"Pagos semanales",
     t3_full:"Apoyo bilingüe", t4_full:"Sin vueltas",
-    ready_h:"Cuando tú digas",
-    car_h:"¿Buscas dueños de troca calificados?",
-    car_p:"Reclutamos, filtramos con tus propios requisitos y perseguimos el papeleo. Pagas cuando el chofer ya está trabajando.",
-    car_btn:"Trabaja con nosotros",
     ft_carriers:"Para compañías",
     nav_cta:"Aplica ya",
     nav_home:"Inicio", nav_drivers:"Para choferes", nav_carriers:"Para compañías", nav_about:"Nosotros",
+    d_eyebrow:"Dos caminos",
+    d_h2:"¿Cuál eres tú?",
+    d_lede:"Los choferes aplican en cinco minutos. Las compañías nos mandan sus requisitos. Los dos empiezan en la siguiente página.",
+    d1_l:"Para choferes", d1_h:"Tienes tu troca",
+    d1_p:"Dinos cómo está tu récord y lo comparamos con los requisitos reales de la compañía antes de mandar nada. Respuesta el mismo día, en español o en inglés, y nunca te cuesta un centavo.",
+    d1_go:"Aplica para manejar",
+    d2_l:"Para compañías", d2_h:"Necesitas choferes trabajando",
+    d2_p:"Mándanos tus requisitos y reclutamos con ellos — revisados antes de llegar a tu solicitud, y perseguidos hasta terminar el papeleo. Solo comisión: pagas cuando el chofer ya está trabajando.",
+    d2_go:"Mira cómo trabajamos",
+    cl_h2:"Cuando tú quieras",
+    cl_p:"Cinco minutos en la solicitud y sabes cómo estás.",
     hero_kicker:"Dueños de troca · Dallas–Fort Worth",
     hero_h1:"Tú tienes la troca. <em>Nosotros te conseguimos la carga.</em>",
     hero_p:"Colocamos a dueños de troca con compañías intermodales que mueven carga constante desde Dallas. Tú pones el tractor — el trailer, las placas y las cargas ya están resueltos.",
     hero_btn1:"Aplica en 5 minutos", hero_btn2:"Mira cómo funciona",
-    t1_n:"Sin trailer", t1_l:"— eso lo pone la compañía",
-    t2_n:"Pagos", t2_l:"semanales, depósito directo",
-    t3_n:"Placas e IFTA", t3_l:"disponibles si las quieres",
 
     k_eyebrow:"El trabajo",
     k_h2:"Trabajo intermodal de contenedores desde Dallas",
@@ -646,98 +540,18 @@ const T = {
     k3_h:"Sigues siendo tu propio jefe",
     k3_p:"Esto es un lease-on: la troca es tuya y trabajas bajo la autoridad de la compañía. No te vuelves chofer de compañía, y la troca sigue siendo tuya.",
 
-    fee_h:"Lo que la compañía te puede resolver",
-    fee_sub:"Todo es opcional — tú eliges cada cosa en el contrato. Nadie más publica estos precios. Nosotros sí, porque de todos modos te vas a enterar y preferimos que sea por nosotros.",
-    fee_note:"Se descuenta semanalmente de tu pago. Si prefieres traer tus propias placas y hacer tu propio IFTA, no hay ningún problema — muchos lo hacen así.",
-    fees:[
-      ["Trailer y chasis","Incluido","Lo pone la compañía. Este es el grande — un trailer propio te cuesta decenas de miles."],
-      ["Placas apportioned","$50 / semana","Ellos sacan las placas. Te ahorras la cuenta de IRP y el pagote de enero. Vas a necesitar tu título, por delante y por detrás, más un 2290 vigente."],
-      ["IFTA","$10 / semana","Ellos declaran tu impuesto de combustible cada trimestre. Aquí es donde más seguido caen multas los nuevos dueños de troca."],
-      ["Fondo de mantenimiento","Tú decides","Ahorro opcional para la reparación que siempre llega. Tú pones la cantidad semanal y tú pones el tope."]
-    ],
 
-    w_eyebrow:"Por qué nos buscan",
-    w_h2:"Reclutamiento que no te hace perder el tiempo",
-    w_lede:"La mayoría manda tu solicitud y espera a ver qué pasa. Nosotros revisamos tu récord contra los requisitos reales de la compañía primero — así sabes en un día dónde estás parado, no en tres semanas.",
-    w1_h:"Tu troca, su trailer",
-    w1_p:"Trabajo intermodal. Tú pones el tractor; la compañía pone el chasis y los contenedores. No hay trailer que comprar ni mantener.",
-    w2_h:"No se requiere ciudadanía",
-    w2_p:"Necesitas permiso legal para trabajar en Estados Unidos. Ese es el requisito — no un pasaporte.",
-    w3_h:"Un récord no es un no automático",
-    w3_p:"Los delitos menores se revisan caso por caso, igual que cosas más viejas. Dinos la verdad desde el principio y te decimos con honestidad cómo estás.",
-    w4_h:"Nosotros perseguimos el papeleo",
-    w4_p:"El contrato, la inspección, el plazo del examen antidoping — le damos seguimiento a cada fecha para que tu solicitud no se muera esperando un documento.",
 
-    h_eyebrow:"El proceso",
-    h_h2:"De la solicitud a la carretera",
-    h_lede:"Cinco pasos. La mayoría de quienes califican están en orientación en un par de semanas.",
-    s1_h:"Aplicas — unos cinco minutos",
-    s1_p:"Tu CDL, tu experiencia, tu troca y tu récord de manejo. Corto y al grano.",
-    s2_h:"Te revisamos el mismo día",
-    s2_p:"Comparamos tu récord con los requisitos publicados de la compañía antes de mandar nada. Si no da, te lo decimos claro en vez de dejarte esperando.",
-    s3_h:"La solicitud de la compañía",
-    s3_p:"Unos 20 minutos, y va directo a su departamento de seguridad. Te dan un número de confirmación, luego la consulta al Clearinghouse y el examen antidoping.",
-    s4_h:"Contrato y documentos",
-    s4_p:"Una sola página en tu teléfono: los datos del contrato, más tu registración, foto del puerto ECM, inspección federal y un cheque anulado. Las fotos sirven.",
-    s5_h:"Orientación y a rodar",
-    s5_p:"Unas horas, normalmente un miércoles en Hutchins. Al terminar puedes empezar hasta el día siguiente.",
 
-    r_eyebrow:"Sin rodeos",
-    r_h2:"Lo que necesitas para calificar",
-    r_lede:"Estos requisitos vienen de la compañía, no de nosotros. Mejor que los sepas hoy y no en tres semanas.",
-    r_note:"<b>¿No estás seguro de calificar?</b> Aplica de todos modos. Los puntos se vencen con el tiempo, y muchas cosas que la gente cree que la descalifican se revisan caso por caso. Preferimos revisarlo y decirte, a que tú solo te descartes.",
 
-    f_eyebrow:"Preguntas", f_h2:"Preguntas justas, respuestas honestas",
 
-    a_eyebrow:"Empieza aquí",
-    a_h2:"Vamos a ver cómo estás",
-    a_lede:"Llena esto y te mandamos la solicitud. No te cuesta nada, nunca — la compañía nos paga cuando ya estás trabajando.",
-    a_p1:"No te cuesta nada, ni hoy ni después",
-    a_p2:"Te decimos con honestidad si no da",
-    a_p3:"Una persona de verdad, no un call center",
 
     c_call:"Llámanos", c_wa:"WhatsApp",
     c_h:"¿Prefieres hablar con alguien?",
     c_p:"Llámanos o mándanos un mensaje. Te contestamos claro, en español o en inglés, sin presionarte para que apliques.",
     wa_msg:"Hola — vi truckersandtrokeros.com y quiero saber más sobre trabajar como dueño de troca.",
     ft_privacy:"Privacidad", ft_terms:"Términos",
-    form_h:"Empieza tu solicitud",
-    form_sub:"Dos minutos ahora, cinco cuando te mandemos la completa.",
-    l_name:"Nombre completo", l_phone:"Teléfono celular", l_email:"Correo electrónico", l_city:"Ciudad y estado",
-    l_truck:"¿Tienes tu propia troca?",
-    o_owns:"Sí, es mía", o_buying:"La estoy pagando / financiando", o_no:"Todavía no",
-    form_btn:"Enviar mis datos",
-    form_fine:"Te mandamos la solicitud por mensaje o correo. Nunca vendemos tus datos.",
-    done_h:"Listo — revisa tu correo",
-    done_p1:"Tu solicitud va en camino. Toma unos cinco minutos.",
-    done_p2:"¿No llega nada en unos minutos? Revisa la carpeta de spam, o contéstanos el mensaje.",
     ft_tag:"Colocación de dueños de troca · Dallas–Fort Worth", ft_link:"Aplica para manejar",
-    err_req:"Danos tu nombre y un teléfono para poder contactarte.",
-    reqs:[
-      [1,"22 años o más"],
-      [1,"CDL Clase A vigente de tu estado"],
-      [1,"1 año de experiencia Clase A en los últimos 5 años"],
-      [1,"8 de esos meses dentro de los últimos 3 años"],
-      [1,"Tarjeta médica DOT vigente"],
-      [1,"Permiso legal para trabajar en EE.UU."],
-      [1,"Tu propio tractor (propio o financiado)"],
-      [0,"Sin DUI/DWI en los últimos 5 años"],
-      [0,"Sin multa por celular/texto en los últimos 6 meses"],
-      [0,"Sin examen antidoping positivo o rechazado en 10 años"]
-    ],
-    faq:[
-      ["¿Cuánto voy a ganar?","Pregúntanos y te damos por escrito la estructura de pago de la compañía antes de que llenes nada definitivo. No te vamos a decir un número que no podamos sostener — y ten cuidado con quien te avienta una cifra grande sin saber siquiera qué ruta te toca."],
-      ["¿Qué me descuentan del pago?","Las placas son $50/semana y el IFTA $10/semana si los tomas, y el fondo de mantenimiento solo si tú lo eliges y por la cantidad que tú pongas. Pídenos la lista completa de descuentos antes de firmar — tienes derecho a verla y nosotros te la conseguimos."],
-      ["¿Cuánto voy a estar en casa?","Esto es dray, o sea trabajo de contenedores entre patios, puertos y clientes, no semanas cruzando el país. El horario exacto depende de la ruta que te asignen. Pregúntanos y te conseguimos los detalles con la compañía antes de que te comprometas."],
-      ["¿Necesito mi propio trailer?","No. Es trabajo intermodal — la compañía pone el chasis y los contenedores. Tú pones el tractor."],
-      ["¿Tengo que ser ciudadano americano?","No. Necesitas permiso legal para trabajar en Estados Unidos. La ciudadanía no es requisito."],
-      ["Tengo un delito menor. ¿Estoy fuera?","No automáticamente. Los delitos menores se revisan caso por caso, igual que los delitos mayores no comerciales. Sé honesto con nosotros — de todos modos lo revisan, y una sorpresa después es lo que de verdad cuesta el puesto."],
-      ["¿Cuánto me cuesta?","Nada. Ni hoy ni después. La compañía nos paga cuando ya estás colocado y trabajando. Si alguien en este negocio te pide dinero para conseguirte trabajo, aléjate."],
-      ["¿Y las placas y el IFTA?","La compañía puede dártelos por una cuota semanal — las placas cuestan $50 por semana y el IFTA $10. Si prefieres usar los tuyos, también está bien. Tú decides en el contrato."],
-      ["¿Qué tan rápido puedo empezar?","La orientación normalmente es un miércoles y dura unas horas. Al terminarla puedes ser elegible para empezar hasta el día siguiente. Lo lento suelen ser los documentos, y ahí es justo donde nosotros empujamos."],
-      ["¿Y si mi inspección está vieja?","Necesitas una inspección federal con fecha dentro de los últimos 30 días cuando entregamos tu expediente. Si la tuya ya se venció, te avisamos antes de que sea un problema."],
-      ["¿Puedo trabajar bajo mi LLC?","Sí. Si la troca está a nombre de tu compañía, el contrato se hace a nombre de la compañía — te pedimos los datos del EIN cuando lleguemos a esa parte."]
-    ]
   }
 };
 
@@ -801,12 +615,6 @@ function paint(){
     if (v == null) return;
     if (/<\/?[a-z]/i.test(v)) el.innerHTML = v; else el.textContent = v;
   });
-  document.getElementById('reqs').innerHTML = t.reqs.map(([ok,txt])=>
-    `<div class="req"><span class="${ok?'tick':'x'}">${ok?'✓':'✕'}</span><span>${txt}</span></div>`).join('');
-  document.getElementById('fees').innerHTML = t.fees.map(([lbl,amt,d])=>
-    `<div class="fee"><div class="lbl">${lbl}</div><div class="amt">${amt}</div><div class="d">${d}</div></div>`).join('');
-  document.getElementById('faq').innerHTML = t.faq.map(([q,a])=>
-    `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
   document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on', b.dataset.lang===lang));
   try { localStorage.setItem('tt_lang', lang); } catch (e) {}
   // Keep the address bar honest: whatever they're reading is what they'd send.
@@ -823,16 +631,21 @@ function paint(){
   if (ftm) ftm.href = pfx + '/terms';
   const home = pfx || '/';
   [['hlogo', home], ['n_home', home], ['n_drv', pfx + '/drivers'],
-   ['n_car', pfx + '/carriers'], ['n_abt', pfx + '/about']].forEach(([id, href]) => {
+   ['n_car', pfx + '/carriers'], ['n_abt', pfx + '/about'],
+   ['hero_btn2', pfx + '/drivers#how'], ['m_home', home], ['m_drv', pfx + '/drivers'], ['m_car', pfx + '/carriers'],
+   ['m_abt', pfx + '/about'], ['navcta', pfx + '/drivers'], ['hero_btn', pfx + '/drivers'], ['cl_btn', pfx + '/drivers'],
+   ['ftapply', pfx + '/drivers'], ['door_drv', pfx + '/drivers'], ['door_car', pfx + '/carriers'],
+   ['ftcar', pfx + '/carriers']].forEach(([id, href]) => {
     const el = document.getElementById(id); if (el) el.href = href;
   });
   if (typeof paintContact === 'function') paintContact();
+  if (typeof carryQuery === 'function') carryQuery();
 }
 document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>{ lang=b.dataset.lang; paint(); });
 {
-  const tog = document.getElementById('navtoggle'), nav = document.getElementById('nav');
-  if (tog && nav) tog.onclick = () => {
-    const open = nav.classList.toggle('open');
+  const tog = document.getElementById('navtoggle'), sheet = document.getElementById('navsheet');
+  if (tog && sheet) tog.onclick = () => {
+    const open = sheet.classList.toggle('open');
     tog.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 }
@@ -841,32 +654,22 @@ paint();
 
 // Where this lead came from, so the CRM can tell the sites apart.
 const params = new URLSearchParams(location.search);
-const SOURCE = params.get('src') || 'truckersandtrokeros.com';
-const RECRUITER = params.get('r') || '';
-const CARRIER = params.get('carrier') || 'evans_dal';
 
-document.getElementById('lead').onsubmit = async (e) => {
-  e.preventDefault();
-  const form = e.target, t = T[lang], err = document.getElementById('err');
-  const b = Object.fromEntries(new FormData(form));
-  if (!b.name || !b.phone) { err.textContent = t.err_req; err.style.display = 'block'; return; }
-  err.style.display = 'none';
-  b.source = SOURCE; if (RECRUITER) b.recruiter = RECRUITER;
-  b.interest = 'Owner-operator · truck: ' + (b.interest || 'unknown') + ' · lang: ' + lang;
-  const btn = form.querySelector('button[type=submit]');
-  btn.disabled = true; btn.textContent = '…';
-  try {
-    const r = await fetch('/api/apply/lead?carrier=' + encodeURIComponent(CARRIER),
-      { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(b) });
-    const d = await r.json().catch(()=>({}));
-    if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.');
-    form.innerHTML = `<div class="done"><div class="big">✓</div>
-      <h3>${t.done_h}</h3><p>${t.done_p1}</p><p>${t.done_p2}</p></div>`;
-  } catch (ex) {
-    err.textContent = ex.message; err.style.display = 'block';
-    btn.disabled = false; btn.textContent = t.form_btn;
-  }
-};
+// The form lives on /drivers now, but attribution starts here: a link shared
+// as /?r=mystica or /?carrier=... must carry that tag across the hop, or the
+// lead lands unattributed and nobody gets paid for it.
+// Declared inside, not above: paint() runs before this point in the file, and
+// a const read from a hoisted function is a dead-zone error waiting to happen.
+function carryQuery() {
+  const KEEP = ['r', 'src', 'carrier', 'utm_source', 'utm_medium', 'utm_campaign'];
+  const q0 = new URLSearchParams(location.search);
+  const keep = new URLSearchParams();
+  for (const k of KEEP) { const v = q0.get(k); if (v) keep.set(k, v); }
+  const q = keep.toString(); if (!q) return;
+  document.querySelectorAll('#navcta,#hero_btn,#cl_btn,#ftapply,#door_drv,#door_car')
+    .forEach((a) => { if (a) a.href = a.getAttribute('href').split('?')[0] + '?' + q; });
+}
+
 </script>
 </body>
 </html>

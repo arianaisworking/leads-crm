@@ -71,8 +71,11 @@ function langPath(l) { return L(basePath(), l); }
 
 function chrome(t) {
   const here = basePath();
-  const navHtml = NAV.map((n) =>
-    `<a href="${L(n.base)}"${n.base === here ? ' class="on"' : ''}>${n[lang]}</a>`).join('');
+  const link = (n) => `<a href="${L(n.base)}"${n.base === here ? ' class="on"' : ''}>${n[lang]}</a>`;
+  // Two halves either side of the wordmark on desktop; one sheet on a phone.
+  const navLeft = NAV.slice(0, 2).map(link).join('');
+  const navRight = NAV.slice(2).map(link).join('');
+  const navAll = NAV.map(link).join('');
 
   // PAGE_CTA: an object overrides the default, `false` drops the button —
   // which is what the application page wants, since it *is* the destination.
@@ -86,15 +89,17 @@ function chrome(t) {
 
   document.getElementById('hdr').innerHTML =
     `<div class="wrap hd">
+       <nav class="nav navL">${navLeft}</nav>
        <a class="logo" href="${L('/')}">${LOGO}</a>
-       <nav class="nav" id="nav">${navHtml}</nav>
        <div class="hdr-right">
+         <nav class="nav navR">${navRight}</nav>
          ${onlyLang() ? '' : `<div class="lang"><button data-lang="en">EN</button><button data-lang="es">ES</button></div>`}
          ${hasCta ? `<a class="cta" href="${cta.href}">${cta.label}</a>` : ''}
          <button class="navtoggle" id="navtoggle" aria-label="${t.menu}" aria-expanded="false">
            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
          </button>
        </div>
+       <nav class="navsheet" id="navsheet">${navAll}</nav>
      </div>`;
 
   document.getElementById('ftr').innerHTML =
@@ -112,9 +117,9 @@ function chrome(t) {
     b.onclick = () => { lang = b.dataset.lang; paintPage(); };
   });
 
-  const tog = document.getElementById('navtoggle'), nav = document.getElementById('nav');
-  if (tog && nav) tog.onclick = () => {
-    const open = nav.classList.toggle('open');
+  const tog = document.getElementById('navtoggle'), sheet = document.getElementById('navsheet');
+  if (tog && sheet) tog.onclick = () => {
+    const open = sheet.classList.toggle('open');
     tog.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 }

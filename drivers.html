@@ -95,6 +95,76 @@
   .as p{margin:0;color:var(--text-2);font-size:14.5px;line-height:1.5}
   .helpline{text-align:center;margin-top:30px;font-size:15.5px;color:var(--text-2)}
   .helpline a{font-weight:600}
+
+  /* ── everything below the form ───────────────────────────────────────────
+     The home page used to carry all of this. It belongs here: a driver reads
+     it while deciding whether to finish the form, not while deciding whether
+     the company is worth a click. */
+  .sec-h{font-size:clamp(27px,5.4vw,40px);text-align:center}
+  .sec-p{text-align:center;color:var(--text-2);font-size:16.5px;max-width:56ch;margin:12px auto 0}
+  section.dark .sec-p{color:#b3b5b9}
+  section .eyebrow{display:flex;justify-content:center}
+
+  .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:38px}
+  @media(max-width:800px){.steps{grid-template-columns:1fr;gap:13px}}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:26px 22px 22px;
+    text-align:center;position:relative}
+  section.dark .step{background:#1c1d20;border-color:var(--line-d)}
+  .step .n{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:28px;height:28px;
+    border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;
+    justify-content:center;font-family:"Anton",Impact,sans-serif;font-size:14px}
+  .step .ic.art{width:74px;height:74px;margin:0 auto 12px}
+  .step .ic.art img{width:100%;height:100%;object-fit:contain}
+  .step h3{font-size:18px;margin-bottom:7px}
+  .step p{margin:0;color:var(--text-2);font-size:15px;line-height:1.5}
+  section.dark .step p{color:#a9abaf}
+
+  .why{display:grid;grid-template-columns:400px 1fr;gap:38px;align-items:center;margin-top:36px}
+  @media(max-width:880px){.why{grid-template-columns:1fr;gap:24px}}
+  .portrait{margin:0;border-radius:6px;overflow:hidden;position:relative;background:var(--ink)}
+  .portrait img{width:100%;height:100%;object-fit:cover;aspect-ratio:760/1188}
+  @media(max-width:880px){.portrait img{aspect-ratio:16/10;object-position:center 28%}}
+  .portrait:after{content:"";position:absolute;inset:auto 0 0 0;height:34%;
+    background:linear-gradient(0deg,rgba(11,11,12,.55),transparent)}
+  .wlist{display:flex;flex-direction:column}
+  .wrow{display:flex;gap:15px;padding:17px 0;border-top:1px solid var(--line)}
+  .wrow:first-child{border-top:0;padding-top:0}
+  .wrow .ic{flex:none;margin-top:1px}
+  .wrow h3{font-size:18px;margin-bottom:5px}
+  .wrow p{margin:0;color:var(--text-2);font-size:15.5px;line-height:1.5}
+
+  .reqs{display:grid;grid-template-columns:1fr 1fr;gap:10px 26px;max-width:820px;margin:34px auto 0}
+  @media(max-width:680px){.reqs{grid-template-columns:1fr}}
+  .req{display:flex;gap:11px;align-items:flex-start;font-size:16px}
+  .req .tick{color:var(--red);font-weight:700;flex:none}
+  .req .x{color:var(--soft);flex:none}
+  .note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--red);
+    border-radius:4px;padding:15px 18px;margin:26px auto 0;max-width:820px;
+    color:var(--text-2);font-size:15.5px}
+  .note b{color:var(--text)}
+
+  .fees{max-width:820px;margin:34px auto 0;background:#fff;border:1px solid var(--line);
+    border-radius:6px;padding:24px 26px}
+  .fees h3{font-size:20px;margin-bottom:5px}
+  .fee_sub{color:var(--soft);font-size:15px;margin:0 0 16px}
+  .fee{display:grid;grid-template-columns:1fr auto;gap:3px 16px;padding:13px 0;border-top:1px solid var(--line)}
+  .fee:first-child{border-top:0}
+  .fee .lbl{font-weight:600;font-size:16px}
+  .fee .amt{font-family:"Anton",Impact,sans-serif;font-size:17px;letter-spacing:.02em;color:var(--red-dark)}
+  .fee .d{grid-column:1/-1;color:var(--text-2);font-size:14.5px}
+  .fee_note{color:var(--soft);font-size:14px;margin:16px 0 0}
+
+  .faq{max-width:820px;margin:34px auto 0}
+  .faq details{border-bottom:1px solid var(--line-d);padding:2px 0}
+  .faq summary{cursor:pointer;padding:16px 0;font-weight:600;font-size:16.5px;color:#fff;
+    list-style:none;display:flex;justify-content:space-between;gap:14px;align-items:center}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary:after{content:"+";font-family:"Anton",Impact,sans-serif;font-size:21px;
+    color:var(--red-soft);flex:none;line-height:1}
+  .faq details[open] summary:after{content:"\2013"}
+  .faq p{margin:0 0 17px;color:#a9abaf;font-size:15.5px;line-height:1.6}
+
+  .backtop{text-align:center;margin-top:34px}
 </style>
 </head>
 <body>
@@ -179,6 +249,71 @@
   </div>
 </div>
 
+<section class="paper" id="how">
+  <div class="wrap">
+    <span class="eyebrow" data-t="h_eyebrow"></span>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="h_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="h_lede"></p>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><span class="ic art"><img src="/img/ico-check.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s1_h"></h3><p data-t="s1_p"></p></div>
+      <div class="step"><span class="n">2</span><span class="ic art"><img src="/img/ico-match.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s2_h"></h3><p data-t="s2_p"></p></div>
+      <div class="step"><span class="n">3</span><span class="ic art"><img src="/img/ico-terminal.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s3_h"></h3><p data-t="s3_p"></p></div>
+    </div>
+    <div class="steps" style="margin-top:22px">
+      <div class="step"><span class="n">4</span><span class="ic art"><img src="/img/ico-route.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s4_h"></h3><p data-t="s4_p"></p></div>
+      <div class="step"><span class="n">5</span><span class="ic art"><img src="/img/ico-shield.png" alt="" loading="lazy" width="176" height="176"></span><h3 data-t="s5_h"></h3><p data-t="s5_p"></p></div>
+      <div class="step" style="display:flex;flex-direction:column;justify-content:center;gap:12px">
+        <h3 data-t="ready_h"></h3>
+        <a class="btn" href="#lead" data-t="top_btn"></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow" data-t="w_eyebrow"></span>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="w_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="w_lede"></p>
+    <div class="why">
+      <figure class="portrait">
+        <img src="/img/driver.jpg" alt="An owner-operator beside his tractor at a truck stop at dusk" loading="lazy" width="760" height="1188">
+      </figure>
+      <div class="wlist">
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V7h11v9"/><path d="M13 10h4l3.2 3.9V16"/><circle cx="6.5" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/></svg></span><div><h3 data-t="w1_h"></h3><p data-t="w1_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18"/></svg></span><div><h3 data-t="w2_h"></h3><p data-t="w2_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8h9a3 3 0 0 1 0 6H5"/></svg></span><div><h3 data-t="w3_h"></h3><p data-t="w3_p"></p></div></div>
+        <div class="wrow"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d00000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><div><h3 data-t="w4_h"></h3><p data-t="w4_p"></p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="paper" id="requirements">
+  <div class="wrap">
+    <span class="eyebrow" data-t="r_eyebrow"></span>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="r_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <p class="sec-p" data-t="r_lede"></p>
+    <div class="reqs" id="reqs"></div>
+    <div class="note" data-t="r_note"></div>
+    <div class="fees">
+      <h3 data-t="fee_h"></h3>
+      <p class="fee_sub" data-t="fee_sub"></p>
+      <div id="fees"></div>
+      <p class="fee_note" data-t="fee_note"></p>
+    </div>
+  </div>
+</section>
+
+<section class="dark" id="faq">
+  <div class="wrap">
+    <span class="eyebrow" data-t="f_eyebrow"></span>
+    <div class="rule"><span class="streak"><i></i><i></i><i></i></span><h2 class="sec-h" data-t="f_h2"></h2><span class="streak r"><i></i><i></i><i></i></span></div>
+    <div class="faq" id="faq-list"></div>
+    <div class="backtop"><a class="btn" href="#lead" data-t="top_btn"></a></div>
+  </div>
+</section>
+
 <footer id="ftr"></footer>
 
 <script src="/site.js"></script>
@@ -211,7 +346,46 @@ const T = {
     as2_p:"Two of us. In English or Spanish, whichever you'd rather.",
     as3_h:"Your details stay yours",
     as3_p:"We never sell them and never pass them to other recruiters. Only the carrier you're applying to sees your file.",
-    helpline:"Stuck on any of it? <a href=\"mailto:recruiting@truckersandtrokeros.com\">Email us</a> and a person will help you through it."
+    helpline:"Stuck on any of it? <a href=\"mailto:recruiting@truckersandtrokeros.com\">Email us</a> and a person will help you through it.",
+    top_btn:"Start the form",
+
+    h_eyebrow: "The process",
+    h_h2: "From application to rolling",
+    h_lede: "Five steps. Most drivers who qualify are in orientation within a couple of weeks.",
+    s1_h: "You apply — about five minutes",
+    s1_p: "Your CDL, your experience, your truck, your driving record. Short and straight to the point.",
+    s2_h: "We screen you the same day",
+    s2_p: "We check your record against the carrier's published standards before anything is submitted. If it's not a fit, we tell you straight instead of leaving you hanging.",
+    s3_h: "The carrier's application",
+    s3_p: "About 20 minutes, and it goes to their Safety team. You'll get a confirmation number, then a Clearinghouse query and a drug test.",
+    s4_h: "Lease and documents",
+    s4_p: "One page on your phone: your lease details, plus your registration, ECM port photo, federal inspection and a voided check. Photos are fine.",
+    s5_h: "Orientation, then you're rolling",
+    s5_p: "A few hours, typically on a Wednesday in Hutchins. Finish it and you can start as soon as the next day.",
+    ready_h: "Ready when you are",
+    w_eyebrow: "Why drivers call us",
+    w_h2: "Recruiting that doesn't waste your time",
+    w_lede: "Most recruiters send your file in and hope. We check you against the carrier's actual qualification standards first — so you find out where you stand in a day, not three weeks.",
+    w1_h: "Your truck, their trailer",
+    w1_p: "Intermodal work. You bring the tractor; the carrier supplies the chassis and the containers. No trailer to buy or maintain.",
+    w2_h: "Citizenship isn't required",
+    w2_p: "You need to be legally authorized to work in the United States. That's the requirement — not a passport.",
+    w3_h: "A record isn't automatically a no",
+    w3_p: "Misdemeanors are reviewed case by case. So are older items. Tell us the truth up front and we'll tell you honestly where you stand.",
+    w4_h: "We chase the paperwork",
+    w4_p: "Lease forms, inspections, the drug-test window — we track every deadline and stay on it so your file doesn't die waiting on a document.",
+    r_eyebrow: "Straight answers",
+    r_h2: "What you need to qualify",
+    r_lede: "These come from the carrier, not from us. Better you know them now than three weeks in.",
+    r_note: "<b>Not sure you qualify?</b> Apply anyway. Points age off, and plenty of things people assume are disqualifying get reviewed case by case. We'd rather look at it and tell you than have you count yourself out.",
+    reqs: [[1,"22 years old or older"],[1,"Valid Class A CDL from your home state"],[1,"1 year of Class A experience in the last 5 years"],[1,"8 of those months within the last 3 years"],[1,"Current DOT medical card"],[1,"Legally authorized to work in the U.S."],[1,"Your own tractor (owned or financing)"],[0,"No DUI/DWI in the last 5 years"],[0,"No handheld/texting ticket in the last 6 months"],[0,"No positive or refused drug test in 10 years"]],
+    fee_h: "What the carrier can handle for you",
+    fee_sub: "All optional — you choose each one on the lease form. Nobody else publishes these. We do, because you'll find out anyway and we'd rather you hear it from us.",
+    fee_note: "Deducted weekly from your settlement. If you'd rather run your own plates and file your own IFTA, that's completely fine — plenty of drivers do.",
+    fees: [["Trailer &amp; chassis","Included","The carrier supplies it. This is the big one — a trailer of your own runs well into five figures."],["Apportioned plates","$50 / week","They pull the plates. You skip the IRP account and the lump sum in January. You'll need your title, front and back, plus a current 2290."],["IFTA","$10 / week","They file your quarterly fuel tax. This is where new owner-operators most often eat a penalty."],["Maintenance escrow","You set it","Optional savings for the repair that's coming. You pick the weekly amount and you set the ceiling."]],
+    f_eyebrow: "Questions",
+    f_h2: "Fair questions, honest answers",
+    faq: [["What will I make?","Ask us and we'll give you the carrier's pay structure in writing before you fill out anything binding. We won't quote you a number we can't stand behind — and be careful with anyone who throws a big figure at you before they know your lane."],["What comes out of my settlement?","Plates are $50/week and IFTA $10/week if you take them, and maintenance escrow only if you choose it and at whatever amount you set. Ask us for the full deduction list before you sign — you're entitled to see it, and we'll get it for you."],["How much will I be home?","This is drayage, so it's container work between the yards, ports and customers rather than weeks across the country. The exact schedule comes down to the lane you're assigned. Ask us and we'll get the specifics from the carrier before you commit."],["Do I need my own trailer?","No. This is intermodal work — the carrier supplies the chassis and containers. You bring the tractor."],["Do I have to be a U.S. citizen?","No. You need to be legally authorized to work in the United States. Citizenship is not a requirement."],["I have a misdemeanor. Am I out?","Not automatically. Misdemeanors are reviewed case by case, and so are non-commercial felonies. Be upfront with us — it gets checked either way, and a surprise later is what actually costs people the seat."],["What does this cost me?","Nothing. Not now, not later. The carrier pays us when you're placed and seated. If anyone in trucking asks you for money to get hired, walk away."],["What about plates and IFTA?","The carrier can provide both for a weekly fee — plates run $50/week and IFTA $10/week. If you'd rather run your own, that's fine too. Your call on the lease form."],["How fast can I start?","Orientation is usually a Wednesday and takes a few hours. Finish it and you can be eligible to start as early as the next day. The slow part is usually documents, which is exactly what we push on."],["What if my inspection is old?","You'll need a federal inspection dated within the last 30 days when your file goes in. If yours has aged out we'll tell you before it becomes a problem."],["Can I run under my LLC?","Yes. If the truck is owned by your company, the lease is written in the company's name — we'll collect the EIN details when we get to the lease form."]]
   },
   es: {
     title:"Aplica para manejar — Truckers & Trokeros",
@@ -240,10 +414,63 @@ const T = {
     as2_p:"Somos dos. En español o en inglés, como prefieras.",
     as3_h:"Tus datos son tuyos",
     as3_p:"Nunca los vendemos ni se los pasamos a otros reclutadores. Solo la compañía a la que aplicas ve tu expediente.",
-    helpline:"¿Se te atoró algo? <a href=\"mailto:recruiting@truckersandtrokeros.com\">Escríbenos</a> y una persona te ayuda."
+    helpline:"¿Se te atoró algo? <a href=\"mailto:recruiting@truckersandtrokeros.com\">Escríbenos</a> y una persona te ayuda.",
+    top_btn:"Empieza la solicitud",
+
+    h_eyebrow: "El proceso",
+    h_h2: "De la solicitud a la carretera",
+    h_lede: "Cinco pasos. La mayoría de quienes califican están en orientación en un par de semanas.",
+    s1_h: "Aplicas — unos cinco minutos",
+    s1_p: "Tu CDL, tu experiencia, tu troca y tu récord de manejo. Corto y al grano.",
+    s2_h: "Te revisamos el mismo día",
+    s2_p: "Comparamos tu récord con los requisitos publicados de la compañía antes de mandar nada. Si no da, te lo decimos claro en vez de dejarte esperando.",
+    s3_h: "La solicitud de la compañía",
+    s3_p: "Unos 20 minutos, y va directo a su departamento de seguridad. Te dan un número de confirmación, luego la consulta al Clearinghouse y el examen antidoping.",
+    s4_h: "Contrato y documentos",
+    s4_p: "Una sola página en tu teléfono: los datos del contrato, más tu registración, foto del puerto ECM, inspección federal y un cheque anulado. Las fotos sirven.",
+    s5_h: "Orientación y a rodar",
+    s5_p: "Unas horas, normalmente un miércoles en Hutchins. Al terminar puedes empezar hasta el día siguiente.",
+    ready_h: "Cuando tú digas",
+    w_eyebrow: "Por qué nos buscan",
+    w_h2: "Reclutamiento que no te hace perder el tiempo",
+    w_lede: "La mayoría manda tu solicitud y espera a ver qué pasa. Nosotros revisamos tu récord contra los requisitos reales de la compañía primero — así sabes en un día dónde estás parado, no en tres semanas.",
+    w1_h: "Tu troca, su trailer",
+    w1_p: "Trabajo intermodal. Tú pones el tractor; la compañía pone el chasis y los contenedores. No hay trailer que comprar ni mantener.",
+    w2_h: "No se requiere ciudadanía",
+    w2_p: "Necesitas permiso legal para trabajar en Estados Unidos. Ese es el requisito — no un pasaporte.",
+    w3_h: "Un récord no es un no automático",
+    w3_p: "Los delitos menores se revisan caso por caso, igual que cosas más viejas. Dinos la verdad desde el principio y te decimos con honestidad cómo estás.",
+    w4_h: "Nosotros perseguimos el papeleo",
+    w4_p: "El contrato, la inspección, el plazo del examen antidoping — le damos seguimiento a cada fecha para que tu solicitud no se muera esperando un documento.",
+    r_eyebrow: "Sin rodeos",
+    r_h2: "Lo que necesitas para calificar",
+    r_lede: "Estos requisitos vienen de la compañía, no de nosotros. Mejor que los sepas hoy y no en tres semanas.",
+    r_note: "<b>¿No estás seguro de calificar?</b> Aplica de todos modos. Los puntos se vencen con el tiempo, y muchas cosas que la gente cree que la descalifican se revisan caso por caso. Preferimos revisarlo y decirte, a que tú solo te descartes.",
+    reqs: [[1,"22 años o más"],[1,"CDL Clase A vigente de tu estado"],[1,"1 año de experiencia Clase A en los últimos 5 años"],[1,"8 de esos meses dentro de los últimos 3 años"],[1,"Tarjeta médica DOT vigente"],[1,"Permiso legal para trabajar en EE.UU."],[1,"Tu propio tractor (propio o financiado)"],[0,"Sin DUI/DWI en los últimos 5 años"],[0,"Sin multa por celular/texto en los últimos 6 meses"],[0,"Sin examen antidoping positivo o rechazado en 10 años"]],
+    fee_h: "Lo que la compañía te puede resolver",
+    fee_sub: "Todo es opcional — tú eliges cada cosa en el contrato. Nadie más publica estos precios. Nosotros sí, porque de todos modos te vas a enterar y preferimos que sea por nosotros.",
+    fee_note: "Se descuenta semanalmente de tu pago. Si prefieres traer tus propias placas y hacer tu propio IFTA, no hay ningún problema — muchos lo hacen así.",
+    fees: [["Trailer y chasis","Incluido","Lo pone la compañía. Este es el grande — un trailer propio te cuesta decenas de miles."],["Placas apportioned","$50 / semana","Ellos sacan las placas. Te ahorras la cuenta de IRP y el pagote de enero. Vas a necesitar tu título, por delante y por detrás, más un 2290 vigente."],["IFTA","$10 / semana","Ellos declaran tu impuesto de combustible cada trimestre. Aquí es donde más seguido caen multas los nuevos dueños de troca."],["Fondo de mantenimiento","Tú decides","Ahorro opcional para la reparación que siempre llega. Tú pones la cantidad semanal y tú pones el tope."]],
+    f_eyebrow: "Preguntas",
+    f_h2: "Preguntas justas, respuestas honestas",
+    faq: [["¿Cuánto voy a ganar?","Pregúntanos y te damos por escrito la estructura de pago de la compañía antes de que llenes nada definitivo. No te vamos a decir un número que no podamos sostener — y ten cuidado con quien te avienta una cifra grande sin saber siquiera qué ruta te toca."],["¿Qué me descuentan del pago?","Las placas son $50/semana y el IFTA $10/semana si los tomas, y el fondo de mantenimiento solo si tú lo eliges y por la cantidad que tú pongas. Pídenos la lista completa de descuentos antes de firmar — tienes derecho a verla y nosotros te la conseguimos."],["¿Cuánto voy a estar en casa?","Esto es dray, o sea trabajo de contenedores entre patios, puertos y clientes, no semanas cruzando el país. El horario exacto depende de la ruta que te asignen. Pregúntanos y te conseguimos los detalles con la compañía antes de que te comprometas."],["¿Necesito mi propio trailer?","No. Es trabajo intermodal — la compañía pone el chasis y los contenedores. Tú pones el tractor."],["¿Tengo que ser ciudadano americano?","No. Necesitas permiso legal para trabajar en Estados Unidos. La ciudadanía no es requisito."],["Tengo un delito menor. ¿Estoy fuera?","No automáticamente. Los delitos menores se revisan caso por caso, igual que los delitos mayores no comerciales. Sé honesto con nosotros — de todos modos lo revisan, y una sorpresa después es lo que de verdad cuesta el puesto."],["¿Cuánto me cuesta?","Nada. Ni hoy ni después. La compañía nos paga cuando ya estás colocado y trabajando. Si alguien en este negocio te pide dinero para conseguirte trabajo, aléjate."],["¿Y las placas y el IFTA?","La compañía puede dártelos por una cuota semanal — las placas cuestan $50 por semana y el IFTA $10. Si prefieres usar los tuyos, también está bien. Tú decides en el contrato."],["¿Qué tan rápido puedo empezar?","La orientación normalmente es un miércoles y dura unas horas. Al terminarla puedes ser elegible para empezar hasta el día siguiente. Lo lento suelen ser los documentos, y ahí es justo donde nosotros empujamos."],["¿Y si mi inspección está vieja?","Necesitas una inspección federal con fecha dentro de los últimos 30 días cuando entregamos tu expediente. Si la tuya ya se venció, te avisamos antes de que sea un problema."],["¿Puedo trabajar bajo mi LLC?","Sí. Si la troca está a nombre de tu compañía, el contrato se hace a nombre de la compañía — te pedimos los datos del EIN cuando lleguemos a esa parte."]]
   }
 };
 const PAGE_CTA = false;
+
+// Three blocks are data, not markup: the requirement ticks, the fee rows and
+// the FAQ. They repaint with the language like everything else.
+const painters = () => {
+  const t = T[document.documentElement.lang] || T.en;
+  document.getElementById('reqs').innerHTML = t.reqs.map(([ok, txt]) =>
+    `<div class="req"><span class="${ok ? 'tick' : 'x'}">${ok ? '\u2713' : '\u2715'}</span><span>${txt}</span></div>`).join('');
+  document.getElementById('fees').innerHTML = t.fees.map(([lbl, amt, d]) =>
+    `<div class="fee"><div class="lbl">${lbl}</div><div class="amt">${amt}</div><div class="d">${d}</div></div>`).join('');
+  document.getElementById('faq-list').innerHTML = t.faq.map(([q, a]) =>
+    `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
+};
+const _paint = paintPage;
+paintPage = function () { _paint(); painters(); };
 paintPage();
 
 const params = new URLSearchParams(location.search);
