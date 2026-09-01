@@ -7,7 +7,7 @@ import { json } from '../../_lib/tenant.js';
 import { sendEmail, emailShell, teamEmail, replyToEmail, brandName, esc } from '../../_lib/email.js';
 import { screen, parseRules, screenSummary, addBusinessDays, VIOLATIONS } from '../../_lib/screening.js';
 import { seedDocs, ensurePlacement, leasePacketHtml, openSecure, secret as mkSecret,
-  carrierApplyUrl, recruiterFor, leaseRow } from '../../_lib/recruiting.js';
+  carrierApplyUrl, recruiterFor, leaseRow, rid } from '../../_lib/recruiting.js';
 import { redact } from '../../_lib/vault.js';
 import { draftRules } from '../../_lib/carrier-brain.js';
 
@@ -441,6 +441,45 @@ export async function onRequest(context) {
   }
 
   // ---------- RECRUITERS + THE SPLIT ----------
+  // Job postings. The public board reads these through /api/apply/jobs, which
+  // returns only the open ones and only the public fields.
+  if (res === 'jobs') {
+    const COLS = ['carrier_id', 'title', 'driver_type', 'location', 'haul_type', 'home_time',
+      'pay_summary', 'requirements', 'description', 'openings', 'show_carrier', 'status', 'sort_order'];
+    if (method === 'GET' && !id) {
+      const { results } = await db.prepare(`
+        SELECT j.*, c.name AS carrier_name,
+          (SELECT COUNT(*) FROM leads l WHERE l.job_id = j.id) AS applicants
+        FROM jobs j LEFT JOIN carriers c ON c.id = j.carrier_id
+        ORDER BY j.sort_order, j.created_at DESC`).all();
+      return json({ jobs: results || [] });
+    }
+    if (method === 'POST') {
+      const b = await request.json();
+      if (!b.title) return json({ error: 'title required' }, 400);
+      const nid = rid('jb');
+      const cols = COLS.filter((c) => c in b);
+      await db.prepare(`INSERT INTO jobs (id, ${cols.join(',')}) VALUES (?${',?'.repeat(cols.length)})`)
+        .bind(nid, ...cols.map((c) => b[c])).run();
+      return json({ ok: true, id: nid });
+    }
+    if (method === 'PATCH' && id) {
+      const b = await request.json();
+      const sets = [], vals = [];
+      for (const c of COLS) if (c in b) { sets.push(`${c}=?`); vals.push(b[c]); }
+      if (!sets.length) return json({ error: 'nothing to update' }, 400);
+      sets.push("updated_at=datetime('now')");
+      vals.push(id);
+      await db.prepare(`UPDATE jobs SET ${sets.join(', ')} WHERE id=?`).bind(...vals).run();
+      return json({ ok: true });
+    }
+    if (method === 'DELETE' && id) {
+      await db.prepare('DELETE FROM jobs WHERE id=?').bind(id).run();
+      return json({ ok: true });
+    }
+    return json({ error: 'not found' }, 404);
+  }
+
   // Referrals: who sent us whom, and whether they've been paid for it.
   if (res === 'referrals') {
     if (method === 'GET' && !id) {

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open jobs · Truckers &amp; Trokeros</title>
+<meta name="description" content="What we're hiring for right now. Owner-operator and company driver positions, with the requirements up front so you know before you apply.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://truckersandtrokeros.com/jobs">
+<link rel="alternate" hreflang="en" href="https://truckersandtrokeros.com/jobs">
+<link rel="alternate" hreflang="es" href="https://truckersandtrokeros.com/es/jobs">
+<link rel="alternate" hreflang="pa" href="https://truckersandtrokeros.com/pa/jobs">
+<link rel="alternate" hreflang="x-default" href="https://truckersandtrokeros.com/jobs">
+<meta name="theme-color" content="#0b0b0c">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://truckersandtrokeros.com/jobs">
+<meta property="og:title" content="Open jobs">
+<meta property="og:description" content="What we're hiring for right now.">
+<meta property="og:image" content="https://truckersandtrokeros.com/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/site.css">
+<script src="/contact.js"></script>
+<style>
+  /* The board. Everything on a card is something we're willing to say in
+     public; the carrier's name appears only when that posting allows it. */
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+  .filters button{background:transparent;border:1px solid var(--line);border-radius:100px;
+    padding:0 18px;min-height:44px;font:inherit;font-size:14.5px;font-weight:600;
+    color:var(--text-2);cursor:pointer}
+  .filters button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  .jobs{display:grid;gap:14px}
+  .job{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);
+    border-radius:4px;padding:22px 24px}
+  .job .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .job h2{font-size:clamp(19px,3.6vw,24px);margin-bottom:6px}
+  .job .who{color:var(--soft);font-size:13.5px;margin:0 0 12px}
+  .tag{display:inline-flex;align-items:center;font-family:"Anton",Impact,sans-serif;font-size:11.5px;
+    letter-spacing:.08em;text-transform:uppercase;background:var(--paper);border:1px solid var(--line);
+    color:var(--text-2);border-radius:3px;padding:5px 10px;white-space:nowrap}
+  .tag.oo{background:var(--ink);border-color:var(--ink);color:#fff}
+  .facts{display:flex;gap:8px 22px;flex-wrap:wrap;margin:0 0 14px}
+  .fact{font-size:14.5px;color:var(--text-2)}
+  .fact b{display:block;font-family:"Anton",Impact,sans-serif;font-size:11.5px;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--soft);margin-bottom:1px}
+  .job p.desc{margin:0 0 14px;color:var(--text-2);font-size:15.5px}
+  .job ul{margin:0 0 16px;padding-left:19px;color:var(--text-2);font-size:15px}
+  .job li{margin-bottom:4px}
+  .job .btn{min-height:46px;font-size:15px}
+
+  .empty{text-align:center;padding:40px 10px;color:var(--text-2)}
+  .empty h2{font-size:22px;margin-bottom:9px}
+  .empty p{margin:0 0 20px}
+</style>
+</head>
+<body>
+<header id="hdr"></header>
+
+<div class="phead">
+  <div class="tex"><img src="/img/streaks.jpg" alt="" width="1500" height="750"></div>
+  <div class="wrap">
+    <span class="eyebrow" data-t="eyebrow">Open jobs</span>
+    <h1 data-t="h1">What we're hiring for</h1>
+    <p data-t="sub">The requirements are on the card, so you know where you stand before you spend an afternoon on an application.</p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="filters" id="filters"></div>
+    <div class="jobs" id="list"></div>
+  </div>
+</section>
+
+<nav class="callbar" id="callbar" hidden></nav>
+<footer id="ftr"></footer>
+
+<script src="/site.js"></script>
+<script>
+const T = {
+  en: {
+    title:"Open jobs · Truckers & Trokeros",
+    desc:"What we're hiring for right now. Owner-operator and company driver positions, with the requirements up front so you know before you apply.",
+    eyebrow:"Open jobs", h1:"What we're hiring for",
+    sub:"The requirements are on the card, so you know where you stand before you spend an afternoon on an application.",
+    f_all:"All", f_oo:"Owner-operator", f_co:"Company driver",
+    t_oo:"Owner-operator", t_co:"Company driver", t_both:"Either",
+    l_where:"Where", l_haul:"Freight", l_home:"Home time", l_pay:"Pay", l_open:"Openings",
+    apply:"Apply for this",
+    loading:"Loading…",
+    none_h:"Nothing posted right now",
+    none_p:"Postings come and go quickly. Send us your details and we'll come to you when something fits.",
+    none_btn:"Put me on the list",
+    err:"We couldn't load the board just now. Try again in a minute, or apply and we'll come to you."
+  },
+  es: {
+    title:"Trabajos abiertos · Truckers & Trokeros",
+    desc:"Lo que estamos buscando ahora. Puestos para dueños de troca y para choferes de compañía, con los requisitos por delante.",
+    eyebrow:"Trabajos abiertos", h1:"Lo que estamos buscando",
+    sub:"Los requisitos están en la tarjeta, para que sepas cómo estás antes de gastar una tarde en una solicitud.",
+    f_all:"Todos", f_oo:"Dueño de troca", f_co:"Chofer de compañía",
+    t_oo:"Dueño de troca", t_co:"Chofer de compañía", t_both:"Cualquiera",
+    l_where:"Dónde", l_haul:"Carga", l_home:"Tiempo en casa", l_pay:"Pago", l_open:"Vacantes",
+    apply:"Aplicar a este",
+    loading:"Cargando…",
+    none_h:"Ahorita no hay nada publicado",
+    none_p:"Las vacantes se mueven rápido. Mándanos tus datos y te buscamos cuando salga algo que te quede.",
+    none_btn:"Anótame en la lista",
+    err:"No pudimos cargar la lista en este momento. Inténtalo en un minuto, o aplica y nosotros te buscamos."
+  },
+  pa: {
+    title:"Khulle kamm · Truckers & Trokeros",
+    desc:"Hun asi kis layi bharti kar rahe haan. Owner-operator te company driver, dove, sharta pehla hi dassiyan hoiyan.",
+    eyebrow:"Khulle kamm", h1:"Asi kis layi bharti kar rahe haan",
+    sub:"Sharta card te hi likhiyan han, taan jo aramzi bharan ton pehla pata lagg jave ki tusi kithe kharhe ho.",
+    f_all:"Saare", f_oo:"Owner-operator", f_co:"Company driver",
+    t_oo:"Owner-operator", t_co:"Company driver", t_both:"Koi vi",
+    l_where:"Kithe", l_haul:"Load", l_home:"Ghar da samaa", l_pay:"Tankhah", l_open:"Thaanvan",
+    apply:"Is layi apply karo",
+    loading:"Load ho riha hai…",
+    none_h:"Hun koi kamm post nahi keeta hoya",
+    none_p:"Thaanvan jaldi bhar jandiyan han. Sanu apni jaankari bhejo te jadon kujh tuhade layi hoya asi tuhanu dassaange.",
+    none_btn:"Mainu list te paa deo",
+    err:"Abhi list load nahi ho saki. Ikk minute baad koshish karo, jaan apply kar deo te asi tuhade tak aavaange."
+  }
+};
+const PAGE_CTA = null;
+if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
+paintPage();
+
+const t = () => Object.assign({}, T.en, T[document.documentElement.lang] || {});
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let JOBS = null, filter = 'all';
+
+function typeLabel(k) {
+  const x = t();
+  return k === 'company' ? x.t_co : k === 'both' ? x.t_both : x.t_oo;
+}
+
+// The apply link carries the posting, so the CRM records which opening a
+// driver came in on, and any r/utm tags on this page ride along with it.
+function applyHref(job) {
+  const keep = new URLSearchParams(location.search);
+  const q = new URLSearchParams();
+  for (const k of ['r', 'src', 'utm_source', 'utm_medium', 'utm_campaign']) {
+    const v = keep.get(k); if (v) q.set(k, v);
+  }
+  q.set('job', job.id);
+  const lang = document.documentElement.lang;
+  return (lang === 'en' ? '' : '/' + lang) + '/drivers?' + q.toString();
+}
+
+function fact(label, value) {
+  return value ? `<div class="fact"><b>${esc(label)}</b>${esc(value)}</div>` : '';
+}
+
+function render() {
+  const x = t(), list = document.getElementById('list');
+  if (JOBS === null) { list.innerHTML = `<p class="lede">${esc(x.loading)}</p>`; return; }
+  if (JOBS === false) { list.innerHTML = `<p class="lede">${esc(x.err)}</p>`; return; }
+
+  const shown = JOBS.filter((j) => filter === 'all' || j.driver_type === filter || j.driver_type === 'both');
+  document.getElementById('filters').innerHTML = !JOBS.length ? '' :
+    [['all', x.f_all], ['owner_operator', x.f_oo], ['company', x.f_co]]
+      .map(([k, l]) => `<button data-f="${k}"${k === filter ? ' class="on"' : ''}>${esc(l)}</button>`).join('');
+  document.querySelectorAll('#filters button').forEach((b) => {
+    b.onclick = () => { filter = b.dataset.f; render(); };
+  });
+
+  if (!shown.length) {
+    list.innerHTML = `<div class="empty"><h2>${esc(x.none_h)}</h2><p>${esc(x.none_p)}</p>
+      <a class="btn" href="${document.documentElement.lang === 'en' ? '' : '/' + document.documentElement.lang}/drivers">${esc(x.none_btn)}</a></div>`;
+    return;
+  }
+  list.innerHTML = shown.map((j) => {
+    const reqs = String(j.requirements || '').split('\n').map((r) => r.trim()).filter(Boolean);
+    return `<article class="job">
+      <div class="top">
+        <div>
+          <h2>${esc(j.title)}</h2>
+          ${j.carrier_name ? `<p class="who">${esc(j.carrier_name)}</p>` : ''}
+        </div>
+        <span class="tag${j.driver_type === 'owner_operator' ? ' oo' : ''}">${esc(typeLabel(j.driver_type))}</span>
+      </div>
+      <div class="facts">
+        ${fact(x.l_where, j.location)}${fact(x.l_haul, j.haul_type)}
+        ${fact(x.l_home, j.home_time)}${fact(x.l_pay, j.pay_summary)}
+        ${fact(x.l_open, j.openings)}
+      </div>
+      ${j.description ? `<p class="desc">${esc(j.description)}</p>` : ''}
+      ${reqs.length ? `<ul>${reqs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+      <a class="btn" href="${esc(applyHref(j))}">${esc(x.apply)}</a>
+    </article>`;
+  }).join('');
+}
+
+const _paint = paintPage;
+paintPage = function () { _paint(); render(); };
+render();
+
+fetch('/api/apply/jobs')
+  .then((r) => r.ok ? r.json() : Promise.reject(new Error('http ' + r.status)))
+  .then((d) => { JOBS = Array.isArray(d.jobs) ? d.jobs : []; render(); })
+  .catch(() => { JOBS = false; render(); });
+</script>
+</body>
+</html>

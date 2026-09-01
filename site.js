@@ -26,6 +26,7 @@ const LANG_LABEL = { en: 'EN', es: 'ES', pa: 'PA' };
 
 const NAV = [
   { base: '/', en: 'Home', es: 'Inicio', pa: 'Home' },
+  { base: '/jobs', en: 'Open jobs', es: 'Trabajos', pa: 'Khulle kamm' },
   { base: '/drivers', en: 'For drivers', es: 'Para choferes', pa: 'Drivers layi' },
   { base: '/carriers', en: 'For carriers', es: 'Para compañías', pa: 'Companies layi' },
   { base: '/about', en: 'About', es: 'Nosotros', pa: 'Sade baare' },
@@ -42,19 +43,19 @@ function contact() {
 
 const CHROME = {
   en: {
-    nav_cta: 'Apply now', ft_tag: 'Owner-operator placement, nationwide',
+    nav_cta: 'Apply now', nav_jobs: 'Open jobs', ft_tag: 'Driver placement, nationwide',
     ft_apply: 'Apply to drive', ft_privacy: 'Privacy', ft_terms: 'Terms',
     ft_refer: 'Refer a driver', ft_join: 'Recruit with us',
     menu: 'Menu', call: 'Contact', call_aria: 'Contact us', lang_label: 'Language',
   },
   es: {
-    nav_cta: 'Aplica ya', ft_tag: 'Colocación de dueños de troca en todo el país',
+    nav_cta: 'Aplica ya', nav_jobs: 'Ver trabajos', ft_tag: 'Colocación de choferes en todo el país',
     ft_apply: 'Aplica para manejar', ft_privacy: 'Privacidad', ft_terms: 'Términos',
     ft_refer: 'Recomienda a un chofer', ft_join: 'Recluta con nosotros',
     menu: 'Menú', call: 'Contacto', call_aria: 'Contáctanos', lang_label: 'Idioma',
   },
   pa: {
-    nav_cta: 'Hun apply karo', ft_tag: 'Owner-operator placement, poore desh vich',
+    nav_cta: 'Hun apply karo', nav_jobs: 'Khulle kamm', ft_tag: 'Driver placement, poore desh vich',
     ft_apply: 'Drive layi apply karo', ft_privacy: 'Privacy', ft_terms: 'Sharta',
     ft_refer: 'Kise driver nu bhejo', ft_join: 'Sade naal bharti karo',
     menu: 'Menu', call: 'Sampark', call_aria: 'Sade naal sampark karo', lang_label: 'Bhasha',
@@ -101,8 +102,8 @@ function chrome(t) {
   const ct = contact();
   const link = (n) => `<a href="${L(n.base)}"${n.base === here ? ' class="on"' : ''}>${n[lang]}</a>`;
   // Two halves either side of the wordmark on desktop; one sheet on a phone.
-  const navLeft = NAV.slice(0, 2).map(link).join('');
-  const navRight = NAV.slice(2).map(link).join('');
+  const navLeft = NAV.slice(0, 3).map(link).join('');
+  const navRight = NAV.slice(3).map(link).join('');
   const navAll = NAV.map(link).join('');
 
   // PAGE_CTA: an object overrides the default, `false` drops the button —

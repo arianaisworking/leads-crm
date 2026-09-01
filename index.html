@@ -1858,7 +1858,8 @@ async function renderDrMoney(m){
         </div>`).join("")}
       </div>
       <div style="margin-top:12px"><button class="btn ghost sm" id="mEditSplit" type="button">Edit shares</button>
-        <button class="btn ghost sm" id="mReferrals" type="button">Referrals</button></div>
+        <button class="btn ghost sm" id="mReferrals" type="button">Referrals</button>
+        <button class="btn ghost sm" id="mJobs" type="button">Job board</button></div>
     </div>`:""}
     ${byC.length?`<div class="card" style="margin-bottom:14px"><table><thead><tr><th>Carrier</th><th>Placements</th><th>Booked</th><th>Paid</th></tr></thead>
       <tbody>${byC.map(r=>`<tr><td>${esc(r.carrier||"—")}</td><td>${r.n}</td><td>${drMoney(r.total)}</td><td>${drMoney(r.paid)}</td></tr>`).join("")}</tbody></table></div>`:""}
@@ -1893,6 +1894,7 @@ async function renderDrMoney(m){
   });
   const es=$("#mEditSplit"); if(es) es.onclick=()=>openRecruiters(()=>renderDrMoney(m));
   const rf=$("#mReferrals"); if(rf) rf.onclick=()=>openReferrals(()=>renderDrMoney(m));
+  const jb=$("#mJobs"); if(jb) jb.onclick=()=>openJobs(()=>renderDrMoney(m));
 }
 
 async function openRecruiters(onSave){
@@ -1970,6 +1972,75 @@ async function openRecruiters(onSave){
       }
       toast("Split saved."); closeDrawer(); onSave&&onSave();
     }catch(e){ $("#rcMsg").textContent=e.message; }
+  };
+}
+
+// The job board. Only 'open' postings reach the public page, and the carrier's
+// name only appears there if the posting says so, so a draft is safe to write
+// and a sensitive client stays unnamed.
+async function openJobs(onSave){
+  let jobs=[]; await loadCarriers();
+  try{ const r=await drapi("/jobs"); jobs=r.jobs||[]; }catch(e){}
+  const TYPES=[["owner_operator","Owner-operator"],["company","Company driver"],["both","Either"]];
+  const STATUS=["draft","open","filled","closed"];
+  const d=$("#drawer");
+  const row=(j)=>`<div data-job="${j.id||""}" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px">
+    <div class="drow" style="gap:8px;align-items:center;margin-bottom:7px">
+      <input data-jf="title" value="${esc(j.title||"")}" placeholder="Regional dry van, home weekends">
+      <select data-jf="status" style="max-width:110px">${STATUS.map(x=>`<option${x===(j.status||"draft")?" selected":""}>${x}</option>`).join("")}</select>
+    </div>
+    <div class="drow" style="gap:8px;margin-bottom:7px">
+      <select data-jf="carrier_id" style="max-width:190px"><option value="">No carrier yet</option>${DR_CARRIERS.map(c=>`<option value="${c.id}"${c.id===j.carrier_id?" selected":""}>${esc(c.name)}</option>`).join("")}</select>
+      <select data-jf="driver_type" style="max-width:150px">${TYPES.map(([v,l])=>`<option value="${v}"${v===(j.driver_type||"owner_operator")?" selected":""}>${l}</option>`).join("")}</select>
+      <input data-jf="openings" type="number" step="1" value="${j.openings!=null?j.openings:""}" placeholder="#" style="max-width:70px" title="Openings">
+    </div>
+    <div class="drow" style="gap:8px;margin-bottom:7px">
+      <input data-jf="location" value="${esc(j.location||"")}" placeholder="Dallas, TX">
+      <input data-jf="haul_type" value="${esc(j.haul_type||"")}" placeholder="Dry van">
+      <input data-jf="home_time" value="${esc(j.home_time||"")}" placeholder="Home weekends">
+    </div>
+    <input data-jf="pay_summary" value="${esc(j.pay_summary||"")}" placeholder="What we're willing to say about pay in public" style="margin-bottom:7px">
+    <textarea data-jf="description" rows="2" placeholder="A couple of lines a driver reads on the board">${esc(j.description||"")}</textarea>
+    <textarea data-jf="requirements" rows="2" placeholder="Requirements, one per line" style="margin-top:7px">${esc(j.requirements||"")}</textarea>
+    <label class="drow" style="gap:7px;align-items:center;margin-top:8px;font-size:12.5px;color:var(--soft)">
+      <input data-jf="show_carrier" type="checkbox"${j.show_carrier?" checked":""} style="width:auto;min-height:0"> Name the carrier publicly
+    </label>
+    <div class="drow" style="gap:8px;align-items:center;margin-top:8px">
+      <span class="sub" style="font-size:12px">${j.id?`${j.applicants||0} applied`:"Not saved yet"}</span>
+      ${j.id?`<button class="btn ghost sm" data-jdel="${j.id}" type="button">Delete</button>`:""}
+    </div>
+  </div>`;
+  d.innerHTML=`<button class="dclose" onclick="closeDrawer()">✕</button>
+    <div class="dhead">${avatar({name:"Jobs"})}<div><div class="name">Job board</div><div class="sub">${jobs.filter(j=>j.status==="open").length} open of ${jobs.length}</div></div></div>
+    <div class="dbody">
+      <p class="sub" style="margin:0 0 14px">Only <b>open</b> postings show on the website. The carrier is not named there unless you tick the box, so a draft is safe to write before anyone has agreed to anything.</p>
+      <div id="jbList">${jobs.map(row).join("")}</div>
+      <button class="btn ghost sm" id="jbAdd" type="button">+ Add posting</button>
+      <div class="dfoot"><button class="btn" id="jbSave">Save postings</button><span class="sub" id="jbMsg"></span></div>
+    </div>`;
+  d.classList.add("show"); $("#scrim").classList.add("show"); $("#scrim").onclick=closeDrawer;
+  $("#jbAdd").onclick=()=>$("#jbList").insertAdjacentHTML("beforeend",row({}));
+  d.querySelectorAll("[data-jdel]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("Delete this posting? Drivers already linked to it keep their record.")) return;
+    try{ await drapi("/jobs/"+b.dataset.jdel,{method:"DELETE"}); toast("Deleted."); openJobs(onSave); }
+    catch(e){ toast(e.message); }
+  });
+  $("#jbSave").onclick=async()=>{
+    $("#jbMsg").textContent="Saving…";
+    try{
+      for(const el of [...$("#jbList").querySelectorAll("[data-job]")]){
+        const g=f=>{const e=el.querySelector(`[data-jf="${f}"]`);return e?(e.type==="checkbox"?(e.checked?1:0):e.value.trim()):"";};
+        if(!g("title")) continue;
+        const body={title:g("title"),status:g("status"),carrier_id:g("carrier_id")||null,
+          driver_type:g("driver_type"),openings:g("openings")?parseInt(g("openings"),10):null,
+          location:g("location")||null,haul_type:g("haul_type")||null,home_time:g("home_time")||null,
+          pay_summary:g("pay_summary")||null,description:g("description")||null,
+          requirements:g("requirements")||null,show_carrier:g("show_carrier")};
+        if(el.dataset.job) await drapi("/jobs/"+el.dataset.job,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+        else await drapi("/jobs",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+      }
+      toast("Job board saved."); closeDrawer(); onSave&&onSave();
+    }catch(e){ $("#jbMsg").textContent=e.message; }
   };
 }
 

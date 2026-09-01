@@ -106,7 +106,7 @@
   <div class="shot"><img src="/img/hero-truck.jpg" alt="" fetchpriority="high" width="1600" height="686"></div>
   <div class="scrim"></div>
   <div class="wrap">
-    <span class="eyebrow" data-t="eyebrow">Owner-operator application</span>
+    <span class="eyebrow" data-t="eyebrow">Driver application</span>
     <h1 data-t="h1"></h1>
     <p data-t="sub"></p>
     <div class="stages">
@@ -190,7 +190,7 @@ const T = {
   en: {
     title:"Apply to drive · Truckers & Trokeros",
     desc:"Tell us what you're looking for. We check you against the carrier's real standards and come back the same day, in English or Spanish.",
-    eyebrow:"Owner-operator application",
+    eyebrow:"Driver application",
     h1:"Let's see where you stand",
     sub:"Five minutes, and you'll know. We check your record against the carrier's published standards before anything is submitted, so nobody wastes an afternoon on an application that was never going to pass.",
     st1:"Your details", st2:"Experience", st3:"Your record", st4:"We screen you",
@@ -198,8 +198,8 @@ const T = {
     form_h:"Start with the basics",
     form_sub:"Two minutes now. We'll email you the full application straight away.",
     l_name:"Full name", l_phone:"Cell phone", l_email:"Email", l_city:"City & state",
-    l_truck:"Do you own your truck?", l_exp:"Years of CDL-A experience",
-    o_owns:"Yes, I own it", o_buying:"I'm buying / financing one", o_no:"Not yet",
+    l_truck:"Do you have your own truck?", l_exp:"Years of CDL-A experience",
+    o_owns:"Yes, I own it", o_buying:"I'm buying / financing one", o_no:"No, I need one provided",
     o_pick:"Select", o_e0:"Less than a year", o_e1:"1–2 years", o_e3:"3–5 years", o_e5:"5 years or more",
     form_btn:"Send my information",
     form_fine:"We'll text or email you your application. We never sell your details.",
@@ -220,7 +220,7 @@ const T = {
   es: {
     title:"Aplica para manejar · Truckers & Trokeros",
     desc:"Dinos qué estás buscando. Revisamos tu récord con los requisitos reales de la compañía y te contestamos el mismo día, en español o en inglés.",
-    eyebrow:"Solicitud para dueños de troca",
+    eyebrow:"Solicitud de chofer",
     h1:"Vamos a ver cómo estás",
     sub:"Cinco minutos y lo sabes. Comparamos tu récord con los requisitos publicados de la compañía antes de mandar nada, así nadie pierde una tarde en una solicitud que nunca iba a pasar.",
     st1:"Tus datos", st2:"Experiencia", st3:"Tu récord", st4:"Te revisamos",
@@ -229,7 +229,7 @@ const T = {
     form_sub:"Dos minutos ahora. Te mandamos la solicitud completa por correo enseguida.",
     l_name:"Nombre completo", l_phone:"Celular", l_email:"Correo", l_city:"Ciudad y estado",
     l_truck:"¿La troca es tuya?", l_exp:"Años de experiencia con CDL-A",
-    o_owns:"Sí, es mía", o_buying:"La estoy pagando / financiando", o_no:"Todavía no",
+    o_owns:"Sí, es mía", o_buying:"La estoy pagando / financiando", o_no:"No, necesito que me den una",
     o_pick:"Escoge", o_e0:"Menos de un año", o_e1:"1–2 años", o_e3:"3–5 años", o_e5:"5 años o más",
     form_btn:"Manda mis datos",
     form_fine:"Te mandamos tu solicitud por texto o correo. Nunca vendemos tus datos.",
@@ -250,7 +250,7 @@ const T = {
   pa: {
     title:"Drive layi apply karo · Truckers & Trokeros",
     desc:"Sanu dasso tusi ki labh rahe ho. Kujh vi bhejan ton pehla asi company diyan asli sharta naal mila ke vekhde haan te ohi din jawab dinde haan.",
-    eyebrow:"Owner-operator application",
+    eyebrow:"Driver application",
     h1:"Vekhiye tusi kithe kharhe ho",
     sub:"Panj minute, te tuhanu pata lagg javega. Kujh vi bhejan ton pehla asi tuhada record company diyan sharta naal mila ke vekhde haan, taan jo kise da din us application te barbaad na hove jo kadey pass honi hi nahi si.",
     st1:"Tuhadi jaankari", st2:"Tajurba", st3:"Tuhada record", st4:"Asi jaanchde haan",
@@ -259,7 +259,7 @@ const T = {
     form_sub:"Hun do minute. Poori application asi turant email kar dinde haan.",
     l_name:"Poora naam", l_phone:"Mobile number", l_email:"Email", l_city:"Sheher te state",
     l_truck:"Ki truck tuhada apna hai?", l_exp:"CDL-A da kinna tajurba",
-    o_owns:"Haan, mera apna hai", o_buying:"Khareed riha / finance te hai", o_no:"Hale nahi",
+    o_owns:"Haan, mera apna hai", o_buying:"Khareed riha / finance te hai", o_no:"Nahi, mainu chahida hai",
     o_pick:"Chuno", o_e0:"Ikk saal ton ghatt", o_e1:"1-2 saal", o_e3:"3-5 saal", o_e5:"5 saal jaan vaddh",
     form_btn:"Meri jaankari bhejo",
     form_fine:"Tuhadi application asi text jaan email raahi bhejaange. Asi tuhadi jaankari kadey nahi vechde.",
@@ -277,7 +277,7 @@ const T = {
     helpline:"Kithe atak gaye? <a href=\"mailto:recruiting@truckersandtrokeros.com\">Sanu email karo</a> te ikk banda tuhadi madad karega."
   }
 };
-const PAGE_CTA = false;
+const PAGE_CTA = { key: 'nav_jobs', base: '/jobs' };
 if (window.CONTACT && window.CONTACT.phone) document.body.classList.add('hascallbar');
 
 paintPage();
@@ -294,7 +294,7 @@ document.getElementById('lead').onsubmit = async (e) => {
   if (!b.name || !b.phone) { err.textContent = t.err_req; err.style.display = 'block'; return; }
   err.style.display = 'none';
   b.source = SOURCE; if (RECRUITER) b.recruiter = RECRUITER;
-  b.interest = 'Owner-operator · truck: ' + (b.interest || 'unknown')
+  b.interest = 'Driver · truck: ' + (b.interest || 'unknown')
     + ' · experience: ' + (b.experience || 'not said')
     + ' · lang: ' + document.documentElement.lang;
   const btn = form.querySelector('button[type=submit]');

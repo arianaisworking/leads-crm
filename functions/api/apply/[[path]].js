@@ -8,6 +8,9 @@
 //   POST /api/apply/submit?carrier=<id>   -> creates the driver record, then the same
 //   POST /api/apply/lead                  -> website funnel: drops a driver in and
 //                                            emails them the application (CORS open)
+//   GET  /api/apply/jobs                  -> the public job board (CORS open); only
+//                                            open postings, carrier named only if
+//                                            that posting says so
 //   POST /api/apply/carrier-inquiry       -> a carrier asking us to recruit; lands in
 //                                            `carriers` as a prospect (active=0)
 //   POST /api/apply/referral              -> a driver sending us a driver; creates the
@@ -252,7 +255,14 @@ export async function onRequest(context) {
     const email = String(b.email || '').trim().slice(0, 200) || null;
     if (!name || !(phone || email)) return cors(json({ error: 'Name and a phone number or email are required.' }, 400));
 
-    const carrier = carrierId ? await db.prepare('SELECT * FROM carriers WHERE id=? AND active=1').bind(carrierId).first() : await firstCarrier(db);
+    // A posting decides the carrier when the driver came in on one, which is
+    // the whole point of the board: the right application, not the default one.
+    const jobId = String(b.job || url.searchParams.get('job') || '').trim().slice(0, 40) || null;
+    const job = jobId ? await db.prepare("SELECT * FROM jobs WHERE id=? AND status='open'").bind(jobId).first() : null;
+    const wantCarrier = (job && job.carrier_id) || carrierId;
+    const carrier = wantCarrier
+      ? await db.prepare('SELECT * FROM carriers WHERE id=? AND active=1').bind(wantCarrier).first()
+      : await firstCarrier(db);
     // Don't create a second record for someone who already came through.
     let existing = null;
     if (phone) existing = await db.prepare('SELECT * FROM leads WHERE phone=? LIMIT 1').bind(phone).first();
@@ -267,11 +277,14 @@ export async function onRequest(context) {
           city=COALESCE(?,city), state=COALESCE(?,state), apply_token=?, updated_at=datetime('now') WHERE id=?`)
         .bind(name, phone, email, String(b.city || '').trim() || null, String(b.state || '').trim().slice(0, 2).toUpperCase() || null, applyToken, driverId).run();
     } else {
-      const r = await db.prepare(`INSERT INTO leads (name, phone, email, city, state, status, client_id, source, carrier_id, apply_token, recruiter_id, interest)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
+      const r = await db.prepare(`INSERT INTO leads (name, phone, email, city, state, status, client_id, source, carrier_id, apply_token, recruiter_id, interest, job_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
         name, phone, email, String(b.city || '').trim() || null, String(b.state || '').trim().slice(0, 2).toUpperCase() || null,
         'New', 'house', String(b.source || 'website').slice(0, 120), carrier ? carrier.id : null, applyToken,
-        String(b.recruiter || '').trim().slice(0, 40) || null, String(b.interest || b.message || '').trim().slice(0, 300) || null).run();
+        String(b.recruiter || '').trim().slice(0, 40) || null,
+        [String(b.interest || b.message || '').trim(), job ? 'job: ' + job.title : '']
+          .filter(Boolean).join(' · ').slice(0, 300) || null,
+        job ? job.id : null).run();
       driverId = r.meta.last_row_id;
     }
 
@@ -438,6 +451,24 @@ export async function onRequest(context) {
         brandName(env)),
     }));
     return cors(json({ ok: true }));
+  }
+
+  // ---- The public job board.
+  //
+  // Only open postings, and only the fields meant for the public. The carrier's
+  // name is withheld unless that posting says otherwise, which is the same rule
+  // the rest of the site follows: a driver learns who they're headed for from
+  // us, not from a page anyone can read.
+  if (action === 'jobs') {
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    const { results } = await db.prepare(`
+      SELECT j.id, j.title, j.driver_type, j.location, j.haul_type, j.home_time,
+             j.pay_summary, j.requirements, j.description, j.openings,
+             CASE WHEN j.show_carrier = 1 THEN c.name ELSE NULL END AS carrier_name
+      FROM jobs j LEFT JOIN carriers c ON c.id = j.carrier_id
+      WHERE j.status = 'open'
+      ORDER BY j.sort_order, j.created_at DESC`).all();
+    return cors(json({ jobs: results || [] }));
   }
 
   // ---------- THE LEASE FORM + DOCUMENT RETURN ----------

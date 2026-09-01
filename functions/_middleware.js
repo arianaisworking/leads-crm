@@ -52,7 +52,7 @@ export async function onRequest(context) {
     //   /es/drivers, /pa/… -> /drivers (no such file exists to serve)
     //
     // Each page reads the language out of the path it was requested under.
-    const PAGES = ['drivers', 'carriers', 'about', 'refer', 'join', 'privacy', 'terms'];
+    const PAGES = ['jobs', 'drivers', 'carriers', 'about', 'refer', 'join', 'privacy', 'terms'];
     const LANGS = ['es', 'pa'];
     const langPrefix = new RegExp('^/(' + LANGS.join('|') + ')(?=/|$)');
 
