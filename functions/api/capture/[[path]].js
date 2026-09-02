@@ -4,7 +4,13 @@
 // database (e.g. mxncells.com -> aiw-patients, thenetworkboss.com -> aiw-crm).
 //
 //   POST /api/capture/lead   { name, phone, email, interest, location, message, source,
-//                              availability?: { dates, time, tz }, _hp }
+//                              campaign?, attribution?, availability?: { dates, time, tz }, _hp }
+//
+// `campaign` and `attribution` say which advert paid for the lead. The campaign
+// is appended to `source` so it shows in the CRM list; the full detail is
+// appended to `message` so it is on the record. Neither reaches the
+// notification email beyond a plain "paid ad" flag, because a campaign named
+// for a condition would put a health interest in an inbox.
 //
 // `location` and `message` need migration-003 columns. On a database where that
 // migration has not run, the insert falls back to the old column layout instead
@@ -52,8 +58,20 @@ export async function onRequest(context) {
   const phone = (b.phone || '').toString().trim().slice(0, 40) || null;
   const email = (b.email || '').toString().trim().slice(0, 200) || null;
   const interest = (b.interest || '').toString().trim().slice(0, 300) || null;
-  const message = (b.message || '').toString().trim().slice(0, 2000) || null;
-  const source = (b.source || 'website').toString().trim().slice(0, 120);
+  const messageIn = (b.message || '').toString().trim();
+  const baseSource = (b.source || 'website').toString().trim().slice(0, 120);
+  // Advert attribution. Whitelisted, so a public endpoint cannot be used to
+  // write arbitrary text onto a lead.
+  const ATTR_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content',
+    'utm_term', 'click_id', 'landing', 'referrer'];
+  const attrIn = b.attribution && typeof b.attribution === 'object' ? b.attribution : {};
+  const attr = ATTR_KEYS
+    .map((k) => [k, (attrIn[k] == null ? '' : String(attrIn[k])).trim().slice(0, 200)])
+    .filter(([, v]) => v);
+  const campaign = (b.campaign || '').toString().trim().slice(0, 60);
+  const paid = Boolean(campaign || attr.length);
+  // The list column shows the advert, so a coordinator can sort by it.
+  const source = (campaign ? `${baseSource} · ${campaign}` : baseSource).slice(0, 120);
   // Destination / office the visitor asked for. Accepts either key so a form can
   // send whichever reads better in its own markup.
   const location = (b.location || b.preferred_location || '').toString().trim().slice(0, 160) || null;
@@ -67,6 +85,13 @@ export async function onRequest(context) {
   if (av.tz) avail.avail_tz = String(av.tz).trim().slice(0, 80);
   if (phone) avail.avail_phone = phone;
 
+  // Attribution goes on the record rather than into the free text the visitor
+  // wrote, separated so a coordinator reads their words first.
+  const message = [
+    messageIn,
+    attr.length ? `Came from an advert:\n${attr.map(([k, v]) => `${k}: ${v}`).join('\n')}` : '',
+  ].filter(Boolean).join('\n\n').slice(0, 2000) || null;
+
   if (!name) return reply({ error: 'Please enter your name.' }, 400);
   if (!phone && !email) return reply({ error: 'Please enter a phone number or email.' }, 400);
 
@@ -76,7 +101,7 @@ export async function onRequest(context) {
        VALUES (?,?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
     ).bind(name, phone, email, interest, location, message, source).run();
     await saveAvailability(env, r.meta.last_row_id, avail);
-    notify(context, { id: r.meta.last_row_id, name, phone, email, location, source, avail });
+    notify(context, { id: r.meta.last_row_id, name, phone, email, location, source: baseSource, paid, avail });
     return reply({ ok: true, id: r.meta.last_row_id });
   } catch (e) {
     // This same code is deployed against several databases (one per tenant), and
@@ -94,7 +119,7 @@ export async function onRequest(context) {
          VALUES (?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
       ).bind(name, phone, email, legacyInterest, message, source).run();
       await saveAvailability(env, r.meta.last_row_id, avail);
-      notify(context, { id: r.meta.last_row_id, name, phone, email, location, source, avail });
+      notify(context, { id: r.meta.last_row_id, name, phone, email, location, source: baseSource, paid, avail });
       return reply({ ok: true, id: r.meta.last_row_id, degraded: true });
     } catch (e2) {
       return reply({ error: 'Could not save. Please try again.' }, 500);
@@ -135,7 +160,9 @@ function notify(context, lead) {
     ['Reach them at', reach],
     ['Best time to reach them', when ? when + (a.avail_tz ? ` (${a.avail_tz})` : '') : 'Not specified'],
     ['Preferred location', lead.location || 'Not specified'],
-    ['Came from', lead.source],
+    // The advert's name stays in the CRM. A campaign called for a condition
+    // would say something about this person's health in an inbox.
+    ['Came from', lead.paid ? `${lead.source} (paid advert)` : lead.source],
   ].map(([k, v]) =>
     `<tr><td style="padding:6px 0;color:#8a95a6;font-size:13px;width:150px">${esc(k)}</td>
          <td style="padding:6px 0;font-size:14px;font-weight:600">${esc(v)}</td></tr>`).join('');
@@ -152,7 +179,8 @@ function notify(context, lead) {
   const text = `New enquiry from the website\n\n`
     + `Name: ${lead.name}\nReach them at: ${reach}\n`
     + `Best time to reach them: ${when ? when + (a.avail_tz ? ` (${a.avail_tz})` : '') : 'Not specified'}\n`
-    + `Preferred location: ${lead.location || 'Not specified'}\nCame from: ${lead.source}\n\n`
+    + `Preferred location: ${lead.location || 'Not specified'}\n`
+    + `Came from: ${lead.source}${lead.paid ? ' (paid advert)' : ''}\n\n`
     + `Their area of interest and anything they wrote is in the CRM: ${crmUrl}`;
 
   const send = sendEmail(env, {
