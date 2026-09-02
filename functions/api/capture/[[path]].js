@@ -3,7 +3,8 @@
 // forms POST here to drop a new lead straight into the CRM for THIS deployment's
 // database (e.g. mxncells.com -> aiw-patients, thenetworkboss.com -> aiw-crm).
 //
-//   POST /api/capture/lead   { name, phone, email, interest, location, message, source, _hp }
+//   POST /api/capture/lead   { name, phone, email, interest, location, message, source,
+//                              availability?: { dates, time, tz }, _hp }
 //
 // `location` and `message` need migration-003 columns. On a database where that
 // migration has not run, the insert falls back to the old column layout instead
@@ -56,6 +57,15 @@ export async function onRequest(context) {
   // Destination / office the visitor asked for. Accepts either key so a form can
   // send whichever reads better in its own markup.
   const location = (b.location || b.preferred_location || '').toString().trim().slice(0, 160) || null;
+  // When a form asks when to call, it lands in the same questionnaire keys the
+  // intake document, the doctor email and the patient view already read, so a
+  // coordinator can propose a real time on the first reply.
+  const av = b.availability && typeof b.availability === 'object' ? b.availability : {};
+  const avail = {};
+  if (av.dates) avail.avail_dates = String(av.dates).trim().slice(0, 200);
+  if (av.time) avail.avail_time = String(av.time).trim().slice(0, 80);
+  if (av.tz) avail.avail_tz = String(av.tz).trim().slice(0, 80);
+  if (phone) avail.avail_phone = phone;
 
   if (!name) return reply({ error: 'Please enter your name.' }, 400);
   if (!phone && !email) return reply({ error: 'Please enter a phone number or email.' }, 400);
@@ -65,7 +75,8 @@ export async function onRequest(context) {
       `INSERT INTO leads (name, phone, email, interest, preferred_location, message, source, status, client_id, acquisition_date, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
     ).bind(name, phone, email, interest, location, message, source).run();
-    notify(context, { id: r.meta.last_row_id, name, phone, email, location, source });
+    await saveAvailability(env, r.meta.last_row_id, avail);
+    notify(context, { id: r.meta.last_row_id, name, phone, email, location, source, avail });
     return reply({ ok: true, id: r.meta.last_row_id });
   } catch (e) {
     // This same code is deployed against several databases (one per tenant), and
@@ -82,11 +93,25 @@ export async function onRequest(context) {
         `INSERT INTO leads (name, phone, email, interest, signals, source, status, client_id, acquisition_date, created_at, updated_at)
          VALUES (?,?,?,?,?,?, 'New', 'house', date('now'), datetime('now'), datetime('now'))`
       ).bind(name, phone, email, legacyInterest, message, source).run();
-      notify(context, { id: r.meta.last_row_id, name, phone, email, location, source });
+      await saveAvailability(env, r.meta.last_row_id, avail);
+      notify(context, { id: r.meta.last_row_id, name, phone, email, location, source, avail });
       return reply({ ok: true, id: r.meta.last_row_id, degraded: true });
     } catch (e2) {
       return reply({ error: 'Could not save. Please try again.' }, 500);
     }
+  }
+}
+
+// Written separately from the insert on purpose. `questionnaire` exists on the
+// patients database but not on every tenant's, and a lead that is already saved
+// must not fail because this extra could not be stored.
+async function saveAvailability(env, id, avail) {
+  if (!id || !Object.keys(avail).length) return;
+  try {
+    await env.DB.prepare('UPDATE leads SET questionnaire=? WHERE id=?')
+      .bind(JSON.stringify(avail), id).run();
+  } catch {
+    /* tenant without the column: availability is a bonus, never the lead */
   }
 }
 
@@ -103,9 +128,12 @@ function notify(context, lead) {
   // The patients app opens the record straight from this hash. The other CRMs
   // have no hash routing, so they ignore it and land on the dashboard.
   const crmUrl = lead.id ? `${base}/#patient=${lead.id}` : base;
+  const a = lead.avail || {};
+  const when = [a.avail_dates, a.avail_time].filter(Boolean).join(', ');
   const rows = [
     ['Name', lead.name],
     ['Reach them at', reach],
+    ['Best time to reach them', when ? when + (a.avail_tz ? ` (${a.avail_tz})` : '') : 'Not specified'],
     ['Preferred location', lead.location || 'Not specified'],
     ['Came from', lead.source],
   ].map(([k, v]) =>
@@ -123,6 +151,7 @@ function notify(context, lead) {
 
   const text = `New enquiry from the website\n\n`
     + `Name: ${lead.name}\nReach them at: ${reach}\n`
+    + `Best time to reach them: ${when ? when + (a.avail_tz ? ` (${a.avail_tz})` : '') : 'Not specified'}\n`
     + `Preferred location: ${lead.location || 'Not specified'}\nCame from: ${lead.source}\n\n`
     + `Their area of interest and anything they wrote is in the CRM: ${crmUrl}`;
 
